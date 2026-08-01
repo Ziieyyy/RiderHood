@@ -1,20 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { ServiceReminder } from '../constants/mockData';
+import { MaintenanceReminder } from '../types/database';
 import { Droplet, Disc, Link2, ShieldAlert, CheckCircle2 } from 'lucide-react-native';
 
 interface ReminderItemProps {
-  item: ServiceReminder;
+  item: MaintenanceReminder;
 }
 
 export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
   const getIcon = () => {
-    switch (item.name.toLowerCase()) {
+    switch ((item.type || '').toLowerCase()) {
+      case 'oil':
       case 'engine oil & filter':
         return <Droplet color={COLORS.primary} size={18} />;
+      case 'brake':
       case 'front & rear brake pads':
-        return <Disc color={item.status === 'warning' ? COLORS.warning : COLORS.primary} size={18} />;
+        return <Disc color={item.status === 'due' || item.status === 'overdue' ? COLORS.warning : COLORS.primary} size={18} />;
+      case 'chain':
       case 'drive chain & sprocket':
         return <Link2 color={COLORS.primary} size={18} />;
       default:
@@ -23,7 +26,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
   };
 
   const getStatusBadge = () => {
-    if (item.status === 'warning') {
+    if (item.status === 'due' || item.status === 'overdue') {
       return (
         <View style={[styles.badge, { backgroundColor: COLORS.warningBg, borderColor: COLORS.warning }]}>
           <ShieldAlert color={COLORS.warning} size={12} />
@@ -39,14 +42,18 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
     );
   };
 
+  const percentage = Math.min(100, Math.max(10, Math.round(((item.current_mileage || 0) / (item.next_service_mileage || 1)) * 100)));
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity style={styles.container} activeOpacity={0.8} onPress={() => {}}>
       <View style={styles.topLine}>
         <View style={styles.iconTitleRow}>
           <View style={styles.iconCircle}>{getIcon()}</View>
           <View style={styles.textContainer}>
-            <Text style={styles.nameText}>{item.name}</Text>
-            <Text style={styles.categoryText}>{item.category} • {item.remainingKm}</Text>
+            <Text style={styles.nameText}>{item.title}</Text>
+            <Text style={styles.categoryText}>
+              {item.type} • Next: {item.next_service_mileage ? `${item.next_service_mileage} KM` : 'Due soon'}
+            </Text>
           </View>
         </View>
         {getStatusBadge()}
@@ -58,15 +65,15 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
             style={[
               styles.fill,
               {
-                width: `${item.percentage}%`,
-                backgroundColor: item.status === 'warning' ? COLORS.warning : COLORS.primary,
+                width: `${percentage}%`,
+                backgroundColor: item.status === 'due' || item.status === 'overdue' ? COLORS.warning : COLORS.primary,
               },
             ]}
           />
         </View>
-        <Text style={styles.percentText}>{item.percentage}%</Text>
+        <Text style={styles.percentText}>{percentage}%</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { COLORS } from '../constants/theme';
-import { Shield, Bell, ChevronLeft, Cpu } from 'lucide-react-native';
+import { ChevronLeft, Cpu, Bell } from 'lucide-react-native';
 
 interface HeaderProps {
   title?: string;
@@ -9,6 +10,7 @@ interface HeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   showTelemetryBadge?: boolean;
+  rightElement?: React.ReactNode;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,12 +19,16 @@ export const Header: React.FC<HeaderProps> = ({
   showBack = false,
   onBack,
   showTelemetryBadge = true,
+  rightElement,
 }) => {
+  const router = useRouter();
+  const handleBackPress = onBack || (() => router.back());
+
   return (
     <View style={styles.container}>
       <View style={styles.leftRow}>
         {showBack ? (
-          <TouchableOpacity onPress={onBack} style={styles.iconButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.iconButton} activeOpacity={0.7}>
             <ChevronLeft color={COLORS.textPrimary} size={24} />
           </TouchableOpacity>
         ) : (
@@ -46,10 +52,18 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
       </View>
 
-      <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
-        <Bell color={COLORS.textPrimary} size={20} />
-        <View style={styles.notificationBadge} />
-      </TouchableOpacity>
+      {rightElement ? (
+        rightElement
+      ) : (
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push('/(customer)/notifications')}
+          activeOpacity={0.7}
+        >
+          <Bell color={COLORS.textPrimary} size={20} />
+          <View style={styles.notificationBadge} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

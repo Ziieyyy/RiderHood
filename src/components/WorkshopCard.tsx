@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { Workshop } from '../constants/mockData';
-import { Star, MapPin, Wrench, ShieldCheck, ChevronRight, PhoneCall } from 'lucide-react-native';
+import { Workshop } from '../types/database';
+import { Star, MapPin, Wrench, ChevronRight } from 'lucide-react-native';
 
 interface WorkshopCardProps {
   workshop: Workshop;
@@ -10,6 +10,11 @@ interface WorkshopCardProps {
 }
 
 export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPress }) => {
+  const rating = workshop.rating || 5.0;
+  const reviewsCount = workshop.review_count || 0;
+  const distance = workshop.district ? `${workshop.district}, ${workshop.state || ''}` : 'Nearby';
+  const specialties = ['Full Service', 'Tuning', 'Parts'];
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -20,13 +25,13 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPres
           <View style={styles.ratingLocationRow}>
             <View style={styles.ratingBox}>
               <Star color="#FFC107" size={14} fill="#FFC107" />
-              <Text style={styles.ratingText}>{workshop.rating}</Text>
-              <Text style={styles.reviewsText}>({workshop.reviewsCount})</Text>
+              <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+              <Text style={styles.reviewsText}>({reviewsCount})</Text>
             </View>
             <Text style={styles.dot}>•</Text>
             <View style={styles.locationBox}>
               <MapPin color={COLORS.primary} size={12} />
-              <Text style={styles.distanceText}>{workshop.distance}</Text>
+              <Text style={styles.distanceText}>{distance}</Text>
             </View>
           </View>
         </View>
@@ -41,10 +46,10 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPres
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.addressText} numberOfLines={1}>{workshop.address}</Text>
+      <Text style={styles.addressText} numberOfLines={1}>{workshop.address || 'Address on file'}</Text>
 
       <View style={styles.specialtiesRow}>
-        {workshop.specialties.map((item, idx) => (
+        {specialties.map((item, idx) => (
           <View key={idx} style={styles.tag}>
             <Wrench color={COLORS.primaryDim} size={10} />
             <Text style={styles.tagText}>{item}</Text>
@@ -53,8 +58,8 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPres
       </View>
 
       <View style={styles.footerRow}>
-        <Text style={styles.statusText}>{workshop.status}</Text>
-        <Text style={styles.priceRange}>{workshop.priceRange}</Text>
+        <Text style={styles.statusText}>{workshop.is_open ? 'Open Now' : 'Closed'}</Text>
+        <Text style={styles.priceRange}>Verified Partner</Text>
       </View>
     </View>
   );
