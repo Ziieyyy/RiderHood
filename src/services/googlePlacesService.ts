@@ -38,11 +38,19 @@ const CLIENT_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 'AIzaSyD
  * Strictly NEVER generates fake or mock reviews.
  */
 export async function fetchGooglePlaceDetails(
-  placeId: string,
+  placeId?: string | null,
   workshop?: Workshop | null,
   forceRefresh: boolean = false
 ): Promise<GooglePlaceDetailsResult | null> {
-  const targetPlaceId = placeId || workshop?.google_place_id;
+  let targetPlaceId = placeId || workshop?.google_place_id;
+
+  // Auto-discover placeId if missing for this workshop
+  if (!targetPlaceId && workshop) {
+    targetPlaceId = await discoverGooglePlaceId(workshop);
+    if (targetPlaceId && workshop.id) {
+      await supabase.from('workshops').update({ google_place_id: targetPlaceId }).eq('id', workshop.id);
+    }
+  }
 
   if (!targetPlaceId) {
     return {

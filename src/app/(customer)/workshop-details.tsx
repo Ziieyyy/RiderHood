@@ -99,12 +99,7 @@ export default function WorkshopDetailsScreen() {
     if (!targetWorkshop) return;
     setGoogleLoading(true);
     try {
-      const placeId = targetWorkshop.google_place_id;
-      if (!placeId) {
-        setGooglePlaceDetails(null);
-        return;
-      }
-      const gDetails = await fetchGooglePlaceDetails(placeId, targetWorkshop);
+      const gDetails = await fetchGooglePlaceDetails(targetWorkshop.google_place_id, targetWorkshop);
       setGooglePlaceDetails(gDetails);
     } catch (err) {
       console.log('[WorkshopDetails] Error fetching Google Place Details:', err);
