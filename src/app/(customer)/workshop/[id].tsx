@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,40 +28,57 @@ import {
   Heart,
   ChevronRight,
   ShieldCheck,
+  ExternalLink,
+  Edit2,
+  MessageCircle,
+  User,
 } from 'lucide-react-native';
 import { getWorkshop, getWorkshopServices } from '../../../services/workshopService';
-import { getWorkshopReviews } from '../../../services/reviewService';
+import { getWorkshopReviews, getReviewStats, canCustomerReview, getCompletedBookingsWithoutReview, createReviewWithPhotos, type ReviewStats } from '../../../services/reviewService';
+import { useAuth } from '../../../context/AuthContext';
 import type { Workshop, Service, Review } from '../../../types/database';
 
 export default function CustomerWorkshopDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<Service[]>([]); 
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({ average: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+  const [canReview, setCanReview] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [favorite, setFavorite] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   const loadWorkshopData = useCallback(async () => {
     if (!id) return;
     try {
-      const [w, svcs, revs] = await Promise.all([
+      const [w, svcs, revs, stats] = await Promise.all([
         getWorkshop(id),
         getWorkshopServices(id),
         getWorkshopReviews(id),
+        getReviewStats(id),
       ]);
       setWorkshop(w);
       setServices(svcs);
       setReviews(revs);
+      setReviewStats(stats);
+
+      // Check if current user can write a review
+      if (user?.id) {
+        const allowed = await canCustomerReview(user.id, id);
+        setCanReview(allowed);
+      }
     } catch (err) {
       console.log('Error loading workshop detail:', err);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     loadWorkshopData();
@@ -102,6 +120,85 @@ export default function CustomerWorkshopDetailScreen() {
     });
   };
 
+  const handleWriteReview = async () => {
+    if (!user?.id || !workshop?.id) {
+      Alert.alert('Sign In Required', 'Please sign in to submit a review.');
+      return;
+    }
+    try {
+      const bks = await getCompletedBookingsWithoutReview(user.id, workshop.id);
+      if (bks.length === 0) {
+        Alert.alert('No Eligible Booking', 'You need a completed service booking to write a review.');
+        return;
+      }
+      Alert.alert(
+        'Review Service',
+        `Submit review for your completed service on ${bks[0].booking_date}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Rate 5 Stars ⭐',
+            onPress: async () => {
+              try {
+                await createReviewWithPhotos({
+                  customer_id: user.id,
+                  workshop_id: workshop.id,
+                  booking_id: bks[0].id,
+                  motorcycle_id: bks[0].motorcycle_id || null,
+                  rating: 5,
+                  comment: 'Excellent service and friendly staff!',
+                });
+                Alert.alert('🎉 Review Submitted!', 'Thank you for your feedback.');
+                loadWorkshopData();
+              } catch (err: any) {
+                Alert.alert('Error', err?.message || 'Failed to submit review.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not verify booking eligibility.');
+    }
+  };
+
+  const handleGoogleReview = () => {
+    if (workshop?.google_review_url) {
+      Linking.openURL(workshop.google_review_url).catch(() => {
+        Alert.alert('Google Reviews', 'Could not open Google Reviews page.');
+      });
+    } else {
+      Alert.alert('Google Reviews', 'Google review link is not available for this workshop yet.');
+    }
+  };
+
+  const formatTimeAgo = (dateStr: string): string => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    if (diffWeeks < 5) return `${diffWeeks} week${diffWeeks > 1 ? 's' : ''} ago`;
+    return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+  };
+
+  const renderStarRow = (rating: number, size: number = 12) => {
+    return (
+      <View style={{ flexDirection: 'row', gap: 2 }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <Star key={i} color="#f59e0b" fill={i <= rating ? '#f59e0b' : 'transparent'} size={size} />
+        ))}
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -125,12 +222,14 @@ export default function CustomerWorkshopDetailScreen() {
 
   const selectedServices = services.filter(s => selectedServiceIds.includes(s.id));
   const estimatedTotal = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
+  const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+  const workshopRating = reviewStats.count > 0 ? reviewStats.average : Number(workshop.rating || 0);
 
   return (
     <SafeAreaView style={styles.container}>
       <Header
         title={workshop.name}
-        subtitle={`${workshop.district || 'Kuala Lumpur'} • ★ ${workshop.rating ? Number(workshop.rating).toFixed(1) : '5.0'}`}
+        subtitle={`${workshop.district || 'Kuala Lumpur'} • ★ ${workshopRating.toFixed(1)}`}
         showBack
         rightElement={
           <TouchableOpacity onPress={() => setFavorite(!favorite)} activeOpacity={0.8}>
@@ -151,7 +250,7 @@ export default function CustomerWorkshopDetailScreen() {
               <View style={styles.ratingBadge}>
                 <Star color="#f59e0b" fill="#f59e0b" size={14} />
                 <Text style={styles.ratingText}>
-                  {workshop.rating ? Number(workshop.rating).toFixed(1) : '5.0'} ({workshop.review_count || 12} reviews)
+                  {workshopRating.toFixed(1)} ({reviewStats.count || workshop.review_count || 0} reviews)
                 </Text>
               </View>
 
@@ -240,11 +339,48 @@ export default function CustomerWorkshopDetailScreen() {
           })
         )}
 
-        {/* Customer Reviews Section */}
-        <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-          <Text style={styles.sectionTitle}>CUSTOMER REVIEWS ({reviews.length})</Text>
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* CUSTOMER REVIEWS SECTION                                  */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+
+        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+          <Text style={styles.sectionTitle}>CUSTOMER REVIEWS</Text>
         </View>
 
+        {/* Rating Summary Card */}
+        <View style={styles.ratingSummaryCard}>
+          <View style={styles.ratingBigCol}>
+            <Text style={styles.ratingBigNum}>{workshopRating.toFixed(1)}</Text>
+            {renderStarRow(Math.round(workshopRating), 16)}
+            <Text style={styles.ratingCountText}>Based on {reviewStats.count} review{reviewStats.count !== 1 ? 's' : ''}</Text>
+          </View>
+
+          <View style={styles.ratingBarsCol}>
+            {[5, 4, 3, 2, 1].map(star => {
+              const count = reviewStats.distribution[star] || 0;
+              const pct = reviewStats.count > 0 ? (count / reviewStats.count) * 100 : 0;
+              return (
+                <View key={star} style={styles.barRow}>
+                  <Text style={styles.barLabel}>{star}★</Text>
+                  <View style={styles.barTrack}>
+                    <View style={[styles.barFill, { width: `${pct}%` }]} />
+                  </View>
+                  <Text style={styles.barPct}>{Math.round(pct)}%</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Write a Review Button */}
+        {canReview && (
+          <TouchableOpacity style={styles.writeReviewBtn} onPress={handleWriteReview}>
+            <Edit2 color="#000" size={16} />
+            <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Recent Reviews */}
         {reviews.length === 0 ? (
           <View style={styles.emptyCard}>
             <Star color={COLORS.textMuted} size={32} />
@@ -252,31 +388,110 @@ export default function CustomerWorkshopDetailScreen() {
             <Text style={styles.emptySub}>Be the first rider to leave a review after your service appointment.</Text>
           </View>
         ) : (
-          reviews.map(rev => (
-            <View key={rev.id} style={styles.reviewCard}>
-              <View style={styles.revHeader}>
-                <Text style={styles.revName}>{rev.customer?.full_name || 'Rider'}</Text>
-                <View style={styles.revStarRow}>
-                  <Star color="#f59e0b" fill="#f59e0b" size={12} />
-                  <Text style={styles.revStarText}>{rev.rating}.0</Text>
+          <>
+            {displayedReviews.map(rev => (
+              <View key={rev.id} style={styles.reviewCard}>
+                <View style={styles.revHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={styles.avatarCircle}>
+                      <User color={COLORS.textMuted} size={14} />
+                    </View>
+                    <View>
+                      <Text style={styles.revName}>{rev.customer?.full_name || 'Rider'}</Text>
+                      <Text style={styles.revTimeAgo}>{formatTimeAgo(rev.created_at)}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.revStarRow}>
+                    {renderStarRow(rev.rating, 12)}
+                  </View>
+                </View>
+
+                {rev.comment ? <Text style={styles.revComment}>"{rev.comment}"</Text> : null}
+
+                {/* Review Photos */}
+                {rev.photos && rev.photos.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                    {rev.photos.map(photo => (
+                      <Image
+                        key={photo.id}
+                        source={{ uri: photo.photo_url }}
+                        style={styles.reviewPhotoThumb}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </ScrollView>
+                )}
+
+                {/* Workshop Reply */}
+                {rev.reply ? (
+                  <View style={styles.workshopReplyBox}>
+                    <Text style={styles.replyHeader}>Workshop Reply:</Text>
+                    <Text style={styles.replyText}>{rev.reply}</Text>
+                  </View>
+                ) : null}
+
+                {/* Source Badge */}
+                <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                  <View style={styles.sourceBadge}>
+                    <Text style={styles.sourceBadgeText}>⭐ RIDERHOOD</Text>
+                  </View>
                 </View>
               </View>
-              {rev.comment ? <Text style={styles.revComment}>{rev.comment}</Text> : null}
-              {rev.reply ? (
-                <View style={styles.workshopReplyBox}>
-                  <Text style={styles.replyHeader}>Workshop Reply:</Text>
-                  <Text style={styles.replyText}>{rev.reply}</Text>
-                </View>
-              ) : null}
-            </View>
-          ))
+            ))}
+
+            {reviews.length > 3 && (
+              <TouchableOpacity
+                style={styles.viewAllBtn}
+                onPress={() => setShowAllReviews(!showAllReviews)}
+              >
+                <Text style={styles.viewAllBtnText}>
+                  {showAllReviews ? 'Show Less' : `View All ${reviews.length} Reviews`}
+                </Text>
+                <ChevronRight color={COLORS.primary} size={14} />
+              </TouchableOpacity>
+            )}
+          </>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* GOOGLE REVIEWS SECTION                                    */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+
+        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+          <Text style={styles.sectionTitle}>GOOGLE REVIEWS</Text>
+        </View>
+
+        <View style={styles.googleReviewCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={styles.googleIconBox}>
+              <Text style={{ fontSize: 20 }}>G</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.googleTitle}>See what customers say on Google</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <Star color="#f59e0b" fill="#f59e0b" size={12} />
+                <Text style={styles.googleRatingText}>
+                  {Number(workshop.rating || 0).toFixed(1)} Google Rating
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.googleReviewBtn} onPress={handleGoogleReview}>
+            <Star color="#FFF" fill="#FFF" size={14} />
+            <Text style={styles.googleReviewBtnText}>Review us on Google</Text>
+            <ExternalLink color="#FFF" size={12} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom spacing */}
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* Floating Bottom Booking Bar */}
       <View style={styles.bottomBar}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.barLabel}>
+          <Text style={styles.barLabelText}>
             {selectedServiceIds.length > 0
               ? `${selectedServiceIds.length} Service(s) Selected`
               : 'Book Appointment'}
@@ -381,6 +596,7 @@ const styles = StyleSheet.create({
   locationText: {
     color: COLORS.textSecondary,
     fontSize: 12,
+    flex: 1,
   },
   quickBtnRow: {
     flexDirection: 'row',
@@ -501,6 +717,87 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
   },
+
+  // ─── Rating Summary Card ────────────────────────────────────
+  ratingSummaryCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 16,
+  },
+  ratingBigCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minWidth: 80,
+  },
+  ratingBigNum: {
+    color: COLORS.textPrimary,
+    fontSize: 36,
+    fontWeight: '900',
+  },
+  ratingCountText: {
+    color: COLORS.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  ratingBarsCol: {
+    flex: 1,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  barLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    fontWeight: '800',
+    width: 22,
+  },
+  barTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: COLORS.surface,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: '#f59e0b',
+    borderRadius: 3,
+  },
+  barPct: {
+    color: COLORS.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    width: 28,
+    textAlign: 'right',
+  },
+
+  // ─── Write Review Button ────────────────────────────────────
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  writeReviewBtnText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  // ─── Review Cards ───────────────────────────────────────────
   reviewCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 14,
@@ -514,24 +811,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   revName: {
     color: COLORS.textPrimary,
     fontSize: 13,
     fontWeight: '800',
+  },
+  revTimeAgo: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 1,
   },
   revStarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  revStarText: {
-    color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
   revComment: {
     color: COLORS.textSecondary,
     fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  reviewPhotoThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   workshopReplyBox: {
     backgroundColor: COLORS.surface,
@@ -551,6 +868,81 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  sourceBadge: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  sourceBadgeText: {
+    color: COLORS.primary,
+    fontSize: 8,
+    fontWeight: '900',
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 10,
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  viewAllBtnText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  // ─── Google Reviews Section ─────────────────────────────────
+  googleReviewCard: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 12,
+  },
+  googleIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  googleTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  googleRatingText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  googleReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#4285F4',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  googleReviewBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  // ─── Bottom Bar ─────────────────────────────────────────────
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -565,7 +957,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  barLabel: {
+  barLabelText: {
     color: COLORS.textMuted,
     fontSize: 11,
     fontWeight: '700',

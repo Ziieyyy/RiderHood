@@ -68,14 +68,27 @@ export interface Motorcycle {
   engine_oil_type: string | null;
   front_tyre_size: string | null;
   rear_tyre_size: string | null;
+  last_service_date?: string | null;
+  warranty_expiry_date?: string | null;
   photo_url: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface MotorcyclePhoto {
+  id: string;
+  motorcycle_id: string;
+  owner_id: string;
+  photo_url: string;
+  file_path: string | null;
+  caption: string | null;
+  is_main: boolean;
+  created_at: string;
+}
+
 export interface Workshop {
   id: string;
-  owner_id: string;
+  owner_id: string | null;
   name: string;
   description: string | null;
   phone: string | null;
@@ -91,9 +104,17 @@ export interface Workshop {
   opening_time: string | null;
   closing_time: string | null;
   is_open: boolean;
+  is_partner: boolean;
+  booking_enabled: boolean;
   verification_status: WorkshopVerificationStatus;
   status: WorkshopStatus;
   operating_hours?: string | null;
+  google_review_url?: string | null;
+  google_place_id?: string | null;
+  google_maps_url?: string | null;
+  google_rating?: number | null;
+  google_review_count?: number | null;
+  google_last_synced_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +128,7 @@ export interface Service {
   price: number;
   estimated_duration_minutes: number | null;
   is_available: boolean;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -247,6 +269,7 @@ export interface Review {
   customer_id: string;
   workshop_id: string;
   booking_id: string;
+  motorcycle_id?: string | null;
   rating: number;
   comment: string | null;
   reply: string | null;
@@ -256,6 +279,16 @@ export interface Review {
   created_at: string;
   updated_at: string;
   customer?: Profile;
+  photos?: ReviewPhoto[];
+}
+
+export interface ReviewPhoto {
+  id: string;
+  review_id: string;
+  photo_url: string;
+  file_path: string | null;
+  caption: string | null;
+  created_at: string;
 }
 
 export interface Notification {
@@ -299,6 +332,7 @@ export interface Database {
       expenses: { Row: Expense; Insert: Partial<Expense>; Update: Partial<Expense> };
       documents: { Row: Document; Insert: Partial<Document>; Update: Partial<Document> };
       reviews: { Row: Review; Insert: Partial<Review>; Update: Partial<Review> };
+      review_photos: { Row: ReviewPhoto; Insert: Partial<ReviewPhoto>; Update: Partial<ReviewPhoto> };
       notifications: { Row: Notification; Insert: Partial<Notification>; Update: Partial<Notification> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog>; Update: Partial<AuditLog> };
     };

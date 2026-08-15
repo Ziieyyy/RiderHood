@@ -7,6 +7,8 @@ export interface WorkshopFilters {
   longitude?: number;
   isOpenNow?: boolean;
   serviceCategory?: string;
+  partnerOnly?: boolean;
+  district?: string;
 }
 
 // ─── Get approved, active workshops (customer-facing) ─────────
@@ -16,6 +18,7 @@ export async function getWorkshops(filters: WorkshopFilters = {}): Promise<Works
     .select('*')
     .eq('verification_status', 'approved')
     .eq('status', 'active')
+    .order('is_partner', { ascending: false })
     .order('rating', { ascending: false });
 
   if (filters.search) {
@@ -24,17 +27,32 @@ export async function getWorkshops(filters: WorkshopFilters = {}): Promise<Works
   if (filters.isOpenNow) {
     query = query.eq('is_open', true);
   }
+  if (filters.partnerOnly) {
+    query = query.eq('booking_enabled', true);
+  }
+  if (filters.district) {
+    query = query.ilike('district', `%${filters.district}%`);
+  }
 
   const { data, error } = await query;
   if (error) throw error;
 
   let result = data ?? [];
 
+  // Always pin Partner workshops (Wan Legacy Motor) to top, followed by highest rating
+  result.sort((a, b) => {
+    if (a.is_partner && !b.is_partner) return -1;
+    if (!a.is_partner && b.is_partner) return 1;
+    return Number(b.rating || 0) - Number(a.rating || 0);
+  });
+
   // Client-side distance sort when GPS coordinates provided
   if (filters.latitude && filters.longitude) {
     result = result
       .filter((w) => w.latitude !== null && w.longitude !== null)
       .sort((a, b) => {
+        if (a.is_partner && !b.is_partner) return -1;
+        if (!a.is_partner && b.is_partner) return 1;
         const distA = getDistanceKm(filters.latitude!, filters.longitude!, a.latitude!, a.longitude!);
         const distB = getDistanceKm(filters.latitude!, filters.longitude!, b.latitude!, b.longitude!);
         return distA - distB;
@@ -55,14 +73,18 @@ export async function getWorkshop(id: string): Promise<Workshop | null> {
   return data;
 }
 
-// ─── Get workshop for admin (owner only) ─────────────────────
+// ─── Get workshop for admin (owner or dev fallback) ───────────
 export async function getMyWorkshop(ownerId: string): Promise<Workshop | null> {
   const { data, error } = await supabase
     .from('workshops')
     .select('*')
     .eq('owner_id', ownerId)
-    .single();
-  if (error) return null;
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching workshop for owner:', error);
+    return null;
+  }
   return data;
 }
 
@@ -111,25 +133,45 @@ export async function setWorkshopStatus(id: string, status: 'active' | 'suspende
   return updateWorkshop(id, { status });
 }
 
+export async function updateWorkshopStatus(id: string, isOpen: boolean) {
+  return updateWorkshop(id, { is_open: isOpen });
+}
+
 // ─── Services for a workshop ──────────────────────────────────
-export async function getWorkshopServices(workshopId: string): Promise<Service[]> {
-  const { data, error } = await supabase
-    .from('services')
-    .select('*')
-    .eq('workshop_id', workshopId)
-    .eq('is_available', true)
-    .order('name');
-  if (error) throw error;
-  return data ?? [];
+export async function getWorkshopServices(
+  workshopId?: string,
+  options?: { onlyAvailable?: boolean }
+): Promise<Service[]> {
+  try {
+    let query = supabase.from('services').select('*');
+    if (options?.onlyAvailable ?? true) {
+      query = query.eq('is_available', true);
+    }
+    if (workshopId) {
+      query = query.eq('workshop_id', workshopId);
+    }
+    const { data, error } = await query.order('name');
+    if (error) {
+      console.error('Failed to query services table:', error);
+      return [];
+    }
+    return data ?? [];
+  } catch (err) {
+    console.error('Failed to query services table:', err);
+    return [];
+  }
 }
 
 export async function createService(payload: Partial<Service>): Promise<Service> {
   const { data, error } = await supabase
     .from('services')
-    .insert(payload)
+    .insert({ ...payload, is_available: true })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error('Failed to create service package in Supabase:', error);
+    throw error;
+  }
   return data;
 }
 

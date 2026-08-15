@@ -176,7 +176,7 @@ export default function CustomerHistoryScreen() {
 
                 <View style={styles.cardFooter}>
                   <Text style={styles.totalLabel}>Total</Text>
-                  <Text style={styles.totalAmount}>RM {bk.total_amount.toFixed(2)}</Text>
+                  <Text style={styles.totalAmount}>RM {Number(bk.total_amount || 0).toFixed(2)}</Text>
                 </View>
               </View>
             );

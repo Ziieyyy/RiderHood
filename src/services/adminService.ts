@@ -132,3 +132,34 @@ export function subscribeToNewWorkshops(onNew: (workshop: unknown) => void) {
     )
     .subscribe();
 }
+
+// ─── Sync Google Metadata (Admin) ──────────────────────────────
+import { fetchGooglePlaceDetails, discoverGooglePlaceId } from './googlePlacesService';
+
+export async function syncAllWorkshopsGoogleMetadata(): Promise<{
+  totalSynced: number;
+}> {
+  const { data: workshops, error } = await supabase
+    .from('workshops')
+    .select('id, name, address, district, state, google_place_id');
+  if (error || !workshops) return { totalSynced: 0 };
+
+  let count = 0;
+  for (const w of workshops) {
+    let placeId = w.google_place_id;
+    if (!placeId) {
+      placeId = await discoverGooglePlaceId(w);
+      if (placeId) {
+        await supabase.from('workshops').update({ google_place_id: placeId }).eq('id', w.id);
+      }
+    }
+    if (placeId) {
+      await fetchGooglePlaceDetails(placeId, w as any, true);
+      count++;
+    }
+  }
+
+  return { totalSynced: count };
+}
+
+

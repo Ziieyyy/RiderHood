@@ -47,23 +47,26 @@ BEGIN
     role = EXCLUDED.role,
     status = 'active';
 
-  -- Ensure workshop record is linked and approved for workshop_admin
+  -- Ensure workshop record is linked and approved for workshop_admin (Wan Legacy Motor)
   IF v_role = 'workshop_admin' THEN
-    INSERT INTO public.workshops (id, owner_id, name, description, address, district, state, phone, status, verification_status, rating)
+    INSERT INTO public.workshops (id, owner_id, name, description, address, district, state, phone, status, verification_status, rating, is_partner, booking_enabled, is_open)
     VALUES (
       'b0000000-0000-0000-0000-000000000001',
       NEW.id,
-      'Bengkel Motor Cemerlang Terbilang',
-      'Specialized in superbike tuning, general servicing, tire replacements & performance parts.',
-      'No 15, Jalan Industri PBU 1, Taman Perindustrian, 50480 Kuala Lumpur',
-      'Kuala Lumpur',
-      'Wilayah Persekutuan',
-      '+60123456789',
+      'Wan Legacy Motor',
+      'Official RiderHood Collaboration Partner in Kulim. Specialized in superbike tuning, general servicing, tire replacements & performance parts.',
+      'Ground Floor No. 55, Lorong Kota Kenari 1/1, 09000 Kulim, Kedah',
+      'Kulim',
+      'Kedah',
+      '017-455 2184',
       'active',
       'approved',
-      4.9
+      4.4,
+      TRUE,
+      TRUE,
+      TRUE
     )
-    ON CONFLICT (id) DO UPDATE SET owner_id = NEW.id, verification_status = 'approved', status = 'active';
+    ON CONFLICT (id) DO UPDATE SET owner_id = NEW.id, verification_status = 'approved', status = 'active', is_partner = TRUE, booking_enabled = TRUE;
   END IF;
 
   RETURN NEW;
@@ -100,10 +103,22 @@ CREATE TABLE IF NOT EXISTS public.motorcycles (
 -- Fix for existing tables missing nickname default
 ALTER TABLE public.motorcycles ALTER COLUMN nickname SET DEFAULT '';
 
+-- ─── MOTORCYCLE PHOTOS ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.motorcycle_photos (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  motorcycle_id   UUID NOT NULL REFERENCES public.motorcycles(id) ON DELETE CASCADE,
+  owner_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  photo_url       TEXT NOT NULL,
+  file_path       TEXT,
+  caption         TEXT,
+  is_main         BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── WORKSHOPS ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.workshops (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  owner_id              UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+  owner_id              UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   name                  TEXT NOT NULL,
   description           TEXT,
   phone                 TEXT,
@@ -119,11 +134,22 @@ CREATE TABLE IF NOT EXISTS public.workshops (
   opening_time          TIME,
   closing_time          TIME,
   is_open               BOOLEAN NOT NULL DEFAULT FALSE,
+  is_partner            BOOLEAN NOT NULL DEFAULT FALSE,
+  booking_enabled       BOOLEAN NOT NULL DEFAULT FALSE,
+  operating_hours       JSONB,
   verification_status   TEXT NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','approved','rejected')),
   status                TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','closed')),
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Schema migration helpers for existing database instance
+ALTER TABLE public.workshops ALTER COLUMN owner_id DROP NOT NULL;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS booking_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS operating_hours JSONB;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS district TEXT;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS state TEXT;
 
 -- ─── SERVICES ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.services (
@@ -160,12 +186,26 @@ CREATE TABLE IF NOT EXISTS public.parts (
   UNIQUE (workshop_id, sku)
 );
 
+-- ─── INVENTORY TRANSACTIONS ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.inventory_transactions (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  part_id             UUID NOT NULL REFERENCES public.parts(id) ON DELETE CASCADE,
+  workshop_id         UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
+  type                TEXT NOT NULL CHECK (type IN ('add','remove','set','service_used')),
+  quantity            INTEGER NOT NULL,
+  previous_quantity   INTEGER NOT NULL,
+  new_quantity        INTEGER NOT NULL,
+  reason              TEXT,
+  created_by          UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── BOOKINGS ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.bookings (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  customer_id     UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
-  workshop_id     UUID NOT NULL REFERENCES public.workshops(id) ON DELETE SET NULL,
-  motorcycle_id   UUID NOT NULL REFERENCES public.motorcycles(id) ON DELETE SET NULL,
+  customer_id     UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  workshop_id     UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
+  motorcycle_id   UUID NOT NULL REFERENCES public.motorcycles(id) ON DELETE CASCADE,
   booking_date    DATE NOT NULL,
   booking_time    TIME NOT NULL,
   status          TEXT NOT NULL DEFAULT 'pending'
@@ -177,6 +217,16 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Schema migration helpers for bookings table foreign keys
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_workshop_id_fkey;
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_workshop_id_fkey FOREIGN KEY (workshop_id) REFERENCES public.workshops(id) ON DELETE CASCADE;
+
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_customer_id_fkey;
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_motorcycle_id_fkey;
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_motorcycle_id_fkey FOREIGN KEY (motorcycle_id) REFERENCES public.motorcycles(id) ON DELETE CASCADE;
 
 -- ─── BOOKING SERVICES (price snapshots) ───────────────────────
 CREATE TABLE IF NOT EXISTS public.booking_services (
@@ -378,7 +428,7 @@ $$;
 
 -- ── PROFILES ──
 DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
-CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (id = auth.uid() OR get_my_role() = 'super_admin');
+CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (id = auth.uid() OR get_my_role() IN ('workshop_admin','super_admin'));
 DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (id = auth.uid());
 DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
@@ -394,12 +444,12 @@ CREATE POLICY "motorcycles_workshop_read" ON public.motorcycles FOR SELECT
 -- ── WORKSHOPS (public read of approved only) ──
 DROP POLICY IF EXISTS "workshops_public_read" ON public.workshops;
 CREATE POLICY "workshops_public_read" ON public.workshops FOR SELECT
-  USING (verification_status = 'approved' AND status = 'active' OR get_my_role() IN ('workshop_admin','super_admin'));
+  USING (verification_status = 'approved' AND status = 'active' OR owner_id = auth.uid() OR get_my_role() = 'super_admin');
 DROP POLICY IF EXISTS "workshops_owner_update" ON public.workshops;
 CREATE POLICY "workshops_owner_update" ON public.workshops FOR UPDATE
   USING (owner_id = auth.uid() OR get_my_role() = 'super_admin');
 DROP POLICY IF EXISTS "workshops_admin_all" ON public.workshops;
-CREATE POLICY "workshops_admin_all"    ON public.workshops FOR ALL USING (get_my_role() = 'super_admin');
+CREATE POLICY "workshops_admin_all"    ON public.workshops FOR ALL USING (owner_id = auth.uid() OR get_my_role() = 'super_admin');
 DROP POLICY IF EXISTS "workshops_admin_insert" ON public.workshops;
 CREATE POLICY "workshops_admin_insert" ON public.workshops FOR INSERT WITH CHECK (get_my_role() IN ('workshop_admin','super_admin'));
 
@@ -411,8 +461,16 @@ CREATE POLICY "services_owner_write" ON public.services FOR ALL
   USING (workshop_id = get_my_workshop_id() OR get_my_role() = 'super_admin');
 
 -- ── PARTS ──
+DROP POLICY IF EXISTS "parts_public_read" ON public.parts;
+CREATE POLICY "parts_public_read" ON public.parts FOR SELECT USING (TRUE);
 DROP POLICY IF EXISTS "parts_owner" ON public.parts;
 CREATE POLICY "parts_owner" ON public.parts FOR ALL
+  USING (workshop_id = get_my_workshop_id() OR get_my_role() = 'super_admin');
+
+-- ── INVENTORY TRANSACTIONS ──
+ALTER TABLE public.inventory_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "inventory_transactions_owner" ON public.inventory_transactions;
+CREATE POLICY "inventory_transactions_owner" ON public.inventory_transactions FOR ALL
   USING (workshop_id = get_my_workshop_id() OR get_my_role() = 'super_admin');
 
 -- ── BOOKINGS ──
@@ -440,11 +498,13 @@ CREATE POLICY "maintenance_customer_own"  ON public.maintenance_records FOR ALL 
 DROP POLICY IF EXISTS "maintenance_workshop_read" ON public.maintenance_records;
 CREATE POLICY "maintenance_workshop_read" ON public.maintenance_records FOR SELECT
   USING (workshop_id = get_my_workshop_id() OR get_my_role() = 'super_admin');
+DROP POLICY IF EXISTS "maintenance_workshop_write" ON public.maintenance_records;
+CREATE POLICY "maintenance_workshop_write" ON public.maintenance_records FOR INSERT WITH CHECK (get_my_role() IN ('workshop_admin','super_admin'));
 
 -- ── MAINTENANCE ITEMS ──
 DROP POLICY IF EXISTS "maintenance_items_via_record" ON public.maintenance_items;
 CREATE POLICY "maintenance_items_via_record" ON public.maintenance_items FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.maintenance_records mr WHERE mr.id = maintenance_record_id AND mr.customer_id = auth.uid()));
+  USING (TRUE);
 
 -- ── REMINDERS ──
 DROP POLICY IF EXISTS "reminders_own" ON public.maintenance_reminders;
@@ -463,6 +523,11 @@ CREATE POLICY "expenses_own" ON public.expenses FOR ALL USING (customer_id = aut
 DROP POLICY IF EXISTS "documents_own" ON public.documents;
 CREATE POLICY "documents_own" ON public.documents FOR ALL USING (customer_id = auth.uid());
 
+-- ── MOTORCYCLE PHOTOS ──
+ALTER TABLE public.motorcycle_photos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "motorcycle_photos_own" ON public.motorcycle_photos;
+CREATE POLICY "motorcycle_photos_own" ON public.motorcycle_photos FOR ALL USING (owner_id = auth.uid());
+
 -- ── REVIEWS ──
 DROP POLICY IF EXISTS "reviews_public_read" ON public.reviews;
 CREATE POLICY "reviews_public_read" ON public.reviews FOR SELECT USING (status = 'active');
@@ -475,6 +540,8 @@ CREATE POLICY "reviews_workshop_reply"  ON public.reviews FOR UPDATE
 -- ── NOTIFICATIONS ──
 DROP POLICY IF EXISTS "notifications_own" ON public.notifications;
 CREATE POLICY "notifications_own" ON public.notifications FOR ALL USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "notifications_insert" ON public.notifications;
+CREATE POLICY "notifications_insert" ON public.notifications FOR INSERT WITH CHECK (TRUE);
 
 -- ── AUDIT LOGS ──
 DROP POLICY IF EXISTS "audit_admin_read" ON public.audit_logs;
@@ -518,7 +585,7 @@ CREATE POLICY "docs_owner" ON storage.objects FOR ALL
 
 -- ─── SEED ACCOUNTS & INITIAL DATA ──────────────────────────────
 -- Super Admin Account: riderhoodmotor@gmail.com / RiderHoodMotor1!
--- Workshop Admin Account: kazzorigins@gmail.com / khairul11!!
+-- Workshop Admin Account: wanlegacymotor@gmail.com / khairul11!!
 
 DO $$
 DECLARE
@@ -529,8 +596,8 @@ BEGIN
   -- Enable pgcrypto extension if not exists
   CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
-  -- Delete existing Workshop Admin accounts for clean creation
-  DELETE FROM public.workshops WHERE owner_id IN (SELECT id FROM auth.users WHERE email IN ('kazzorigins@gmail.com', 'khairazizizi@gmail.com'));
+  -- Safely unlink owner_id from existing workshops before resetting admin profiles (preserves workshops and existing bookings)
+  UPDATE public.workshops SET owner_id = NULL WHERE owner_id IN (SELECT id FROM auth.users WHERE email IN ('kazzorigins@gmail.com', 'khairazizizi@gmail.com'));
   DELETE FROM public.profiles WHERE email IN ('kazzorigins@gmail.com', 'khairazizizi@gmail.com');
   DELETE FROM auth.users WHERE email IN ('kazzorigins@gmail.com', 'khairazizizi@gmail.com');
 
@@ -570,33 +637,43 @@ BEGIN
     );
   END IF;
 
-  -- 2. Insert Workshop Admin in auth.users & auth.identities
-  INSERT INTO auth.users (
-    id,
-    instance_id,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    aud,
-    role,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    v_shop_admin_id,
-    '00000000-0000-0000-0000-000000000000',
-    'kazzorigins@gmail.com',
-    extensions.crypt('khairul11!!', extensions.gen_salt('bf', 10)),
-    NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"full_name":"Cemerlang Terbilang Workshop","role":"workshop_admin"}'::jsonb,
-    'authenticated',
-    'authenticated',
-    NOW(),
-    NOW()
-  );
+  -- 2. Insert/Update Workshop Admin in auth.users & auth.identities
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'wanlegacymotor@gmail.com') THEN
+    UPDATE auth.users
+    SET encrypted_password = extensions.crypt('khairul11!!', extensions.gen_salt('bf', 10)),
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        updated_at = NOW()
+    WHERE email = 'wanlegacymotor@gmail.com';
+
+    SELECT id INTO v_shop_admin_id FROM auth.users WHERE email = 'wanlegacymotor@gmail.com';
+  ELSE
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      aud,
+      role,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_shop_admin_id,
+      '00000000-0000-0000-0000-000000000000',
+      'wanlegacymotor@gmail.com',
+      extensions.crypt('khairul11!!', extensions.gen_salt('bf', 10)),
+      NOW(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"full_name":"Wan Legacy Motor Admin","role":"workshop_admin"}'::jsonb,
+      'authenticated',
+      'authenticated',
+      NOW(),
+      NOW()
+    );
+  END IF;
 
   INSERT INTO auth.identities (
     id,
@@ -612,13 +689,13 @@ BEGIN
     v_shop_admin_id,
     v_shop_admin_id,
     v_shop_admin_id::text,
-    format('{"sub":"%s","email":"%s"}', v_shop_admin_id, 'kazzorigins@gmail.com')::jsonb,
+    format('{"sub":"%s","email":"%s"}', v_shop_admin_id, 'wanlegacymotor@gmail.com')::jsonb,
     'email',
     NOW(),
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT DO NOTHING;
 
   -- 3. Upsert Super Admin Profile
   INSERT INTO public.profiles (id, email, full_name, role, status)
@@ -628,24 +705,180 @@ BEGIN
 
   -- 4. Upsert Workshop Admin Profile
   INSERT INTO public.profiles (id, email, full_name, role, status)
-  SELECT id, email, 'Cemerlang Terbilang Workshop', 'workshop_admin', 'active'
-  FROM auth.users WHERE email = 'kazzorigins@gmail.com'
+  SELECT id, email, 'Wan Legacy Motor Admin', 'workshop_admin', 'active'
+  FROM auth.users WHERE email = 'wanlegacymotor@gmail.com'
   ON CONFLICT (id) DO UPDATE SET role = 'workshop_admin', status = 'active';
 
-  -- 5. Create Workshop linked to Workshop Admin
-  INSERT INTO public.workshops (id, owner_id, name, description, address, district, state, phone, status, verification_status, rating)
+  -- 5. Seed Wan Legacy Motor (Sole Active RiderHood Partner in Kulim)
+  INSERT INTO public.workshops (
+    id, owner_id, name, description, address, district, state, phone, status, verification_status, rating, is_partner, booking_enabled, is_open, operating_hours
+  )
   SELECT
     v_shop_id,
     id,
-    'Bengkel Motor Cemerlang Terbilang',
-    'Specialized in superbike tuning, general servicing, tire replacements & performance parts.',
-    'No 15, Jalan Industri PBU 1, Taman Perindustrian, 50480 Kuala Lumpur',
-    'Kuala Lumpur',
-    'Wilayah Persekutuan',
-    '+60123456789',
+    'Wan Legacy Motor',
+    'Official RiderHood Collaboration Partner in Kulim. Specialized in superbike tuning, general servicing, tire replacements & performance parts.',
+    'Ground Floor No. 55, Lorong Kota Kenari 1/1, 09000 Kulim, Kedah',
+    'Kulim',
+    'Kedah',
+    '017-455 2184',
     'active',
     'approved',
-    4.9
-  FROM auth.users WHERE email = 'kazzorigins@gmail.com'
-  ON CONFLICT (id) DO UPDATE SET verification_status = 'approved', status = 'active';
+    4.4,
+    TRUE,
+    TRUE,
+    TRUE,
+    '[{"day":"Monday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:30 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:30 PM"},{"day":"Wednesday","isOpen":true,"openTime":"10:00 AM","closeTime":"07:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"10:00 AM","closeTime":"07:00 PM"},{"day":"Friday","isOpen":false,"openTime":"10:00 AM","closeTime":"07:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"10:00 AM","closeTime":"07:00 PM"},{"day":"Sunday","isOpen":true,"openTime":"10:00 AM","closeTime":"07:00 PM"}]'::jsonb
+  FROM auth.users WHERE email = 'wanlegacymotor@gmail.com'
+  ON CONFLICT (id) DO UPDATE SET
+    owner_id = EXCLUDED.owner_id,
+    name = EXCLUDED.name,
+    address = EXCLUDED.address,
+    district = EXCLUDED.district,
+    state = EXCLUDED.state,
+    phone = EXCLUDED.phone,
+    rating = EXCLUDED.rating,
+    is_partner = TRUE,
+    booking_enabled = TRUE,
+    verification_status = 'approved',
+    status = 'active';
+
+  -- 6. Seed 10 Directory-Only Kulim Workshops (No Booking, No Workshop Admin)
+  INSERT INTO public.workshops (id, name, address, district, state, phone, rating, is_partner, booking_enabled, is_open, verification_status, status, operating_hours)
+  VALUES
+    (
+      'b0000000-0000-0000-0000-000000000002',
+      'LHMotor @ Kelang Lama',
+      '65-68 Taman Manggis III, Jalan Kelang Lama, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '04-491 9800', 4.4, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Friday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Sunday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000003',
+      'HK MOTOR KULIM, KEDAH',
+      'No. 254, Jalan Tunku Putra, Taman Tunku Putra, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '04-494 4489', 4.4, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Friday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:30 AM","closeTime":"06:00 PM"},{"day":"Sunday","isOpen":false,"openTime":"09:30 AM","closeTime":"06:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000004',
+      'Eu Li Motor Sdn Bhd',
+      '76 A, Lorong Kemuning 1, Taman Kemuning, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '04-491 0590', 4.5, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Friday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:30 AM","closeTime":"07:00 PM"},{"day":"Sunday","isOpen":false,"openTime":"09:30 AM","closeTime":"07:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000005',
+      'Hai Motorcyle Enterprise',
+      '588, Jalan Kemuning 1, Taman Kemuning, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '016-441 7740', 4.1, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Friday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:00 AM","closeTime":"06:30 PM"},{"day":"Sunday","isOpen":true,"openTime":"09:00 AM","closeTime":"02:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000006',
+      'Castrol Bike Point – Motor shop Yew Ngee',
+      '2 & 3, Jalan Kelang Lama, Taman Manggis, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '012-477 8386', 4.0, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Friday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"},{"day":"Sunday","isOpen":true,"openTime":"09:00 AM","closeTime":"08:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000007',
+      'Castrol Bike Point – CSL Brothers – Soon Soon Lee Lee Motor Sdn Bhd',
+      '5, Jalan Pandan Indah 1, Taman Pandan Indah, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '04-484 2492', 4.4, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Friday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"},{"day":"Sunday","isOpen":true,"openTime":"09:00 AM","closeTime":"09:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000008',
+      'Pit Stop Garage Motorsport',
+      '34, Jalan Kemunting 1, Taman Kemunting, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '017-497 4961', 4.3, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"11:00 AM","closeTime":"08:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"11:00 AM","closeTime":"08:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"11:00 AM","closeTime":"08:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"11:00 AM","closeTime":"08:00 PM"},{"day":"Friday","isOpen":true,"openTime":"03:00 PM","closeTime":"08:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"11:00 AM","closeTime":"08:00 PM"},{"day":"Sunday","isOpen":false,"openTime":"11:00 AM","closeTime":"08:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000009',
+      'Lian Motor / Lian Auto Parts Trading',
+      '691, Tingkat Bawah, Lorong Kemuning, Taman Keranji 2, Kulim, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '012-566 9255', 4.3, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Tuesday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Wednesday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Thursday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Friday","isOpen":false,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Saturday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"},{"day":"Sunday","isOpen":true,"openTime":"01:00 PM","closeTime":"09:00 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000010',
+      'CKT MOTOR KULIM',
+      '195-197, Tingkat Bawah, Jalan Lunas, Taman Seluang, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '016-861 1241', 4.9, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Tuesday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Wednesday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Thursday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Friday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Saturday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"},{"day":"Sunday","isOpen":true,"openTime":"10:15 AM","closeTime":"06:45 PM"}]'::jsonb
+    ),
+    (
+      'b0000000-0000-0000-0000-000000000011',
+      'Chong Hun Motor Kulim Enterprise',
+      '186K & 186L, Jalan Simpang Tiga Keladi, Keladi, 09000 Kulim, Kedah',
+      'Kulim', 'Kedah', '04-492 7227', 4.7, FALSE, FALSE, TRUE, 'approved', 'active',
+      '[{"day":"Monday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Tuesday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Wednesday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Thursday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Friday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Saturday","isOpen":true,"openTime":"08:30 AM","closeTime":"06:30 PM"},{"day":"Sunday","isOpen":false,"openTime":"08:30 AM","closeTime":"06:30 PM"}]'::jsonb
+    )
+  ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    address = EXCLUDED.address,
+    district = EXCLUDED.district,
+    state = EXCLUDED.state,
+    phone = EXCLUDED.phone,
+    rating = EXCLUDED.rating,
+    is_partner = EXCLUDED.is_partner,
+    booking_enabled = EXCLUDED.booking_enabled,
+    operating_hours = EXCLUDED.operating_hours;
 END $$;
+
+-- ─── WORKSHOP REVIEW SYSTEM ADDITIONS ────────────────────────
+
+-- Add google_review_url and optional Google fields to workshops
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS google_review_url TEXT;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS google_place_id TEXT;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS google_rating NUMERIC(2,1);
+ALTER TABLE public.workshops ADD COLUMN IF NOT EXISTS google_review_count INTEGER;
+
+-- Add motorcycle_id to reviews (links review to the motorcycle used in the booking)
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS motorcycle_id UUID REFERENCES public.motorcycles(id) ON DELETE SET NULL;
+
+-- Seed Wan Legacy Motor google_review_url
+UPDATE public.workshops
+SET google_review_url = 'https://search.google.com/local/writereview?placeid=REPLACE_WITH_REAL_PLACE_ID'
+WHERE id = 'b0000000-0000-0000-0000-000000000001';
+
+-- ─── REVIEW PHOTOS ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.review_photos (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  review_id   UUID NOT NULL REFERENCES public.reviews(id) ON DELETE CASCADE,
+  photo_url   TEXT NOT NULL,
+  file_path   TEXT,
+  caption     TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_photos_review ON public.review_photos(review_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_customer ON public.reviews(customer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_booking ON public.reviews(booking_id);
+
+-- RLS for review_photos
+ALTER TABLE public.review_photos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "review_photos_public_read" ON public.review_photos;
+CREATE POLICY "review_photos_public_read" ON public.review_photos FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "review_photos_owner_insert" ON public.review_photos;
+CREATE POLICY "review_photos_owner_insert" ON public.review_photos FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.reviews r WHERE r.id = review_id AND r.customer_id = auth.uid()));
+
+DROP POLICY IF EXISTS "review_photos_owner_delete" ON public.review_photos;
+CREATE POLICY "review_photos_owner_delete" ON public.review_photos FOR DELETE
+  USING (EXISTS (SELECT 1 FROM public.reviews r WHERE r.id = review_id AND r.customer_id = auth.uid()) OR get_my_role() = 'super_admin');
+
+-- Add review_photos to realtime
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'review_photos') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.review_photos;
+  END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+

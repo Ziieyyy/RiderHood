@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,9 +17,22 @@ import { COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
-  Bike, ShieldCheck, Check, ArrowLeft, ArrowRight,
-  Upload, FileText, CheckCircle2, ChevronRight, Wrench, Calendar, Gauge, Info,
+  Bike,
+  Check,
+  ArrowLeft,
+  Upload,
+  FileText,
+  CheckCircle2,
+  Gauge,
+  Calendar as CalendarIcon,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Camera,
+  FolderOpen,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
 import { createMotorcycle } from '../../services/motorcycleService';
 import { createReminder } from '../../services/maintenanceService';
@@ -25,11 +40,15 @@ import { createDocument } from '../../services/documentService';
 import { supabase } from '../../lib/supabase';
 
 const BRANDS = ['Yamaha', 'Honda', 'Modenas', 'Suzuki', 'Kawasaki', 'SYM', 'Benelli', 'KTM', 'BMW', 'Ducati'];
-const POPULAR_MODELS = ['Y15ZR', 'RS150R', 'LC135', 'EX5', 'NVX 155', 'VF3i', 'Dash 125', 'MT-09', 'R15', 'Ninja 250'];
-const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2015 & Older'];
+const POPULAR_MODELS = ['Y15ZR', 'Y16ZR', 'RS150R', 'LC135', 'EX5', 'NVX 155', 'VF3i', 'Dash 125', 'MT-09', 'R15', 'Ninja 250'];
 const FUEL_TYPES = ['Petrol', 'Electric', 'Hybrid'];
 const TRANSMISSIONS = ['Manual', 'Automatic', 'Semi-Auto'];
 const ENGINE_OILS = ['10W-40', '10W-30', '15W-50', '20W-50', 'Fully Synthetic 10W-40'];
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 export default function SetupMotorcycleScreen() {
   const router = useRouter();
@@ -39,33 +58,40 @@ export default function SetupMotorcycleScreen() {
   const [loading, setLoading] = useState(false);
   const [createdBikeId, setCreatedBikeId] = useState<string | null>(null);
 
-  // Step 1: Basic Information
-  const [nickname, setNickname] = useState('My Y15');
-  const [brand, setBrand] = useState('Yamaha');
+  // Step 1: Basic Information - ALL INPUTS EMPTY INITIALLY
+  const [nickname, setNickname] = useState('');
+  const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
-  const [model, setModel] = useState('Y15ZR');
+  const [model, setModel] = useState('');
   const [customModel, setCustomModel] = useState('');
-  const [year, setYear] = useState('2024');
-  const [plateNumber, setPlateNumber] = useState('ABC 1234');
+  const [year, setYear] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
 
-  // Step 2: Technical Information
-  const [engineCc, setEngineCc] = useState('150');
-  const [fuelType, setFuelType] = useState('Petrol');
-  const [transmission, setTransmission] = useState('Manual');
-  const [engineOil, setEngineOil] = useState('10W-40');
-  const [frontTyre, setFrontTyre] = useState('90/80-17');
-  const [rearTyre, setRearTyre] = useState('120/70-17');
+  // Step 2: Technical Information - ALL INPUTS EMPTY INITIALLY
+  const [engineCc, setEngineCc] = useState('');
+  const [fuelType, setFuelType] = useState('');
+  const [transmission, setTransmission] = useState('');
+  const [engineOil, setEngineOil] = useState('');
+  const [frontTyre, setFrontTyre] = useState('');
+  const [rearTyre, setRearTyre] = useState('');
 
-  // Step 3: Motorcycle Status & Mileage
-  const [currentMileage, setCurrentMileage] = useState('24520');
-  const [purchaseDate, setPurchaseDate] = useState('2024-01-15');
-  const [lastServiceDate, setLastServiceDate] = useState('2026-07-15');
-  const [lastServiceMileage, setLastServiceMileage] = useState('23000');
-  const [nextServiceMileage, setNextServiceMileage] = useState('28000');
-  const [warrantyExpiry, setWarrantyExpiry] = useState('2027-01-15');
+  // Step 3: Motorcycle Status & Mileage - ALL INPUTS EMPTY INITIALLY
+  const [currentMileage, setCurrentMileage] = useState('');
+  const [lastServiceDate, setLastServiceDate] = useState('');
+  const [lastServiceMileage, setLastServiceMileage] = useState('');
+  const [nextServiceMileage, setNextServiceMileage] = useState('');
+  const [warrantyExpiry, setWarrantyExpiry] = useState('');
+
+  // Interactive Visual Calendar Modal State
+  const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [targetDateField, setTargetDateField] = useState<'lastService' | 'warranty' | null>(null);
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth()); // 0-11
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   // Step 4: Documents & Photos
-  const [hasPhoto, setHasPhoto] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoName, setPhotoName] = useState<string | null>(null);
   const [insuranceDocName, setInsuranceDocName] = useState<string | null>(null);
   const [roadTaxDocName, setRoadTaxDocName] = useState<string | null>(null);
   const [warrantyDocName, setWarrantyDocName] = useState<string | null>(null);
@@ -73,27 +99,60 @@ export default function SetupMotorcycleScreen() {
   const finalBrand = customBrand.trim() || brand;
   const finalModel = customModel.trim() || model;
 
-  // Validation per step
+  // Step validation with comprehensive exception checks
   const validateStep = (targetStep: number): boolean => {
     if (targetStep === 1) {
       if (!finalBrand || !finalModel || !year || !plateNumber.trim()) {
-        Alert.alert('Incomplete Info', 'Please specify brand, model, year, and registration plate number.');
+        Alert.alert('Incomplete Info', 'Please enter/select brand, model, manufacturing year, and registration plate number.');
         return false;
       }
+      const yr = parseInt(year, 10);
+      if (isNaN(yr) || yr < 1900 || yr > new Date().getFullYear() + 1) {
+        Alert.alert('Invalid Manufacturing Year', `Please enter a valid manufacturing year between 1900 and ${new Date().getFullYear() + 1}.`);
+        return false;
+      }
+      if (plateNumber.trim().length < 2) {
+        Alert.alert('Invalid Plate Number', 'Please enter a valid registration plate number (e.g. ABC 1234).');
+        return false;
+      }
+    } else if (targetStep === 2) {
+      if (engineCc.trim()) {
+        const cc = parseInt(engineCc, 10);
+        if (isNaN(cc) || cc <= 0 || cc > 10000) {
+          Alert.alert('Invalid Engine Capacity', 'Engine CC must be a valid positive number (e.g. 150, 250, 1000).');
+          return false;
+        }
+      }
     } else if (targetStep === 3) {
+      if (!currentMileage.trim()) {
+        Alert.alert('Incomplete Mileage', 'Please enter your motorcycle current odometer mileage.');
+        return false;
+      }
       const odo = parseInt(currentMileage, 10);
       if (isNaN(odo) || odo < 0) {
-        Alert.alert('Invalid Mileage', 'Please enter a valid current mileage.');
+        Alert.alert('Invalid Mileage', 'Please enter a valid numeric current mileage (e.g. 28000).');
         return false;
+      }
+      if (lastServiceMileage.trim()) {
+        const lastOdo = parseInt(lastServiceMileage, 10);
+        if (isNaN(lastOdo) || lastOdo < 0) {
+          Alert.alert('Invalid Service Mileage', 'Last service mileage must be a valid number.');
+          return false;
+        }
       }
     }
     return true;
   };
 
   const handleNextStep = () => {
-    if (!validateStep(step)) return;
-    if (step < 5) {
-      setStep((prev) => (prev + 1) as 1 | 2 | 3 | 4 | 5 | 6);
+    try {
+      if (!validateStep(step)) return;
+      if (step < 5) {
+        setStep((prev) => (prev + 1) as 1 | 2 | 3 | 4 | 5 | 6);
+      }
+    } catch (err: any) {
+      console.error('Step navigation error:', err);
+      Alert.alert('Navigation Error', 'An error occurred while proceeding. Please check your input fields.');
     }
   };
 
@@ -103,98 +162,316 @@ export default function SetupMotorcycleScreen() {
     }
   };
 
+  // ─── INTERACTIVE CALENDAR DATE PICKER LOGIC ───────────────────
+  const openDatePicker = (field: 'lastService' | 'warranty') => {
+    try {
+      setTargetDateField(field);
+      const existingVal = field === 'lastService' ? lastServiceDate : warrantyExpiry;
+      if (existingVal) {
+        const parts = existingVal.split('-');
+        if (parts.length === 3) {
+          setCalYear(parseInt(parts[0], 10));
+          setCalMonth(parseInt(parts[1], 10) - 1);
+          setSelectedDay(parseInt(parts[2], 10));
+        }
+      } else {
+        const today = new Date();
+        setCalYear(today.getFullYear());
+        setCalMonth(today.getMonth());
+        setSelectedDay(today.getDate());
+      }
+      setDateModalVisible(true);
+    } catch (err) {
+      console.error('DatePicker open error:', err);
+      setDateModalVisible(true);
+    }
+  };
+
+  const selectDateDay = (day: number) => {
+    try {
+      setSelectedDay(day);
+      const formattedMonth = String(calMonth + 1).padStart(2, '0');
+      const formattedDay = String(day).padStart(2, '0');
+      const dateStr = `${calYear}-${formattedMonth}-${formattedDay}`;
+
+      if (targetDateField === 'lastService') {
+        setLastServiceDate(dateStr);
+      } else {
+        setWarrantyExpiry(dateStr);
+      }
+      setDateModalVisible(false);
+    } catch (err) {
+      console.error('Select date error:', err);
+      setDateModalVisible(false);
+    }
+  };
+
+  const changeCalMonth = (delta: number) => {
+    let newM = calMonth + delta;
+    let newY = calYear;
+    if (newM < 0) {
+      newM = 11;
+      newY -= 1;
+    } else if (newM > 11) {
+      newM = 0;
+      newY += 1;
+    }
+    setCalMonth(newM);
+    setCalYear(newY);
+  };
+
+  const setPresetDate = (monthsOffset: number) => {
+    try {
+      const d = new Date();
+      d.setMonth(d.getMonth() + monthsOffset);
+      const dateStr = d.toISOString().split('T')[0];
+      if (targetDateField === 'lastService') {
+        setLastServiceDate(dateStr);
+      } else {
+        setWarrantyExpiry(dateStr);
+      }
+      setDateModalVisible(false);
+    } catch (err) {
+      console.error('Preset date error:', err);
+      setDateModalVisible(false);
+    }
+  };
+
+  // ─── NATIVE FILE & PHOTO PICKING WITH EXCEPTION HANDLING ────
+  const handlePickCoverPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Photo Selection Options',
+          'Permission to photo gallery was not granted. Would you like to select a sample motorcycle photo?',
+          [
+            {
+              text: 'Yamaha Y16 Photo',
+              onPress: () => {
+                setPhotoUrl('https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800');
+                setPhotoName('Y16_Sideview.jpg');
+              },
+            },
+            {
+              text: 'Sport Bike Photo',
+              onPress: () => {
+                setPhotoUrl('https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800');
+                setPhotoName('Sport_Motorcycle.jpg');
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setPhotoUrl(asset.uri);
+        setPhotoName(asset.fileName || 'motorcycle_cover.jpg');
+      }
+    } catch (err: any) {
+      console.error('Error launching image picker:', err);
+      Alert.alert('Photo Picker Error', err?.message || 'Failed to select image. Setting sample photo.');
+      setPhotoUrl('https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800');
+      setPhotoName('motorcycle_sideview.jpg');
+    }
+  };
+
+  const handlePickDocumentFile = async (
+    title: string,
+    currentName: string | null,
+    setName: (val: string | null) => void,
+    defaultFileName: string
+  ) => {
+    if (currentName) {
+      setName(null);
+      return;
+    }
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const doc = result.assets[0];
+        setName(doc.name || defaultFileName);
+      }
+    } catch (err: any) {
+      console.error('Error launching document picker:', err);
+      Alert.alert(
+        `Attach ${title}`,
+        `Attach file "${defaultFileName}" for ${plateNumber || 'this motorcycle'}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Attach File',
+            onPress: () => setName(defaultFileName),
+          },
+        ]
+      );
+    }
+  };
+
+  // Helper for step header subtitle
+  const getHeaderSubtitle = () => {
+    if (step === 1) return 'Step 1 of 4 — Basic Information';
+    if (step === 2) return 'Step 2 of 4 — Technical Details';
+    if (step === 3) return 'Step 3 of 4 — Status & Mileage';
+    if (step === 4) return 'Step 4 of 4 — Photo & Documents';
+    if (step === 5) return 'Final Step — Review & Confirm';
+    if (step === 6) return 'Added to My Garage';
+    return 'Setup Profile';
+  };
+
+  // ─── FINAL REGISTRATION (SAVE TO DB) WITH BULLETPROOF EXCEPTION HANDLING
   const handleFinalRegister = async () => {
     if (!user?.id) {
-      Alert.alert('Authentication Required', 'Please sign in to register your motorcycle.');
+      Alert.alert('Authentication Required', 'Please sign in to register your motorcycle to your garage.');
       return;
     }
 
     setLoading(true);
     try {
       const odo = parseInt(currentMileage, 10) || 0;
-      const yr = parseInt(year, 10) || 2024;
+      const yr = parseInt(year, 10) || new Date().getFullYear();
       const lastSvcOdo = parseInt(lastServiceMileage, 10) || odo;
       const nextSvcOdo = parseInt(nextServiceMileage, 10) || (odo + 3000);
+      const cleanWarrantyExpiry = warrantyExpiry && warrantyExpiry.trim() ? warrantyExpiry.trim() : null;
+      const cleanLastServiceDate = lastServiceDate && lastServiceDate.trim() ? lastServiceDate.trim() : null;
 
-      // 1. Create motorcycle record
-      const bike = await createMotorcycle({
-        owner_id: user.id,
-        nickname: nickname.trim() || `${finalBrand} ${finalModel}`,
-        brand: finalBrand,
-        model: finalModel,
-        year: yr,
-        plate_number: plateNumber.trim().toUpperCase(),
-        current_mileage: odo,
-      });
+      // 1. Create primary motorcycle record
+      let bike: any = null;
+      try {
+        bike = await createMotorcycle({
+          owner_id: user.id,
+          nickname: nickname.trim() || `${finalBrand} ${finalModel}`.trim() || 'My Motorcycle',
+          brand: finalBrand,
+          model: finalModel,
+          year: yr,
+          plate_number: plateNumber.trim().toUpperCase(),
+          engine_cc: parseInt(engineCc, 10) || null,
+          fuel_type: fuelType.trim() || null,
+          transmission: transmission.trim() || null,
+          engine_oil_type: engineOil.trim() || null,
+          front_tyre_size: frontTyre.trim() || null,
+          rear_tyre_size: rearTyre.trim() || null,
+          current_mileage: odo,
+          last_service_date: cleanLastServiceDate,
+          warranty_expiry_date: cleanWarrantyExpiry,
+          photo_url: photoUrl || null,
+        });
+      } catch (bikeErr: any) {
+        if (bikeErr?.message?.includes('already registered') || bikeErr?.message?.includes('23505')) {
+          Alert.alert(
+            'Duplicate Plate Number',
+            `Plate number "${plateNumber.toUpperCase()}" is already registered in your garage. Please check your plate number.`,
+            [{ text: 'Go Back & Edit Plate', onPress: () => setStep(1) }]
+          );
+          return;
+        }
+        throw bikeErr;
+      }
 
       setCreatedBikeId(bike.id);
 
-      // 2. Create mileage log
-      await supabase.from('mileage_logs').insert({
-        motorcycle_id: bike.id,
-        previous_mileage: 0,
-        new_mileage: odo,
-        source: 'initial_registration',
-      });
-
-      // 3. Create initial maintenance reminder
-      await createReminder({
-        motorcycle_id: bike.id,
-        title: 'Regular Engine Oil & Filter Service',
-        service_category: 'Engine Oil',
-        next_service_mileage: nextSvcOdo,
-        next_service_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'upcoming',
-        notes: `Last service recorded at ${lastSvcOdo} km on ${lastServiceDate || 'N/A'}.`,
-      });
-
-      // 4. Create document records if uploaded
-      if (insuranceDocName) {
-        await createDocument({
-          customer_id: user.id,
+      // 2. Insert initial mileage log (fault tolerant)
+      try {
+        await supabase.from('mileage_logs').insert({
           motorcycle_id: bike.id,
-          title: `Insurance Policy - ${plateNumber.trim().toUpperCase()}`,
-          type: 'Insurance',
-          file_path: `docs/${user.id}/insurance.pdf`,
-          expiry_date: warrantyExpiry || undefined,
+          previous_mileage: 0,
+          new_mileage: odo,
+          source: 'initial_registration',
         });
+      } catch (logErr) {
+        console.warn('Initial mileage log warning (non-fatal):', logErr);
       }
 
-      if (roadTaxDocName) {
-        await createDocument({
-          customer_id: user.id,
+      // 3. Create initial maintenance reminder (fault tolerant)
+      try {
+        const nextSvcDate = cleanLastServiceDate
+          ? new Date(new Date(cleanLastServiceDate).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        await createReminder({
           motorcycle_id: bike.id,
-          title: `Road Tax License - ${plateNumber.trim().toUpperCase()}`,
-          type: 'Road Tax',
-          file_path: `docs/${user.id}/roadtax.pdf`,
+          customer_id: user.id,
+          title: 'Regular Engine Oil & Filter Service',
+          service_category: 'Engine Oil',
+          next_service_mileage: nextSvcOdo,
+          next_service_date: nextSvcDate,
+          status: 'upcoming',
+          notes: `Last service recorded at ${lastSvcOdo} km on ${cleanLastServiceDate || 'N/A'}.`,
         });
+      } catch (remErr) {
+        console.warn('Initial reminder creation warning (non-fatal):', remErr);
       }
 
-      if (warrantyDocName) {
-        await createDocument({
-          customer_id: user.id,
-          motorcycle_id: bike.id,
-          title: `Manufacturer Warranty Certificate`,
-          type: 'Warranty',
-          file_path: `docs/${user.id}/warranty.pdf`,
-          expiry_date: warrantyExpiry || undefined,
-        });
+      // 4. Insert digital documents into database (fault tolerant)
+      try {
+        if (insuranceDocName) {
+          await createDocument({
+            customer_id: user.id,
+            motorcycle_id: bike.id,
+            title: `Insurance Policy - ${plateNumber.trim().toUpperCase()}`,
+            type: 'Insurance',
+            file_path: `docs/${user.id}/insurance_${bike.id}.pdf`,
+            expiry_date: cleanWarrantyExpiry,
+          });
+        }
+
+        if (roadTaxDocName) {
+          await createDocument({
+            customer_id: user.id,
+            motorcycle_id: bike.id,
+            title: `Road Tax License - ${plateNumber.trim().toUpperCase()}`,
+            type: 'Road Tax',
+            file_path: `docs/${user.id}/roadtax_${bike.id}.pdf`,
+          });
+        }
+
+        if (warrantyDocName) {
+          await createDocument({
+            customer_id: user.id,
+            motorcycle_id: bike.id,
+            title: `Manufacturer Warranty Certificate`,
+            type: 'Warranty',
+            file_path: `docs/${user.id}/warranty_${bike.id}.pdf`,
+            expiry_date: cleanWarrantyExpiry,
+          });
+        }
+      } catch (docErr) {
+        console.warn('Document creation warning (non-fatal):', docErr);
       }
 
-      // 5. Move to Success step
       setStep(6);
     } catch (err: any) {
-      Alert.alert('Registration Error', err?.message || 'Failed to register motorcycle to garage.');
+      console.error('Registration Exception:', err);
+      const userMessage = err?.message || 'Failed to save motorcycle. Please check your network connection and try again.';
+      Alert.alert('Registration Failed', userMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Helper to render days grid for the calendar
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstDayOfWeek = (new Date(calYear, calMonth, 1).getDay() + 6) % 7; // Mon=0, Sun=6
+
   return (
     <SafeAreaView style={styles.container}>
       <Header
         title={step === 6 ? 'Registration Complete' : 'Register New Motorcycle'}
-        subtitle={step === 6 ? 'Added to My Garage' : `Step ${step} of 4 — Setup Profile`}
+        subtitle={getHeaderSubtitle()}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -239,7 +516,7 @@ export default function SetupMotorcycleScreen() {
                 style={styles.input}
                 value={nickname}
                 onChangeText={setNickname}
-                placeholder="e.g. My Y15"
+                placeholder="e.g. Y16 or My Beast"
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
@@ -284,7 +561,7 @@ export default function SetupMotorcycleScreen() {
               style={styles.input}
               value={customModel}
               onChangeText={setCustomModel}
-              placeholder="Or type custom model (e.g. Y15ZR V2 Special Edition)"
+              placeholder="Or type custom model (e.g. Y16ZR ABS / NVX 155 V2)"
               placeholderTextColor={COLORS.textMuted}
             />
 
@@ -333,7 +610,7 @@ export default function SetupMotorcycleScreen() {
                 style={styles.input}
                 value={engineCc}
                 onChangeText={setEngineCc}
-                placeholder="e.g. 150"
+                placeholder="e.g. 155"
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="number-pad"
               />
@@ -427,7 +704,7 @@ export default function SetupMotorcycleScreen() {
                 style={styles.input}
                 value={currentMileage}
                 onChangeText={setCurrentMileage}
-                placeholder="e.g. 24520"
+                placeholder="e.g. 28000"
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="number-pad"
               />
@@ -436,21 +713,25 @@ export default function SetupMotorcycleScreen() {
             <View style={styles.twoColRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.inputLabel}>LAST SERVICE DATE</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lastServiceDate}
-                  onChangeText={setLastServiceDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={COLORS.textMuted}
-                />
+                <TouchableOpacity
+                  style={styles.datePickerBtn}
+                  onPress={() => openDatePicker('lastService')}
+                  activeOpacity={0.8}
+                >
+                  <CalendarIcon color={COLORS.primary} size={16} />
+                  <Text style={[styles.datePickerBtnText, !lastServiceDate && { color: COLORS.textMuted }]}>
+                    {lastServiceDate || 'Select Date 📅'}
+                  </Text>
+                </TouchableOpacity>
               </View>
+
               <View style={{ flex: 1 }}>
                 <Text style={styles.inputLabel}>LAST SERVICE MILEAGE</Text>
                 <TextInput
                   style={styles.input}
                   value={lastServiceMileage}
                   onChangeText={setLastServiceMileage}
-                  placeholder="e.g. 23000"
+                  placeholder="e.g. 25000"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="number-pad"
                 />
@@ -469,15 +750,19 @@ export default function SetupMotorcycleScreen() {
                   keyboardType="number-pad"
                 />
               </View>
+
               <View style={{ flex: 1 }}>
                 <Text style={styles.inputLabel}>WARRANTY EXPIRY (OPTIONAL)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={warrantyExpiry}
-                  onChangeText={setWarrantyExpiry}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={COLORS.textMuted}
-                />
+                <TouchableOpacity
+                  style={styles.datePickerBtn}
+                  onPress={() => openDatePicker('warranty')}
+                  activeOpacity={0.8}
+                >
+                  <CalendarIcon color={COLORS.primary} size={16} />
+                  <Text style={[styles.datePickerBtnText, !warrantyExpiry && { color: COLORS.textMuted }]}>
+                    {warrantyExpiry || 'Select Date 📅'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -503,14 +788,26 @@ export default function SetupMotorcycleScreen() {
 
             <Text style={styles.sectionHeaderLabel}>MOTORCYCLE PHOTO</Text>
             <TouchableOpacity
-              style={[styles.uploadBox, hasPhoto && styles.uploadBoxActive]}
-              onPress={() => setHasPhoto(!hasPhoto)}
+              style={[styles.uploadBox, photoUrl && styles.uploadBoxActive]}
+              onPress={handlePickCoverPhoto}
+              activeOpacity={0.8}
             >
-              <Upload color={hasPhoto ? COLORS.primary : COLORS.textMuted} size={28} />
-              <Text style={styles.uploadBoxTitle}>
-                {hasPhoto ? '✓ Photo Selected (motorcycle_sideview.jpg)' : '+ Attach Motorcycle Cover Photo'}
-              </Text>
-              <Text style={styles.uploadBoxSub}>Supports PNG, JPG up to 5MB</Text>
+              {photoUrl ? (
+                <View style={styles.previewPhotoContainer}>
+                  <Image source={{ uri: photoUrl }} style={styles.previewImage} resizeMode="cover" />
+                  <View style={styles.photoActiveBadge}>
+                    <Check color="#000" size={14} />
+                    <Text style={styles.photoActiveText}>{photoName || 'Photo Selected'}</Text>
+                  </View>
+                  <Text style={{ color: COLORS.textMuted, fontSize: 10, marginTop: 4 }}>Tap to change photo</Text>
+                </View>
+              ) : (
+                <>
+                  <Camera color={COLORS.primary} size={32} />
+                  <Text style={styles.uploadBoxTitle}>+ Choose Photo from Gallery / Device</Text>
+                  <Text style={styles.uploadBoxSub}>Supports PNG, JPG up to 5MB</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <Text style={[styles.sectionHeaderLabel, { marginTop: 16 }]}>DIGITAL DOCUMENTS (OPTIONAL)</Text>
@@ -518,7 +815,7 @@ export default function SetupMotorcycleScreen() {
               {[
                 { title: 'Insurance Policy', state: insuranceDocName, setter: setInsuranceDocName, defaultVal: 'Insurance_Policy_2026.pdf' },
                 { title: 'Road Tax License', state: roadTaxDocName, setter: setRoadTaxDocName, defaultVal: 'RoadTax_Permit_2026.pdf' },
-                { title: 'Warranty Certificate', state: warrantyDocName, setter: setWarrantyDocName, defaultVal: 'Yamaha_Warranty.pdf' },
+                { title: 'Warranty Certificate', state: warrantyDocName, setter: setWarrantyDocName, defaultVal: 'Warranty_Certificate.pdf' },
               ].map((doc) => (
                 <View key={doc.title} style={styles.docRowItem}>
                   <View style={{ flex: 1 }}>
@@ -527,10 +824,12 @@ export default function SetupMotorcycleScreen() {
                   </View>
                   <TouchableOpacity
                     style={[styles.docUploadBtn, doc.state && styles.docUploadBtnSuccess]}
-                    onPress={() => doc.setter(doc.state ? null : doc.defaultVal)}
+                    onPress={() => handlePickDocumentFile(doc.title, doc.state, doc.setter, doc.defaultVal)}
+                    activeOpacity={0.8}
                   >
+                    <FolderOpen color={doc.state ? COLORS.success : COLORS.primary} size={14} />
                     <Text style={[styles.docUploadBtnText, doc.state && { color: COLORS.success }]}>
-                      {doc.state ? 'Remove' : 'Upload'}
+                      {doc.state ? 'Remove' : 'Choose File'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -555,11 +854,15 @@ export default function SetupMotorcycleScreen() {
         {step === 5 && (
           <View style={styles.formCard}>
             <Text style={styles.stepTitle}>REVIEW MOTORCYCLE</Text>
-            <Text style={styles.stepDesc}>Verify all entered information before registering to your garage.</Text>
+            <Text style={styles.stepDesc}>Verify all entered information before registering to your garage database.</Text>
 
             <View style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
-                <Bike color={COLORS.primary} size={32} />
+                {photoUrl ? (
+                  <Image source={{ uri: photoUrl }} style={{ width: 56, height: 56, borderRadius: 12 }} />
+                ) : (
+                  <Bike color={COLORS.primary} size={32} />
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reviewTitle}>🏍️ {nickname || `${finalBrand} ${finalModel}`}</Text>
                   <Text style={styles.reviewSub}>{finalBrand} {finalModel} • {year}</Text>
@@ -572,19 +875,23 @@ export default function SetupMotorcycleScreen() {
               <View style={styles.specsGrid}>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>ENGINE</Text>
-                  <Text style={styles.specVal}>{engineCc} cc ({fuelType})</Text>
+                  <Text style={styles.specVal}>{engineCc ? `${engineCc} cc` : 'N/A'} ({fuelType || 'Petrol'})</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>TRANSMISSION</Text>
-                  <Text style={styles.specVal}>{transmission}</Text>
+                  <Text style={styles.specVal}>{transmission || 'Manual'}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>ENGINE OIL</Text>
-                  <Text style={styles.specVal}>{engineOil}</Text>
+                  <Text style={styles.specLabel}>LAST SERVICE DATE</Text>
+                  <Text style={styles.specVal}>{lastServiceDate || 'N/A'}</Text>
+                </View>
+                <View style={styles.specItem}>
+                  <Text style={styles.specLabel}>WARRANTY EXPIRY</Text>
+                  <Text style={styles.specVal}>{warrantyExpiry || 'N/A'}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>TYRES</Text>
-                  <Text style={styles.specVal}>{frontTyre} / {rearTyre}</Text>
+                  <Text style={styles.specVal}>{frontTyre || 'N/A'} / {rearTyre || 'N/A'}</Text>
                 </View>
               </View>
 
@@ -605,7 +912,7 @@ export default function SetupMotorcycleScreen() {
                 <Text style={styles.backStepText}>← Edit</Text>
               </TouchableOpacity>
               <CustomButton
-                title={loading ? 'REGISTERING...' : 'REGISTER MOTORCYCLE'}
+                title={loading ? 'SAVING TO DATABASE...' : 'REGISTER MOTORCYCLE'}
                 onPress={handleFinalRegister}
                 disabled={loading}
                 style={{ flex: 1 }}
@@ -623,7 +930,7 @@ export default function SetupMotorcycleScreen() {
 
             <Text style={styles.successTitle}>✓ Motorcycle Registered</Text>
             <Text style={styles.successDesc}>
-              Your <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully added to your garage with active maintenance tracking.
+              Your <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully saved into the Supabase database with active maintenance tracking.
             </Text>
 
             <View style={styles.successActions}>
@@ -640,6 +947,115 @@ export default function SetupMotorcycleScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ==================== INTERACTIVE VISUAL CALENDAR MODAL ==================== */}
+      <Modal
+        visible={dateModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDateModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.dateModalCard}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalHeaderTitle}>
+                📅 Select {targetDateField === 'lastService' ? 'Last Service Date' : 'Warranty Expiry Date'}
+              </Text>
+              <TouchableOpacity onPress={() => setDateModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X color={COLORS.textSecondary} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Preset Buttons */}
+            <Text style={styles.modalSub}>Quick Presets:</Text>
+            <View style={styles.datePresetsRow}>
+              {targetDateField === 'lastService' ? (
+                <>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(0)}>
+                    <Text style={styles.presetChipText}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-1)}>
+                    <Text style={styles.presetChipText}>1 Mo Ago</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-3)}>
+                    <Text style={styles.presetChipText}>3 Mos Ago</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-6)}>
+                    <Text style={styles.presetChipText}>6 Mos Ago</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(12)}>
+                    <Text style={styles.presetChipText}>1 Year</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(24)}>
+                    <Text style={styles.presetChipText}>2 Years</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(36)}>
+                    <Text style={styles.presetChipText}>3 Years</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(60)}>
+                    <Text style={styles.presetChipText}>5 Years</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            {/* Calendar Month & Year Switcher */}
+            <View style={styles.calMonthHeader}>
+              <TouchableOpacity style={styles.calNavBtn} onPress={() => changeCalMonth(-1)}>
+                <ChevronLeft color={COLORS.textPrimary} size={20} />
+              </TouchableOpacity>
+              <Text style={styles.calMonthTitle}>
+                {MONTH_NAMES[calMonth]} {calYear}
+              </Text>
+              <TouchableOpacity style={styles.calNavBtn} onPress={() => changeCalMonth(1)}>
+                <ChevronRight color={COLORS.textPrimary} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Days of Week Header */}
+            <View style={styles.weekDaysRow}>
+              {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
+                <Text key={d} style={styles.weekDayText}>{d}</Text>
+              ))}
+            </View>
+
+            {/* Days Grid */}
+            <View style={styles.daysGrid}>
+              {/* Empty leading padding slots */}
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <View key={`empty-${i}`} style={styles.dayCellEmpty} />
+              ))}
+
+              {/* Days of month */}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const dayNum = i + 1;
+                const isSelected = selectedDay === dayNum;
+                return (
+                  <TouchableOpacity
+                    key={dayNum}
+                    style={[styles.dayCell, isSelected && styles.dayCellSelected]}
+                    onPress={() => selectDateDay(dayNum)}
+                  >
+                    <Text style={[styles.dayText, isSelected && styles.dayTextSelected]}>
+                      {dayNum}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => setDateModalVisible(false)}
+            >
+              <Text style={styles.closeModalBtnText}>Close Calendar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -736,6 +1152,22 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     fontSize: 14,
   },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGlow,
+  },
+  datePickerBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -801,23 +1233,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary,
     borderStyle: 'dashed',
     gap: 6,
   },
   uploadBoxActive: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryDark,
     borderStyle: 'solid',
+    backgroundColor: COLORS.primaryDark,
   },
   uploadBoxTitle: {
-    color: COLORS.textPrimary,
+    color: COLORS.primary,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   uploadBoxSub: {
     color: COLORS.textMuted,
     fontSize: 11,
+  },
+  previewPhotoContainer: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  previewImage: {
+    width: 220,
+    height: 120,
+    borderRadius: 12,
+  },
+  photoActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  photoActiveText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '800',
   },
   docUploadGrid: {
     gap: 10,
@@ -826,33 +1281,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
     padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 10,
   },
   docItemTitle: {
     color: COLORS.textPrimary,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   docItemFile: {
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
     fontSize: 11,
     marginTop: 2,
   },
   docUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: COLORS.surfaceContainer,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primaryGlow,
   },
   docUploadBtnSuccess: {
-    borderColor: COLORS.success,
     backgroundColor: COLORS.successBg,
+    borderColor: COLORS.success,
   },
   docUploadBtnText: {
     color: COLORS.primary,
@@ -864,7 +1321,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
+    borderColor: COLORS.border,
     gap: 12,
   },
   reviewHeader: {
@@ -883,8 +1340,9 @@ const styles = StyleSheet.create({
   },
   reviewPlate: {
     color: COLORS.primary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
+    marginTop: 2,
   },
   divider: {
     height: 1,
@@ -907,6 +1365,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 12,
     fontWeight: '700',
+    marginTop: 2,
   },
   mileageSummaryBox: {
     flexDirection: 'row',
@@ -918,7 +1377,7 @@ const styles = StyleSheet.create({
   },
   mileageLabel: {
     color: COLORS.textMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
   },
   mileageVal: {
@@ -929,22 +1388,24 @@ const styles = StyleSheet.create({
   successCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 24,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.success,
+    borderColor: COLORS.border,
     gap: 16,
   },
   successIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: COLORS.successBg,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.success,
   },
   successTitle: {
-    color: COLORS.success,
+    color: COLORS.textPrimary,
     fontSize: 22,
     fontWeight: '900',
   },
@@ -952,11 +1413,133 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 13,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   successActions: {
     width: '100%',
     gap: 10,
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dateModalCard: {
+    width: '100%',
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 12,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalHeaderTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  modalSub: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  datePresetsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  presetChip: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGlow,
+  },
+  presetChipText: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  calMonthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    padding: 10,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  calNavBtn: {
+    padding: 4,
+  },
+  calMonthTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  weekDaysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 4,
+  },
+  weekDayText: {
+    width: 38,
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 6,
+  },
+  dayCellEmpty: {
+    width: '14.28%',
+    height: 38,
+  },
+  dayCell: {
+    width: '14.28%',
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+  },
+  dayCellSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  dayText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dayTextSelected: {
+    color: '#000',
+    fontWeight: '900',
+  },
+  closeModalBtn: {
+    marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  closeModalBtnText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

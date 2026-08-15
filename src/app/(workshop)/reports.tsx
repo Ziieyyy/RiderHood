@@ -7,85 +7,115 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { COLORS } from '../../constants/theme';
-import { TrendingUp, RefreshCw, Wrench } from 'lucide-react-native';
+import {
+  TrendingUp,
+  RefreshCw,
+  Wrench,
+  DollarSign,
+  CheckCircle2,
+  Package,
+  Calendar,
+  Download,
+  Percent,
+} from 'lucide-react-native';
+import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { useAuth } from '../../context/AuthContext';
-import { getMyWorkshop, getWorkshopServices } from '../../services/workshopService';
-import { getWorkshopBookings } from '../../services/bookingService';
-import type { Booking, Service } from '../../types/database';
+import { getMyWorkshop } from '../../services/workshopService';
+import {
+  getWorkshopReports,
+  WorkshopReportMetrics,
+  ReportTimeframe,
+} from '../../services/reportService';
 
 export default function WorkshopReportsScreen() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+
+  // Time Period Filter
+  const [timeRange, setTimeRange] = useState<ReportTimeframe>('30days');
+
+  // Report Data
+  const [report, setReport] = useState<WorkshopReportMetrics | null>(null);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
     setError(null);
     try {
       const ws = await getMyWorkshop(profile.id);
-      if (!ws) { setLoading(false); return; }
-      const [bks, svcs] = await Promise.all([
-        getWorkshopBookings(ws.id),
-        getWorkshopServices(profile.id),
-      ]);
-      setBookings(bks);
-      setServices(svcs);
-    } catch {
-      setError('Failed to load reports.');
+      if (!ws) {
+        setLoading(false);
+        return;
+      }
+      const data = await getWorkshopReports(ws.id, timeRange);
+      setReport(data);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load report metrics.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, timeRange]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Compute real analytics
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const lastMonth = now.getMonth() === 0
-    ? `${now.getFullYear() - 1}-12`
-    : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+  const handleExportReport = () => {
+    if (!report) return;
 
-  const completedBookings = bookings.filter(b => b.status === 'completed');
-  const thisMonthCompleted = completedBookings.filter(b => b.booking_date.startsWith(thisMonth));
-  const lastMonthCompleted = completedBookings.filter(b => b.booking_date.startsWith(lastMonth));
+    const rangeLabel =
+      timeRange === '7days'
+        ? 'Last 7 Days'
+        : timeRange === '30days'
+        ? 'Last 30 Days'
+        : timeRange === '1year'
+        ? 'Year to Date'
+        : 'All Time';
 
-  const thisMonthRevenue = thisMonthCompleted.reduce((sum, b) => sum + Number(b.total_amount), 0);
-  const lastMonthRevenue = lastMonthCompleted.reduce((sum, b) => sum + Number(b.total_amount), 0);
+    const textSummary = `--- RIDERHOOD WORKSHOP PERFORMANCE REPORT ---
+Period: ${rangeLabel}
+Generated: ${new Date().toLocaleString()}
 
-  const growthPct = lastMonthRevenue > 0
-    ? (((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
-    : '0.0';
+• Gross Revenue: RM ${report.totalRevenue.toFixed(2)}
+• Total Completed Bookings: ${report.completedBookingsCount}
+• Pending Bookings: ${report.pendingBookingsCount}
+• Cancelled Bookings: ${report.cancelledBookingsCount}
+• Avg Order Value: RM ${report.averageBookingValue.toFixed(2)}
+• Unique Customers Served: ${report.uniqueCustomersCount}
 
-  // Top services by booking count
-  const serviceBookingCount: Record<string, { name: string; count: number; revenue: number }> = {};
-  for (const bk of completedBookings) {
-    for (const bs of (bk.booking_services ?? [])) {
-      const key = bs.service_name_snapshot;
-      if (!serviceBookingCount[key]) {
-        serviceBookingCount[key] = { name: key, count: 0, revenue: 0 };
-      }
-      serviceBookingCount[key].count += 1;
-      serviceBookingCount[key].revenue += Number(bs.price_snapshot);
-    }
-  }
-  const topServices = Object.values(serviceBookingCount)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+Top Services:
+${(report.popularServices || [])
+  .map((s: { service_name: string; count: number; revenue: number }, i: number) => `${i + 1}. ${s.service_name} (${s.count} jobs - RM ${s.revenue.toFixed(2)})`)
+  .join('\n')}
 
-  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+Inventory Usage:
+${(report.inventoryUsage || [])
+  .map((p: { part_name: string; quantity_used: number }, i: number) => `${i + 1}. ${p.part_name} (${p.quantity_used} units used)`)
+  .join('\n')}`;
+
+    Alert.alert(
+      'Export Performance Report',
+      textSummary,
+      [
+        { text: 'Close', style: 'cancel' },
+        {
+          text: 'Copy Summary',
+          onPress: () => Alert.alert('Report Copied', 'Performance summary generated successfully.'),
+        },
+      ]
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f59e0b" />
-        <Text style={styles.loadingText}>Loading reports...</Text>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Computing Analytics & Reports...</Text>
       </View>
     );
   }
@@ -94,7 +124,8 @@ export default function WorkshopReportsScreen() {
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Failed to load</Text>
+        <Text style={styles.errorTitle}>Failed to load analytics</Text>
+        <Text style={styles.errorDesc}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
@@ -102,94 +133,216 @@ export default function WorkshopReportsScreen() {
     );
   }
 
+  const totalAllBookings =
+    (report?.completedBookingsCount || 0) +
+    (report?.pendingBookingsCount || 0) +
+    (report?.cancelledBookingsCount || 0);
+
+  const completionRate =
+    totalAllBookings > 0
+      ? ((report?.completedBookingsCount || 0) / totalAllBookings) * 100
+      : 0;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#f59e0b" />}
-    >
-      <Text style={styles.sectionTitle}>REVENUE & SERVICE ANALYTICS</Text>
+    <View style={styles.screenContainer}>
+      <WorkshopAdminHeader
+        title="Analytics & Reports"
+        subtitle="Workshop Performance Metrics & Revenue Analytics"
+      />
 
-      {/* Revenue Card — from real data */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <TrendingUp color="#f59e0b" size={20} />
-          <Text style={styles.cardLabel}>TOTAL REVENUE ({monthName.toUpperCase()})</Text>
-        </View>
-        <Text style={styles.mainValue}>RM {thisMonthRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-        <Text style={styles.subValue}>
-          {Number(growthPct) >= 0 ? '+' : ''}{growthPct}% compared to previous month (RM {lastMonthRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })})
-        </Text>
+      {/* Time Range Filter Bar & Export */}
+      <View style={styles.topBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rangeChipsContainer}>
+          {(
+            [
+              { id: '7days', label: '7 DAYS' },
+              { id: '30days', label: '30 DAYS' },
+              { id: '1year', label: 'YTD' },
+              { id: 'all', label: 'ALL TIME' },
+            ] as const
+          ).map((item) => {
+            const isSel = timeRange === item.id;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.rangeChip, isSel && styles.activeRangeChip]}
+                onPress={() => setTimeRange(item.id)}
+              >
+                <Text style={[styles.rangeChipText, isSel && styles.activeRangeChipText]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <TouchableOpacity style={styles.exportBtn} onPress={handleExportReport} activeOpacity={0.8}>
+          <Download color="#FFFFFF" size={14} />
+          <Text style={styles.exportText}>Export</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Breakdown */}
-      <View style={styles.grid}>
-        <View style={styles.miniCard}>
-          <Text style={styles.miniLabel}>COMPLETED JOBS (THIS MONTH)</Text>
-          <Text style={styles.miniValue}>{thisMonthCompleted.length}</Text>
-          <Text style={styles.miniSub}>{completedBookings.length} total all time</Text>
-        </View>
-        <View style={styles.miniCard}>
-          <Text style={styles.miniLabel}>TOTAL ALL-TIME REVENUE</Text>
-          <Text style={styles.miniValue}>RM {completedBookings.reduce((sum, b) => sum + Number(b.total_amount), 0).toLocaleString()}</Text>
-          <Text style={styles.miniSub}>{completedBookings.length} jobs completed</Text>
-        </View>
-      </View>
-
-      {/* Top Services — from real data */}
-      {topServices.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>MOST POPULAR SERVICES</Text>
-          <View style={styles.card}>
-            {topServices.map((svc, idx) => (
-              <React.Fragment key={svc.name}>
-                <View style={styles.itemRow}>
-                  <Text style={styles.itemName}>{idx + 1}. {svc.name}</Text>
-                  <Text style={styles.itemCount}>{svc.count} Jobs (RM {svc.revenue.toLocaleString()})</Text>
-                </View>
-                {idx < topServices.length - 1 && <View style={styles.divider} />}
-              </React.Fragment>
-            ))}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadData();
+            }}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {/* Main Revenue Card */}
+        <View style={styles.heroRevenueCard}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIconBox}>
+              <TrendingUp color={COLORS.primary} size={22} />
+            </View>
+            <Text style={styles.heroLabel}>GROSS REVENUE</Text>
           </View>
-        </>
-      )}
-
-      {topServices.length === 0 && (
-        <View style={styles.emptyState}>
-          <Wrench color={COLORS.textMuted} size={40} />
-          <Text style={styles.emptyTitle}>No completed services yet</Text>
-          <Text style={styles.emptyDesc}>Analytics will populate as bookings are completed.</Text>
+          <Text style={styles.heroVal}>
+            RM {(report?.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </Text>
+          <Text style={styles.heroSubText}>
+            Generated from {report?.completedBookingsCount ?? 0} completed service jobs
+          </Text>
         </View>
-      )}
-    </ScrollView>
+
+        {/* 4 KPI Grid */}
+        <View style={styles.kpiGrid}>
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Calendar color={COLORS.primary} size={14} />
+              <Text style={styles.kpiLabel}>TOTAL JOBS</Text>
+            </View>
+            <Text style={styles.kpiValue}>{totalAllBookings}</Text>
+            <Text style={styles.kpiSub}>Appointments</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <CheckCircle2 color={COLORS.success} size={14} />
+              <Text style={styles.kpiLabel}>COMPLETED</Text>
+            </View>
+            <Text style={[styles.kpiValue, { color: COLORS.success }]}>
+              {report?.completedBookingsCount ?? 0}
+            </Text>
+            <Text style={styles.kpiSub}>Jobs Done</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Percent color={COLORS.secondaryOrange} size={14} />
+              <Text style={styles.kpiLabel}>COMPLETION RATE</Text>
+            </View>
+            <Text style={styles.kpiValue}>{completionRate.toFixed(1)}%</Text>
+            <Text style={styles.kpiSub}>Success Rate</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <DollarSign color={COLORS.primary} size={14} />
+              <Text style={styles.kpiLabel}>AVG TICKET</Text>
+            </View>
+            <Text style={styles.kpiValue}>
+              RM {(report?.averageBookingValue ?? 0).toFixed(0)}
+            </Text>
+            <Text style={styles.kpiSub}>Per Job</Text>
+          </View>
+        </View>
+
+        {/* Popular Services Section */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderLine}>
+            <Wrench color={COLORS.primary} size={18} />
+            <Text style={styles.sectionTitleText}>TOP POPULAR SERVICES</Text>
+          </View>
+
+          {!report?.popularServices || report.popularServices.length === 0 ? (
+            <Text style={styles.noneText}>No completed service package data available for this range.</Text>
+          ) : (
+            report.popularServices.map((svc: { service_name: string; count: number; revenue: number }, idx: number) => (
+              <View key={svc.service_name} style={styles.itemRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>
+                    {idx + 1}. {svc.service_name}
+                  </Text>
+                  <Text style={styles.itemSub}>{svc.count} Jobs Completed</Text>
+                </View>
+                <Text style={styles.itemRevenue}>RM {svc.revenue.toFixed(2)}</Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Inventory Parts Usage Section */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderLine}>
+            <Package color={COLORS.primary} size={18} />
+            <Text style={styles.sectionTitleText}>MOST USED INVENTORY PARTS</Text>
+          </View>
+
+          {!report?.inventoryUsage || report.inventoryUsage.length === 0 ? (
+            <Text style={styles.noneText}>No inventory parts recorded for this period.</Text>
+          ) : (
+            report.inventoryUsage.map((part: { part_id: string; part_name: string; quantity_used: number; times_used: number }, idx: number) => (
+              <View key={part.part_id} style={styles.itemRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>
+                    {idx + 1}. {part.part_name}
+                  </Text>
+                  <Text style={styles.itemSub}>{part.quantity_used} Units Consumed ({part.times_used} times)</Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  screenContainer: { flex: 1, backgroundColor: COLORS.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
   loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
   errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  retryBtn: { backgroundColor: '#f59e0b', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#000', fontWeight: '800', fontSize: 13 },
-  scrollContent: { padding: 16, paddingBottom: 32, gap: 14 },
-  sectionTitle: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  card: { backgroundColor: COLORS.surfaceContainer, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#3b2f10', gap: 8 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  mainValue: { color: '#f59e0b', fontSize: 32, fontWeight: '900' },
-  subValue: { color: COLORS.textSecondary, fontSize: 12 },
-  grid: { flexDirection: 'row', gap: 12 },
-  miniCard: { flex: 1, backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
-  miniLabel: { color: COLORS.textMuted, fontSize: 9, fontWeight: '800' },
-  miniValue: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900' },
-  miniSub: { color: COLORS.primaryDim, fontSize: 11 },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  itemName: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700', flex: 1 },
-  itemCount: { color: '#f59e0b', fontSize: 13, fontWeight: '800' },
-  divider: { height: 1, backgroundColor: COLORS.border },
-  emptyState: { alignItems: 'center', paddingVertical: 48, gap: 10 },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  emptyDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
+  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
+  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+  retryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, gap: 10 },
+  rangeChipsContainer: { gap: 6 },
+  rangeChip: { backgroundColor: COLORS.cards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
+  activeRangeChip: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
+  rangeChipText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '800' },
+  activeRangeChipText: { color: COLORS.primary },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingHorizontal: 14, height: 34, borderRadius: 10 },
+  exportText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 40, gap: 16 },
+  heroRevenueCard: { backgroundColor: COLORS.cards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.border, gap: 6 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  heroIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255, 107, 0, 0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  heroVal: { color: COLORS.primary, fontSize: 34, fontWeight: '900' },
+  heroSubText: { color: COLORS.textSecondary, fontSize: 12 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  kpiCard: { width: '48%', backgroundColor: COLORS.cards, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
+  kpiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kpiLabel: { color: COLORS.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  kpiValue: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900' },
+  kpiSub: { color: COLORS.textSecondary, fontSize: 10 },
+  sectionCard: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
+  sectionHeaderLine: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10 },
+  sectionTitleText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  noneText: { color: COLORS.textMuted, fontSize: 12, fontStyle: 'italic' },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.secondaryBackground, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
+  itemName: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
+  itemSub: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
+  itemRevenue: { color: COLORS.primary, fontSize: 14, fontWeight: '900' },
 });

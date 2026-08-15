@@ -35,7 +35,7 @@ export async function getWorkshopBookings(workshopId: string): Promise<Booking[]
     .select(`
       *,
       customer:profiles(id, full_name, email, phone, avatar_url),
-      motorcycle:motorcycles(id, nickname, brand, model, plate_number),
+      motorcycle:motorcycles(id, nickname, brand, model, plate_number, current_mileage),
       booking_services(*)
     `)
     .eq('workshop_id', workshopId)
@@ -63,13 +63,40 @@ export async function getBooking(id: string): Promise<Booking | null> {
 
 // ─── Create booking (transactional via RPC) ───────────────────
 export async function createBooking(payload: CreateBookingPayload): Promise<Booking> {
-  // Calculate totals from services
+  // 1. Verify target workshop exists and has booking enabled
+  const { data: workshop, error: wsErr } = await supabase
+    .from('workshops')
+    .select('id, name, status, verification_status, booking_enabled, is_partner')
+    .eq('id', payload.workshop_id)
+    .single();
+
+  if (wsErr || !workshop) {
+    throw new Error('Selected workshop could not be found.');
+  }
+
+  if (workshop.status !== 'active') {
+    throw new Error('This workshop is currently inactive and cannot accept bookings.');
+  }
+
+  if (workshop.booking_enabled === false) {
+    throw new Error(`Service bookings are unavailable for ${workshop.name}. This is a directory-only listing.`);
+  }
+
+  // 2. Validate selected services and verify workshop ownership
   const serviceIds = payload.services.map((s) => s.service_id);
   const { data: servicesData, error: svcError } = await supabase
     .from('services')
-    .select('id, name, price, estimated_duration_minutes')
+    .select('id, name, price, estimated_duration_minutes, workshop_id')
     .in('id', serviceIds);
-  if (svcError) throw svcError;
+
+  if (svcError || !servicesData || servicesData.length !== serviceIds.length) {
+    throw new Error('One or more selected services are invalid or no longer available.');
+  }
+
+  const invalidSvc = servicesData.find((svc) => svc.workshop_id !== payload.workshop_id);
+  if (invalidSvc) {
+    throw new Error('Selected service does not belong to the chosen workshop.');
+  }
 
   const subtotal = (servicesData ?? []).reduce((sum, svc) => {
     const item = payload.services.find((s) => s.service_id === svc.id);
@@ -124,6 +151,43 @@ export async function createBooking(payload: CreateBookingPayload): Promise<Book
   return booking as Booking;
 }
 
+// ─── Reschedule booking ───────────────────────────────────────
+export async function rescheduleBooking(
+  bookingId: string,
+  newDate: string,
+  newTime: string,
+  reason?: string
+): Promise<Booking> {
+  const booking = await getBooking(bookingId);
+  if (!booking) throw new Error('Booking not found');
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({
+      booking_date: newDate,
+      booking_time: newTime,
+      notes: reason ? `${booking.notes ? booking.notes + ' | ' : ''}Rescheduled: ${reason}` : booking.notes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Notify customer
+  await supabase.from('notifications').insert({
+    user_id: booking.customer_id,
+    type: 'booking',
+    title: 'Booking Rescheduled',
+    message: `Your booking date has been updated to ${newDate} at ${newTime}.`,
+    data: { booking_id: bookingId },
+    is_read: false,
+  });
+
+  return data as Booking;
+}
+
 // ─── Update booking status (enforces state machine) ───────────
 export async function updateBookingStatus(
   bookingId: string,
@@ -145,6 +209,39 @@ export async function updateBookingStatus(
     .select()
     .single();
   if (error) throw error;
+
+  // If completed, automatically generate maintenance_records entry per section 36
+  if (newStatus === 'completed') {
+    try {
+      const bike = booking.motorcycle as any;
+      const currentMileage = bike?.current_mileage || 0;
+
+      const { data: record, error: recErr } = await supabase.from('maintenance_records').insert({
+        customer_id: booking.customer_id,
+        motorcycle_id: booking.motorcycle_id,
+        workshop_id: booking.workshop_id,
+        booking_id: booking.id,
+        service_date: booking.booking_date,
+        mileage: currentMileage,
+        description: `Service completed at workshop: #${booking.id.slice(0, 8)}`,
+        total_cost: booking.total_amount,
+        mechanic_notes: booking.notes,
+      }).select().single();
+
+      if (!recErr && record && booking.booking_services) {
+        const items = booking.booking_services.map(bs => ({
+          maintenance_record_id: record.id,
+          service_id: bs.service_id,
+          item_name: bs.service_name_snapshot,
+          cost: bs.price_snapshot,
+          quantity: bs.quantity,
+        }));
+        await supabase.from('maintenance_items').insert(items);
+      }
+    } catch (err) {
+      console.warn('Maintenance record auto-creation error:', err);
+    }
+  }
 
   // Notify customer about status change
   const messages: Partial<Record<BookingStatus, string>> = {

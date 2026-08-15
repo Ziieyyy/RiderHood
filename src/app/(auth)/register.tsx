@@ -114,6 +114,10 @@ export default function RegisterScreen() {
         setModalMode('wrong_password');
         setModalTitle('Weak Password');
         setModalMessage('Please choose a stronger password.');
+      } else if (msg.includes('rate limit')) {
+        setModalMode('general_error');
+        setModalTitle('Email Rate Limit Exceeded');
+        setModalMessage('Supabase default email rate limit reached.\n\nWorkaround:\n1. Disable "Confirm email" in Supabase Auth settings.\n2. Or wait ~1 hour before attempting registration again.');
       } else {
         setModalMode('general_error');
         setModalTitle('Registration Failed');

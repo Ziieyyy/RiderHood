@@ -109,10 +109,13 @@ export default function WorkshopRegistrationScreen() {
         return;
       }
     } catch (err: any) {
+      const isRateLimit = (err?.message || '').toLowerCase().includes('rate limit');
       setModalMode('wrong_password');
-      setModalTitle('Registration Failed');
+      setModalTitle(isRateLimit ? 'Email Rate Limit Exceeded' : 'Registration Failed');
       setModalMessage(
-        err?.message || 'Unable to complete workshop registration. Please check your information.'
+        isRateLimit
+          ? 'Supabase default email rate limit reached.\n\nWorkaround:\n1. Go to Supabase Dashboard -> Authentication -> Providers -> Email.\n2. Turn OFF "Confirm email".\n3. Retry registration.'
+          : err?.message || 'Unable to complete workshop registration. Please check your information.'
       );
       setModalVisible(true);
     } finally {

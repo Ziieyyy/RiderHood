@@ -11,9 +11,12 @@ import {
   Alert,
   Switch,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
@@ -21,16 +24,15 @@ import {
   User, Bike, Plus, Upload, DollarSign, Settings, LogOut, Edit2,
   FileText, CheckCircle2, Shield, Lock, Trash2, Eye, Download,
   HelpCircle, MessageSquare, AlertTriangle, FileCode, Info, Globe,
-  Bell, Moon, ChevronRight, Check, Award, RefreshCw, KeyRound,
+  Bell, Moon, ChevronRight, Check, Award, RefreshCw, KeyRound, Camera, X,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { getMotorcycles, updateMotorcycle, deleteMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
-import { getCustomerDocuments, createDocument, deleteDocument } from '../../services/documentService';
-import { updateProfile, resetPassword } from '../../services/authService';
+import { getCustomerDocuments, createDocument, updateDocument, deleteDocument } from '../../services/documentService';
+import { updateProfile, resetPassword, updatePassword } from '../../services/authService';
 import { PasswordInput } from '../../components/PasswordInput';
-import { updatePassword } from '../../services/authService';
-import type { Motorcycle, Document as RiderDoc } from '../../types/database';
+import type { Motorcycle, Document as RiderDoc, DocumentType } from '../../types/database';
 
 export default function CustomerProfileScreen() {
   const router = useRouter();
@@ -47,11 +49,22 @@ export default function CustomerProfileScreen() {
   const [docFilter, setDocFilter] = useState<string>('All');
   const [showUploadDocModal, setShowUploadDocModal] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
-  const [newDocType, setNewDocType] = useState<any>('Insurance');
+  const [newDocType, setNewDocType] = useState<DocumentType>('Insurance');
   const [newDocBikeId, setNewDocBikeId] = useState<string>('');
+  const [newDocExpiryDate, setNewDocExpiryDate] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
-  // Personal Info Edit State
+  // Document Edit Modal State
+  const [editingDoc, setEditingDoc] = useState<RiderDoc | null>(null);
+  const [showEditDocModal, setShowEditDocModal] = useState(false);
+  const [editDocTitle, setEditDocTitle] = useState('');
+  const [editDocType, setEditDocType] = useState<DocumentType>('Insurance');
+  const [editDocBikeId, setEditDocBikeId] = useState<string>('');
+  const [editDocExpiryDate, setEditDocExpiryDate] = useState('');
+  const [editDocFileName, setEditDocFileName] = useState<string | null>(null);
+  const [savingEditDoc, setSavingEditDoc] = useState(false);
+
+  // Personal Info Form State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -59,12 +72,26 @@ export default function CustomerProfileScreen() {
   const [address, setAddress] = useState('Kuala Lumpur, Malaysia');
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Profile Picture Avatar State
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url || null);
+
   // Bike Edit & View Modal State
   const [selectedBike, setSelectedBike] = useState<Motorcycle | null>(null);
   const [showBikeViewModal, setShowBikeViewModal] = useState(false);
   const [showBikeEditModal, setShowBikeEditModal] = useState(false);
-  const [editBikeMileage, setEditBikeMileage] = useState('');
   const [editBikeNickname, setEditBikeNickname] = useState('');
+  const [editBikeBrand, setEditBikeBrand] = useState('');
+  const [editBikeModel, setEditBikeModel] = useState('');
+  const [editBikeYear, setEditBikeYear] = useState('');
+  const [editBikePlate, setEditBikePlate] = useState('');
+  const [editBikeEngineCc, setEditBikeEngineCc] = useState('');
+  const [editBikeFuelType, setEditBikeFuelType] = useState('');
+  const [editBikeTransmission, setEditBikeTransmission] = useState('');
+  const [editBikeEngineOil, setEditBikeEngineOil] = useState('');
+  const [editBikeFrontTyre, setEditBikeFrontTyre] = useState('');
+  const [editBikeRearTyre, setEditBikeRearTyre] = useState('');
+  const [editBikeMileage, setEditBikeMileage] = useState('');
+  const [editBikePhotoUrl, setEditBikePhotoUrl] = useState('');
   const [savingBike, setSavingBike] = useState(false);
 
   // Password / Security State
@@ -84,18 +111,15 @@ export default function CustomerProfileScreen() {
   const loadGarageAndDocs = useCallback(async () => {
     if (!user?.id) return;
     try {
-      // Load motorcycles
       const fetchedBikes = await getMotorcycles(user.id);
       setBikes(fetchedBikes);
 
-      // Compute health score for each bike
       const scores: Record<string, number> = {};
       for (const b of fetchedBikes) {
         scores[b.id] = await calculateHealthScore(b.id);
       }
       setBikeHealthScores(scores);
 
-      // Load documents
       const docs = await getCustomerDocuments(user.id);
       setDocuments(docs);
     } catch (err) {
@@ -107,51 +131,104 @@ export default function CustomerProfileScreen() {
   }, [user?.id]);
 
   useEffect(() => {
+    loadGarageAndDocs();
     if (profile) {
       setFullName(profile.full_name || '');
       setPhone(profile.phone || '');
+      if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
     }
-    loadGarageAndDocs();
-  }, [profile, loadGarageAndDocs]);
+  }, [loadGarageAndDocs, profile]);
 
-  // Handle Save Personal Profile
+  // ─── PROFILE PICTURE (AVATAR) EDITING ──────────────────────────
+  const handlePickProfilePicture = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Photo Library Options',
+          'Gallery access was not granted. Choose a sample profile picture or enter a photo URL:',
+          [
+            {
+              text: 'Avatar Sample 1',
+              onPress: async () => {
+                const url = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400';
+                setAvatarUrl(url);
+                if (user?.id) await updateProfile(user.id, { avatar_url: url });
+                if (refreshProfile) refreshProfile();
+                Alert.alert('Success', 'Profile picture updated.');
+              },
+            },
+            {
+              text: 'Avatar Sample 2',
+              onPress: async () => {
+                const url = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400';
+                setAvatarUrl(url);
+                if (user?.id) await updateProfile(user.id, { avatar_url: url });
+                if (refreshProfile) refreshProfile();
+                Alert.alert('Success', 'Profile picture updated.');
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri;
+        setAvatarUrl(selectedUri);
+        if (user?.id) {
+          await updateProfile(user.id, { avatar_url: selectedUri });
+          if (refreshProfile) refreshProfile();
+        }
+        Alert.alert('Success', 'Profile picture updated successfully.');
+      }
+    } catch (err: any) {
+      console.error('Profile picture edit error:', err);
+      Alert.alert('Error', err?.message || 'Failed to update profile picture.');
+    }
+  };
+
+  // Handle Save Personal Info
   const handleSaveProfile = async () => {
     if (!user?.id) return;
-    if (!fullName.trim()) {
-      Alert.alert('Required', 'Full Name cannot be empty.');
-      return;
-    }
     setSavingProfile(true);
     try {
       await updateProfile(user.id, {
         full_name: fullName.trim(),
-        phone: phone.trim() || null,
+        phone: phone.trim(),
+        avatar_url: avatarUrl || undefined,
       });
-      await refreshProfile();
       setIsEditingProfile(false);
-      Alert.alert('Success', 'Personal profile details updated.');
+      if (refreshProfile) refreshProfile();
+      Alert.alert('Success', 'Personal information updated successfully.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to update personal profile.');
+      Alert.alert('Error', err?.message || 'Failed to update profile.');
     } finally {
       setSavingProfile(false);
     }
   };
 
-  // Handle Motorcycle Actions
+  // Handle Bike Actions
   const handleSetPrimaryBike = async (bikeId: string) => {
     try {
-      const bikeToSet = bikes.find(b => b.id === bikeId);
-      if (!bikeToSet) return;
-      Alert.alert('Primary Vehicle Set', `${bikeToSet.nickname || bikeToSet.model} is now set as your primary motorcycle.`);
+      Alert.alert('Primary Motorcycle', 'Set as primary motorcycle for quick booking & maintenance?');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to set primary bike.');
+      Alert.alert('Error', err?.message || 'Failed to update primary bike.');
     }
   };
 
   const handleDeleteBike = (bikeId: string, name: string) => {
     Alert.alert(
-      'Delete Motorcycle',
-      `Are you sure you want to remove ${name} from your garage? This will delete all associated logs.`,
+      'Delete Motorcycle?',
+      `Are you sure you want to remove ${name} from your garage?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -173,16 +250,35 @@ export default function CustomerProfileScreen() {
 
   const handleSaveBikeEdit = async () => {
     if (!selectedBike) return;
+    if (!editBikeBrand.trim() || !editBikeModel.trim() || !editBikePlate.trim()) {
+      Alert.alert('Incomplete Info', 'Brand, Model, and Plate Number are required.');
+      return;
+    }
     setSavingBike(true);
     try {
-      const updatedOdo = parseInt(editBikeMileage, 10) || selectedBike.current_mileage;
+      const yr = parseInt(editBikeYear, 10) || selectedBike.year || new Date().getFullYear();
+      const odo = parseInt(editBikeMileage, 10) || selectedBike.current_mileage;
+      const cc = parseInt(editBikeEngineCc, 10) || null;
+
       await updateMotorcycle(selectedBike.id, {
-        nickname: editBikeNickname.trim() || selectedBike.nickname,
-        current_mileage: updatedOdo,
+        nickname: editBikeNickname.trim() || `${editBikeBrand} ${editBikeModel}`,
+        brand: editBikeBrand.trim(),
+        model: editBikeModel.trim(),
+        year: yr,
+        plate_number: editBikePlate.trim().toUpperCase(),
+        engine_cc: cc,
+        fuel_type: editBikeFuelType.trim() || null,
+        transmission: editBikeTransmission.trim() || null,
+        engine_oil_type: editBikeEngineOil.trim() || null,
+        front_tyre_size: editBikeFrontTyre.trim() || null,
+        rear_tyre_size: editBikeRearTyre.trim() || null,
+        current_mileage: odo,
+        photo_url: editBikePhotoUrl.trim() || null,
       });
+
       setShowBikeEditModal(false);
       await loadGarageAndDocs();
-      Alert.alert('Saved', 'Motorcycle details updated.');
+      Alert.alert('Saved', 'All motorcycle details updated successfully.');
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to update motorcycle.');
     } finally {
@@ -190,7 +286,7 @@ export default function CustomerProfileScreen() {
     }
   };
 
-  // Handle Document Actions
+  // ─── DOCUMENT ACTIONS & FULL DOCUMENT EDITING ─────────────────
   const handleUploadDocumentSubmit = async () => {
     if (!user?.id || !newDocTitle.trim()) {
       Alert.alert('Required', 'Please enter a document title.');
@@ -204,16 +300,68 @@ export default function CustomerProfileScreen() {
         title: newDocTitle.trim(),
         type: newDocType,
         file_path: `documents/${user.id}/${Date.now()}_${newDocTitle.replace(/\s+/g, '_')}.pdf`,
-        file_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop',
+        expiry_date: newDocExpiryDate && newDocExpiryDate.trim() ? newDocExpiryDate.trim() : null,
       });
       setDocuments([created, ...documents]);
       setNewDocTitle('');
+      setNewDocExpiryDate('');
       setShowUploadDocModal(false);
-      Alert.alert('Success', 'Document saved to profile.');
+      Alert.alert('Success', 'Document saved to profile vault.');
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to save document.');
     } finally {
       setUploadingDoc(false);
+    }
+  };
+
+  const openEditDocModal = (doc: RiderDoc) => {
+    setEditingDoc(doc);
+    setEditDocTitle(doc.title);
+    setEditDocType(doc.type);
+    setEditDocBikeId(doc.motorcycle_id || '');
+    setEditDocExpiryDate(doc.expiry_date || '');
+    setEditDocFileName(doc.file_path ? doc.file_path.split('/').pop() || null : null);
+    setShowEditDocModal(true);
+  };
+
+  const handlePickEditDocumentFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*', 'application/msword'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setEditDocFileName(file.name);
+      }
+    } catch (err: any) {
+      console.log('Error picking replacement file:', err);
+    }
+  };
+
+  const handleSaveEditDocument = async () => {
+    if (!editingDoc || !editDocTitle.trim()) {
+      Alert.alert('Required', 'Document title is required.');
+      return;
+    }
+
+    setSavingEditDoc(true);
+    try {
+      const updated = await updateDocument(editingDoc.id, {
+        title: editDocTitle.trim(),
+        type: editDocType,
+        motorcycle_id: editDocBikeId || null,
+        expiry_date: editDocExpiryDate && editDocExpiryDate.trim() ? editDocExpiryDate.trim() : null,
+      });
+
+      setDocuments(prev => prev.map(d => d.id === updated.id ? updated : d));
+      setShowEditDocModal(false);
+      Alert.alert('Success', 'Document details updated successfully.');
+    } catch (err: any) {
+      Alert.alert('Update Error', err?.message || 'Failed to update document.');
+    } finally {
+      setSavingEditDoc(false);
     }
   };
 
@@ -227,6 +375,7 @@ export default function CustomerProfileScreen() {
           try {
             await deleteDocument(docId);
             setDocuments(documents.filter(d => d.id !== docId));
+            Alert.alert('Deleted', `"${title}" has been deleted.`);
           } catch (err: any) {
             Alert.alert('Error', err?.message || 'Failed to delete document.');
           }
@@ -280,9 +429,19 @@ export default function CustomerProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ================= 1. PROFILE HEADER ================= */}
         <View style={styles.profileHeaderCard}>
-          <View style={styles.avatarCircle}>
-            <User color={COLORS.primary} size={36} />
-          </View>
+          <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickProfilePicture} activeOpacity={0.8}>
+            {avatarUrl || profile?.avatar_url ? (
+              <Image source={{ uri: (avatarUrl || profile?.avatar_url)! }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <User color={COLORS.primary} size={36} />
+              </View>
+            )}
+            <View style={styles.cameraBadge}>
+              <Camera color="#FFFFFF" size={14} />
+            </View>
+          </TouchableOpacity>
+
           <Text style={styles.profileHeaderName}>{profile?.full_name || 'Rider'}</Text>
           <Text style={styles.profileHeaderEmail}>{profile?.email || user?.email}</Text>
           {profile?.phone ? <Text style={styles.profileHeaderPhone}>📞 {profile.phone}</Text> : null}
@@ -333,140 +492,112 @@ export default function CustomerProfileScreen() {
                 style={styles.input}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="+60 12-345 6789"
+                placeholder="e.g. 0123456789"
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="phone-pad"
               />
             </View>
 
-            <View style={styles.twoColRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>DATE OF BIRTH</Text>
-                <TextInput
-                  style={styles.input}
-                  value={dob}
-                  onChangeText={setDob}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={COLORS.textMuted}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>LOCATION / CITY</Text>
-                <TextInput
-                  style={styles.input}
-                  value={address}
-                  onChangeText={setAddress}
-                  placeholder="Kuala Lumpur"
-                  placeholderTextColor={COLORS.textMuted}
-                />
-              </View>
-            </View>
-
-            <View style={styles.btnRow}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setIsEditingProfile(false)}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <CustomButton
-                title={savingProfile ? 'SAVING...' : 'SAVE CHANGES'}
-                onPress={handleSaveProfile}
-                disabled={savingProfile}
-                style={{ flex: 1 }}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>AVATAR PHOTO URL</Text>
+              <TextInput
+                style={styles.input}
+                value={avatarUrl || ''}
+                onChangeText={setAvatarUrl}
+                placeholder="https://..."
+                placeholderTextColor={COLORS.textMuted}
               />
             </View>
+
+            <CustomButton
+              title={savingProfile ? 'SAVING PROFILE...' : 'SAVE CHANGES'}
+              onPress={handleSaveProfile}
+              disabled={savingProfile}
+              style={{ marginTop: 8 }}
+            />
           </View>
         ) : (
           <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <User color={COLORS.primary} size={18} />
-              <Text style={styles.cardTitle}>PERSONAL INFORMATION</Text>
-            </View>
+            <Text style={styles.cardTitle}>PERSONAL INFORMATION</Text>
+
             <View style={styles.infoGrid}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Full Name</Text>
-                <Text style={styles.infoVal}>{profile?.full_name || 'N/A'}</Text>
+                <Text style={styles.infoValue}>{profile?.full_name || 'Not set'}</Text>
               </View>
+
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoVal}>{profile?.email || 'N/A'}</Text>
+                <Text style={styles.infoValue}>{profile?.email || user?.email}</Text>
               </View>
+
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoVal}>{profile?.phone || 'Not provided'}</Text>
+                <Text style={styles.infoValue}>{profile?.phone || 'Not set'}</Text>
               </View>
+
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Location</Text>
-                <Text style={styles.infoVal}>{address}</Text>
+                <Text style={styles.infoValue}>{address}</Text>
               </View>
             </View>
           </View>
         )}
 
-        {/* ================= 3. MY MOTORCYCLE GARAGE 🏍️ ================= */}
+        {/* ================= 3. MY MOTORCYCLE GARAGE ================= */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>MY MOTORCYCLE GARAGE ({bikes.length})</Text>
           <TouchableOpacity
             style={styles.addBikeBtn}
             onPress={() => router.push('/(customer)/setup-motorcycle')}
-            activeOpacity={0.8}
           >
             <Plus color={COLORS.primary} size={14} />
-            <Text style={styles.addBikeText}>+ Register New Motorcycle</Text>
+            <Text style={styles.addBikeText}>+ Register Bike</Text>
           </TouchableOpacity>
         </View>
 
         {loadingBikes ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 12 }} />
         ) : bikes.length === 0 ? (
           <View style={styles.emptyGarageCard}>
-            <Bike color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyGarageTitle}>MY GARAGE IS EMPTY</Text>
-            <Text style={styles.emptyGarageDesc}>Register your motorcycle to track service reminders, health scores & maintenance receipts.</Text>
-            <CustomButton
-              title="+ Register New Motorcycle"
-              onPress={() => router.push('/(customer)/setup-motorcycle')}
-              style={{ marginTop: 8 }}
-            />
+            <Bike color={COLORS.textMuted} size={32} />
+            <Text style={styles.emptyGarageTitle}>No Motorcycles Registered</Text>
+            <Text style={styles.emptyGarageSub}>Add your motorcycle to track service history and digital documents.</Text>
           </View>
         ) : (
-          bikes.map((bike, idx) => {
-            const healthScore = bikeHealthScores[bike.id] ?? 95;
-            const healthStatus = healthScore >= 80 ? 'Good' : healthScore >= 60 ? 'Attention Needed' : 'Service Due';
-            const isPrimary = idx === 0;
+          bikes.map((bike, index) => {
+            const isPrimary = index === 0;
+            const healthScore = bikeHealthScores[bike.id] ?? 90;
+            const healthStatus = healthScore >= 80 ? 'Good' : 'Service Due';
 
             return (
               <View key={bike.id} style={styles.garageCard}>
-                <View style={styles.garageTopRow}>
-                  <View style={styles.bikeIconBadge}>
-                    <Bike color={COLORS.primary} size={24} />
-                  </View>
+                <View style={styles.garageHeader}>
                   <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.bikeTitle}>🏍️ {bike.nickname || `${bike.brand} ${bike.model}`}</Text>
+                    <View style={styles.badgeRow}>
+                      <Text style={styles.bikeName}>🏍️ {bike.nickname || `${bike.brand} ${bike.model}`}</Text>
                       {isPrimary && (
                         <View style={styles.primaryBadge}>
                           <Text style={styles.primaryBadgeText}>PRIMARY</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.bikeMeta}>{bike.brand} {bike.model} • {bike.year}</Text>
+                    <Text style={styles.bikeSub}>{bike.brand} {bike.model} • {bike.year || '2024'}</Text>
                   </View>
                 </View>
 
-                <View style={styles.garageDetailsGrid}>
-                  <View style={styles.detailBox}>
-                    <Text style={styles.detailLabel}>PLATE NUMBER</Text>
-                    <Text style={styles.detailVal}>{bike.plate_number}</Text>
+                <View style={styles.garageSpecsGrid}>
+                  <View style={styles.garageSpecItem}>
+                    <Text style={styles.garageSpecLabel}>PLATE NUMBER</Text>
+                    <Text style={styles.garageSpecVal}>{bike.plate_number}</Text>
                   </View>
-                  <View style={styles.detailBox}>
-                    <Text style={styles.detailLabel}>CURRENT MILEAGE</Text>
-                    <Text style={styles.detailVal}>{bike.current_mileage.toLocaleString()} km</Text>
+                  <View style={styles.garageSpecItem}>
+                    <Text style={styles.garageSpecLabel}>CURRENT MILEAGE</Text>
+                    <Text style={styles.garageSpecVal}>{bike.current_mileage.toLocaleString()} km</Text>
                   </View>
-                  <View style={styles.detailBox}>
-                    <Text style={styles.detailLabel}>HEALTH STATUS</Text>
-                    <Text style={[styles.detailVal, { color: healthScore >= 80 ? COLORS.success : '#f59e0b' }]}>
+                  <View style={styles.garageSpecItem}>
+                    <Text style={styles.garageSpecLabel}>HEALTH STATUS</Text>
+                    <Text style={[styles.garageSpecVal, { color: healthScore >= 80 ? COLORS.success : '#f59e0b' }]}>
                       {healthStatus} ({healthScore}%)
                     </Text>
                   </View>
@@ -475,37 +606,11 @@ export default function CustomerProfileScreen() {
                 <View style={styles.garageActionsRow}>
                   <TouchableOpacity
                     style={styles.garageActionBtn}
-                    onPress={() => {
-                      setSelectedBike(bike);
-                      setShowBikeViewModal(true);
-                    }}
+                    onPress={() => router.push(`/(customer)/motorcycle/${bike.id}` as any)}
                   >
                     <Eye color={COLORS.textPrimary} size={14} />
                     <Text style={styles.garageActionText}>View</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.garageActionBtn}
-                    onPress={() => {
-                      setSelectedBike(bike);
-                      setEditBikeNickname(bike.nickname || '');
-                      setEditBikeMileage(bike.current_mileage.toString());
-                      setShowBikeEditModal(true);
-                    }}
-                  >
-                    <Edit2 color={COLORS.textPrimary} size={14} />
-                    <Text style={styles.garageActionText}>Edit</Text>
-                  </TouchableOpacity>
-
-                  {!isPrimary && (
-                    <TouchableOpacity
-                      style={styles.garageActionBtn}
-                      onPress={() => handleSetPrimaryBike(bike.id)}
-                    >
-                      <Check color={COLORS.primary} size={14} />
-                      <Text style={[styles.garageActionText, { color: COLORS.primary }]}>Set Primary</Text>
-                    </TouchableOpacity>
-                  )}
 
                   <TouchableOpacity
                     style={[styles.garageActionBtn, { borderColor: COLORS.dangerBg }]}
@@ -520,75 +625,7 @@ export default function CustomerProfileScreen() {
           })
         )}
 
-        {/* ================= 4. DOCUMENTS SECTION ================= */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>MOTORCYCLE DOCUMENTS ({documents.length})</Text>
-          <TouchableOpacity
-            style={styles.addBikeBtn}
-            onPress={() => setShowUploadDocModal(true)}
-          >
-            <Upload color={COLORS.primary} size={14} />
-            <Text style={styles.addBikeText}>+ Upload Document</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterPillsRow}>
-          {['All', 'Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'].map(type => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.pill, docFilter === type && styles.pillActive]}
-              onPress={() => setDocFilter(type)}
-            >
-              <Text style={[styles.pillText, docFilter === type && styles.pillTextActive]}>{type}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {loadingDocs ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 12 }} />
-        ) : filteredDocs.length === 0 ? (
-          <View style={styles.emptyDocsCard}>
-            <FileText color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyDocsTitle}>No {docFilter !== 'All' ? docFilter : ''} Documents Uploaded</Text>
-            <Text style={styles.emptyDocsSub}>Keep your digital road tax, insurance policies, and service receipts in one secure vault.</Text>
-          </View>
-        ) : (
-          filteredDocs.map((doc) => (
-            <View key={doc.id} style={styles.docItemCard}>
-              <FileText color={COLORS.primary} size={20} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.docItemTitle}>{doc.title}</Text>
-                <Text style={styles.docItemMeta}>
-                  {doc.type} • Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                  {doc.expiry_date ? ` • Expires ${doc.expiry_date}` : ''}
-                </Text>
-              </View>
-              <View style={styles.docBtnGroup}>
-                <TouchableOpacity
-                  style={styles.docActionIconBtn}
-                  onPress={() => Alert.alert('Viewing Document', `Opening ${doc.title}...`)}
-                >
-                  <Eye color={COLORS.textSecondary} size={16} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.docActionIconBtn}
-                  onPress={() => Alert.alert('Downloading Document', `Downloaded ${doc.title} to storage.`)}
-                >
-                  <Download color={COLORS.primary} size={16} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.docActionIconBtn}
-                  onPress={() => handleDeleteDocument(doc.id, doc.title)}
-                >
-                  <Trash2 color={COLORS.danger} size={16} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-
-        {/* ================= 5. ACCOUNT & SECURITY ================= */}
+        {/* ================= 4. ACCOUNT & SECURITY ================= */}
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ACCOUNT & SECURITY</Text>
         <View style={styles.card}>
           <TouchableOpacity
@@ -598,81 +635,57 @@ export default function CustomerProfileScreen() {
             <Lock color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
               <Text style={styles.menuRowTitle}>Change Password</Text>
-              <Text style={styles.menuRowSub}>Update your account security password</Text>
+              <Text style={styles.menuRowSub}>Update account security password</Text>
             </View>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.menuRow} onPress={handleForgotPassword}>
-            <KeyRound color={COLORS.primary} size={18} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.menuRowTitle}>Reset Password via Email</Text>
-              <Text style={styles.menuRowSub}>Send password reset instructions to {user?.email}</Text>
-            </View>
-            <ChevronRight color={COLORS.textMuted} size={18} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <View style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => Alert.alert('Active Sessions', 'Currently logged in on Expo Mobile Client (Active Session)')}
+          >
             <Shield color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
               <Text style={styles.menuRowTitle}>Active Login Sessions</Text>
-              <Text style={styles.menuRowSub}>Currently logged in on Expo Mobile Client (Active Session)</Text>
+              <Text style={styles.menuRowSub}>1 active mobile device session</Text>
             </View>
-            <CheckCircle2 color={COLORS.success} size={16} />
-          </View>
+            <ChevronRight color={COLORS.textMuted} size={18} />
+          </TouchableOpacity>
         </View>
 
-        {/* ================= 6. APP SETTINGS ================= */}
+        {/* ================= 6. APP SETTINGS & PREFERENCES ================= */}
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>APP SETTINGS & PREFERENCES</Text>
         <View style={styles.card}>
-          <View style={styles.settingSwitchRow}>
+          <View style={styles.menuRow}>
             <Bell color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.settingTitle}>Push Notifications</Text>
-              <Text style={styles.settingSub}>Maintenance reminders & service updates</Text>
+              <Text style={styles.menuRowTitle}>Push Notifications</Text>
+              <Text style={styles.menuRowSub}>Maintenance & booking alerts</Text>
             </View>
             <Switch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ false: '#374151', true: COLORS.primaryDark }}
-              thumbColor={notifications ? COLORS.primary : '#9ca3af'}
+              trackColor={{ false: COLORS.border, true: COLORS.primaryDark }}
+              thumbColor={notifications ? COLORS.primary : '#888'}
             />
           </View>
 
           <View style={styles.divider} />
 
-          <View style={styles.settingSwitchRow}>
-            <Moon color={COLORS.primary} size={18} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.settingTitle}>Cyber Dark Theme</Text>
-              <Text style={styles.settingSub}>High contrast theme for OLED displays</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#374151', true: COLORS.primaryDark }}
-              thumbColor={darkMode ? COLORS.primary : '#9ca3af'}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.settingSwitchRow}>
+          <View style={styles.menuRow}>
             <Globe color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.settingTitle}>Distance Unit</Text>
-              <Text style={styles.settingSub}>{useKm ? 'Kilometers (km)' : 'Miles (mi)'}</Text>
+              <Text style={styles.menuRowTitle}>App Language</Text>
+              <Text style={styles.menuRowSub}>{language === 'EN' ? 'English (US)' : 'Bahasa Melayu'}</Text>
             </View>
-            <Switch
-              value={useKm}
-              onValueChange={setUseKm}
-              trackColor={{ false: '#374151', true: COLORS.primaryDark }}
-              thumbColor={useKm ? COLORS.primary : '#9ca3af'}
-            />
+            <TouchableOpacity
+              style={styles.langToggleBtn}
+              onPress={() => setLanguage(language === 'EN' ? 'BM' : 'EN')}
+            >
+              <Text style={styles.langToggleText}>{language}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -738,30 +751,48 @@ export default function CustomerProfileScreen() {
               <Text style={styles.modalTitle}>🏍️ {selectedBike?.nickname || `${selectedBike?.brand} ${selectedBike?.model}`}</Text>
             </View>
 
-            <View style={styles.specsGrid}>
-              <View style={styles.specBox}>
-                <Text style={styles.specBoxLabel}>BRAND</Text>
-                <Text style={styles.specBoxVal}>{selectedBike?.brand}</Text>
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.specsGrid}>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>BRAND</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.brand}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>MODEL</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.model}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>YEAR</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.year || '2024'}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>PLATE</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.plate_number}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>ENGINE CC</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.engine_cc ? `${selectedBike.engine_cc} cc` : 'N/A'}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>FUEL / TRANS</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.fuel_type || 'Petrol'} • {selectedBike?.transmission || 'Manual'}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>ENGINE OIL</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.engine_oil_type || '10W-40'}</Text>
+                </View>
+                <View style={styles.specBox}>
+                  <Text style={styles.specBoxLabel}>TYRE SIZES</Text>
+                  <Text style={styles.specBoxVal}>{selectedBike?.front_tyre_size || '90/80-17'} / {selectedBike?.rear_tyre_size || '120/70-17'}</Text>
+                </View>
+                <View style={[styles.specBox, { width: '100%' }]}>
+                  <Text style={styles.specBoxLabel}>CURRENT ODOMETER</Text>
+                  <Text style={[styles.specBoxVal, { color: COLORS.primary, fontSize: 18 }]}>
+                    {selectedBike?.current_mileage.toLocaleString()} km
+                  </Text>
+                </View>
               </View>
-              <View style={styles.specBox}>
-                <Text style={styles.specBoxLabel}>MODEL</Text>
-                <Text style={styles.specBoxVal}>{selectedBike?.model}</Text>
-              </View>
-              <View style={styles.specBox}>
-                <Text style={styles.specBoxLabel}>YEAR</Text>
-                <Text style={styles.specBoxVal}>{selectedBike?.year}</Text>
-              </View>
-              <View style={styles.specBox}>
-                <Text style={styles.specBoxLabel}>PLATE</Text>
-                <Text style={styles.specBoxVal}>{selectedBike?.plate_number}</Text>
-              </View>
-              <View style={[styles.specBox, { width: '100%' }]}>
-                <Text style={styles.specBoxLabel}>CURRENT ODOMETER</Text>
-                <Text style={[styles.specBoxVal, { color: COLORS.primary, fontSize: 18 }]}>
-                  {selectedBike?.current_mileage.toLocaleString()} km
-                </Text>
-              </View>
-            </View>
+            </ScrollView>
 
             <CustomButton title="CLOSE" variant="secondary" onPress={() => setShowBikeViewModal(false)} />
           </View>
@@ -772,33 +803,172 @@ export default function CustomerProfileScreen() {
       <Modal visible={showBikeEditModal} transparent animationType="fade" onRequestClose={() => setShowBikeEditModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Motorcycle Details</Text>
+            <Text style={styles.modalTitle}>✏️ Edit Motorcycle Details</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MOTORCYCLE NICKNAME</Text>
-              <TextInput
-                style={styles.input}
-                value={editBikeNickname}
-                onChangeText={setEditBikeNickname}
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 10 }}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>MOTORCYCLE NICKNAME</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editBikeNickname}
+                    onChangeText={setEditBikeNickname}
+                    placeholder="e.g. Ahxia or My Beast"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>BRAND *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeBrand}
+                      onChangeText={setEditBikeBrand}
+                      placeholder="e.g. Perodua"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>MODEL *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeModel}
+                      onChangeText={setEditBikeModel}
+                      placeholder="e.g. Axia"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>YEAR</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeYear}
+                      onChangeText={setEditBikeYear}
+                      placeholder="e.g. 2016"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>PLATE NUMBER *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikePlate}
+                      onChangeText={setEditBikePlate}
+                      placeholder="e.g. ABC 113"
+                      placeholderTextColor={COLORS.textMuted}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>ENGINE CC</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeEngineCc}
+                      onChangeText={setEditBikeEngineCc}
+                      placeholder="e.g. 1000"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>UPDATE MILEAGE (KM)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeMileage}
+                      onChangeText={setEditBikeMileage}
+                      placeholder="e.g. 2000"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>FUEL TYPE</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeFuelType}
+                      onChangeText={setEditBikeFuelType}
+                      placeholder="e.g. Petrol"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>TRANSMISSION</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeTransmission}
+                      onChangeText={setEditBikeTransmission}
+                      placeholder="e.g. Automatic"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>ENGINE OIL GRADE</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editBikeEngineOil}
+                    onChangeText={setEditBikeEngineOil}
+                    placeholder="e.g. Fully Synthetic 10W-40"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>FRONT TYRE</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeFrontTyre}
+                      onChangeText={setEditBikeFrontTyre}
+                      placeholder="e.g. 90/80-17"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>REAR TYRE</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editBikeRearTyre}
+                      onChangeText={setEditBikeRearTyre}
+                      placeholder="e.g. 120/70-17"
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>COVER PHOTO URL</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editBikePhotoUrl}
+                    onChangeText={setEditBikePhotoUrl}
+                    placeholder="https://..."
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <CustomButton
+                title={savingBike ? 'SAVING...' : 'SAVE CHANGES'}
+                onPress={handleSaveBikeEdit}
+                disabled={savingBike}
               />
+              <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowBikeEditModal(false)} />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>UPDATE MILEAGE (KM)</Text>
-              <TextInput
-                style={styles.input}
-                value={editBikeMileage}
-                onChangeText={setEditBikeMileage}
-                keyboardType="number-pad"
-              />
-            </View>
-
-            <CustomButton
-              title={savingBike ? 'SAVING...' : 'SAVE CHANGES'}
-              onPress={handleSaveBikeEdit}
-              disabled={savingBike}
-            />
-            <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowBikeEditModal(false)} />
           </View>
         </View>
       </Modal>
@@ -820,17 +990,30 @@ export default function CustomerProfileScreen() {
               />
             </View>
 
-            <Text style={styles.inputLabel}>DOCUMENT CATEGORY</Text>
-            <View style={styles.chipsRow}>
-              {['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'].map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.chip, newDocType === t && styles.chipActive]}
-                  onPress={() => setNewDocType(t)}
-                >
-                  <Text style={[styles.chipText, newDocType === t && styles.chipTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>DOCUMENT TYPE</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginTop: 4 }}>
+                {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.typeChip, newDocType === t && styles.typeChipActive]}
+                    onPress={() => setNewDocType(t)}
+                  >
+                    <Text style={[styles.typeChipText, newDocType === t && styles.typeChipTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>EXPIRY DATE (OPTIONAL - YYYY-MM-DD)</Text>
+              <TextInput
+                style={styles.input}
+                value={newDocExpiryDate}
+                onChangeText={setNewDocExpiryDate}
+                placeholder="e.g. 2026-08-10"
+                placeholderTextColor={COLORS.textMuted}
+              />
             </View>
 
             <CustomButton
@@ -843,33 +1026,116 @@ export default function CustomerProfileScreen() {
         </View>
       </Modal>
 
+      {/* Modal: Edit Document */}
+      <Modal visible={showEditDocModal} transparent animationType="fade" onRequestClose={() => setShowEditDocModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeaderRow}>
+              <FileText color={COLORS.primary} size={22} />
+              <Text style={styles.modalTitle}>✏️ Edit Document Details</Text>
+            </View>
+
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 12 }}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>DOCUMENT TITLE *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editDocTitle}
+                    onChangeText={setEditDocTitle}
+                    placeholder="Document Title"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>DOCUMENT TYPE</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginTop: 4 }}>
+                    {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(t => (
+                      <TouchableOpacity
+                        key={t}
+                        style={[styles.typeChip, editDocType === t && styles.typeChipActive]}
+                        onPress={() => setEditDocType(t)}
+                      >
+                        <Text style={[styles.typeChipText, editDocType === t && styles.typeChipTextActive]}>{t}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>EXPIRY DATE (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editDocExpiryDate}
+                    onChangeText={setEditDocExpiryDate}
+                    placeholder="e.g. 2026-08-10"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>ATTACHED FILE</Text>
+                  <TouchableOpacity
+                    style={styles.filePickerBtn}
+                    onPress={handlePickEditDocumentFile}
+                  >
+                    <Upload color={COLORS.primary} size={16} />
+                    <Text style={styles.filePickerBtnText}>
+                      {editDocFileName ? `📄 ${editDocFileName}` : 'Choose New Document File'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <CustomButton
+                title={savingEditDoc ? 'SAVING...' : 'SAVE DOCUMENT CHANGES'}
+                onPress={handleSaveEditDocument}
+                disabled={savingEditDoc}
+              />
+              <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowEditDocModal(false)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal: Change Password */}
       <Modal visible={showChangePasswordModal} transparent animationType="fade" onRequestClose={() => setShowChangePasswordModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Change Account Password</Text>
 
-            <PasswordInput
-              label="NEW PASSWORD"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Enter new password"
-              showStrength
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>NEW PASSWORD</Text>
+              <PasswordInput
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Minimum 6 characters"
+              />
+            </View>
 
-            <PasswordInput
-              label="CONFIRM PASSWORD"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirm new password"
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>CONFIRM NEW PASSWORD</Text>
+              <PasswordInput
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter new password"
+              />
+            </View>
 
             <CustomButton
               title={updatingPassword ? 'UPDATING...' : 'UPDATE PASSWORD'}
               onPress={handleChangePassword}
               disabled={updatingPassword}
             />
-            <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowChangePasswordModal(false)} />
+
+            <TouchableOpacity style={{ marginTop: 8, alignItems: 'center' }} onPress={handleForgotPassword}>
+              <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Forgot password? Send reset link to email</Text>
+            </TouchableOpacity>
+
+            <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowChangePasswordModal(false)} style={{ marginTop: 8 }} />
           </View>
         </View>
       </Modal>
@@ -885,26 +1151,49 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
-    gap: 14,
+    gap: 16,
   },
   profileHeaderCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 24,
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-    gap: 8,
+    borderColor: COLORS.border,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 12,
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.primary,
+  },
+  avatarImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surfaceContainer,
   },
   profileHeaderName: {
     color: COLORS.textPrimary,
@@ -914,21 +1203,23 @@ const styles = StyleSheet.create({
   profileHeaderEmail: {
     color: COLORS.textSecondary,
     fontSize: 13,
+    marginTop: 2,
   },
   profileHeaderPhone: {
-    color: COLORS.textSecondary,
+    color: COLORS.primary,
     fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: COLORS.successBg,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.success,
+    borderRadius: 20,
+    marginTop: 10,
   },
   statusDot: {
     width: 6,
@@ -949,9 +1240,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
+    marginTop: 14,
     borderWidth: 1,
-    borderColor: COLORS.primary,
-    marginTop: 4,
+    borderColor: COLORS.border,
   },
   editProfileBtnText: {
     color: COLORS.primary,
@@ -966,11 +1257,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     gap: 12,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   cardTitle: {
     color: COLORS.textSecondary,
     fontSize: 11,
@@ -978,71 +1264,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   infoGrid: {
-    gap: 8,
+    gap: 10,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   infoLabel: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  infoVal: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 46,
-    color: COLORS.textPrimary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: 14,
-  },
-  twoColRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cancelBtnText: {
     color: COLORS.textSecondary,
     fontSize: 13,
-    fontWeight: '700',
+  },
+  infoValue: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '800',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
   sectionTitle: {
     color: COLORS.textSecondary,
@@ -1054,21 +1298,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   addBikeText: {
     color: COLORS.primary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   emptyGarageCard: {
     backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
@@ -1077,38 +1315,32 @@ const styles = StyleSheet.create({
   },
   emptyGarageTitle: {
     color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  emptyGarageDesc: {
+  emptyGarageSub: {
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
   garageCard: {
     backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: 12,
   },
-  garageTopRow: {
+  garageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
-  bikeIconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
+  badgeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    gap: 8,
   },
-  bikeTitle: {
+  bikeName: {
     color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '900',
@@ -1126,27 +1358,27 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
   },
-  bikeMeta: {
+  bikeSub: {
     color: COLORS.textSecondary,
     fontSize: 12,
+    marginTop: 2,
   },
-  garageDetailsGrid: {
+  garageSpecsGrid: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    gap: 8,
   },
-  detailBox: {
+  garageSpecItem: {
     flex: 1,
   },
-  detailLabel: {
+  garageSpecLabel: {
     color: COLORS.textMuted,
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
   },
-  detailVal: {
+  garageSpecVal: {
     color: COLORS.textPrimary,
     fontSize: 11,
     fontWeight: '800',
@@ -1154,15 +1386,16 @@ const styles = StyleSheet.create({
   },
   garageActionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   garageActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -1170,19 +1403,20 @@ const styles = StyleSheet.create({
   garageActionText: {
     color: COLORS.textPrimary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   filterPillsRow: {
+    flexDirection: 'row',
     marginVertical: 4,
   },
   pill: {
-    backgroundColor: COLORS.surfaceContainer,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceContainer,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginRight: 8,
   },
   pillActive: {
     backgroundColor: COLORS.primaryDark,
@@ -1190,20 +1424,21 @@ const styles = StyleSheet.create({
   },
   pillText: {
     color: COLORS.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   pillTextActive: {
     color: COLORS.primary,
+    fontWeight: '900',
   },
   emptyDocsCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 6,
+    gap: 8,
   },
   emptyDocsTitle: {
     color: COLORS.textPrimary,
@@ -1232,7 +1467,7 @@ const styles = StyleSheet.create({
   },
   docItemMeta: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 2,
   },
   docBtnGroup: {
@@ -1241,23 +1476,27 @@ const styles = StyleSheet.create({
   },
   docActionIconBtn: {
     padding: 6,
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   menuRowTitle: {
     color: COLORS.textPrimary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   menuRowTitleFlex: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
     flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
   },
   menuRowSub: {
     color: COLORS.textSecondary,
@@ -1267,38 +1506,37 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: COLORS.border,
+    marginVertical: 4,
   },
-  settingSwitchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  langToggleBtn: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
-  settingTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  settingSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
+  langToggleText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '900',
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: COLORS.dangerBg,
+    paddingVertical: 14,
     borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 16,
     borderWidth: 1,
-    borderColor: COLORS.dangerBg,
+    borderColor: COLORS.danger,
+    marginTop: 12,
   },
   logoutBtnText: {
     color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
   },
   modalOverlay: {
     flex: 1,
@@ -1308,13 +1546,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
+    width: '100%',
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 24,
     padding: 20,
-    width: '100%',
     borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 12,
+    borderColor: COLORS.border,
+    gap: 14,
   },
   modalHeaderRow: {
     flexDirection: 'row',
@@ -1323,19 +1561,21 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: COLORS.textPrimary,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
   },
   specsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 14,
   },
   specBox: {
-    width: '46%',
+    width: '48%',
+    backgroundColor: COLORS.surface,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   specBoxLabel: {
     color: COLORS.textMuted,
@@ -1344,33 +1584,65 @@ const styles = StyleSheet.create({
   },
   specBoxVal: {
     color: COLORS.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
   },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  inputGroup: {
     gap: 6,
   },
-  chip: {
+  inputLabel: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  input: {
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 10,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    color: COLORS.textPrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    fontSize: 13,
+  },
+  typeChip: {
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  chipActive: {
+  typeChipActive: {
     backgroundColor: COLORS.primaryDark,
     borderColor: COLORS.primary,
   },
-  chipText: {
+  typeChipText: {
     color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '700',
   },
-  chipTextActive: {
+  typeChipTextActive: {
     color: COLORS.primary,
+    fontWeight: '900',
+  },
+  filePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGlow,
+  },
+  filePickerBtnText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

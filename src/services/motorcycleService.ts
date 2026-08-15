@@ -25,21 +25,35 @@ export async function getMotorcycle(id: string): Promise<Motorcycle | null> {
 
 // ─── Create a motorcycle ──────────────────────────────────────
 export async function createMotorcycle(payload: Partial<Motorcycle>): Promise<Motorcycle> {
-  const nickname =
-    payload.nickname?.trim() ||
-    `${payload.brand ?? ''} ${payload.model ?? ''}`.trim() ||
-    'My Motorcycle';
+  try {
+    const nickname =
+      payload.nickname?.trim() ||
+      `${payload.brand ?? ''} ${payload.model ?? ''}`.trim() ||
+      'My Motorcycle';
 
-  const { data, error } = await supabase
-    .from('motorcycles')
-    .insert({
-      ...payload,
-      nickname,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+    const { data, error } = await supabase
+      .from('motorcycles')
+      .insert({
+        ...payload,
+        nickname,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error(`Plate number "${payload.plate_number}" is already registered in your garage database.`);
+      }
+      if (error.code === '42501') {
+        throw new Error('Permission denied. Please check your account session.');
+      }
+      throw new Error(error.message || 'Database error occurred while saving motorcycle.');
+    }
+    return data;
+  } catch (err: any) {
+    console.error('createMotorcycle error:', err);
+    throw err;
+  }
 }
 
 // ─── Update a motorcycle ──────────────────────────────────────

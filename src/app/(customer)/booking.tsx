@@ -13,7 +13,7 @@ import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
   Calendar as CalendarIcon, Clock, CheckCircle2,
-  Wrench, ChevronDown, ShieldCheck, Zap, Bike,
+  Wrench, ChevronDown, ShieldCheck, Zap, Bike, X, MapPin, Check
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import type { Workshop, Service, Motorcycle } from '../../types/database';
@@ -25,6 +25,7 @@ export default function CustomerBookingScreen() {
 
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
+  const [showWorkshopModal, setShowWorkshopModal] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState<Motorcycle | null>(null);
@@ -33,8 +34,8 @@ export default function CustomerBookingScreen() {
   const [selectedTime, setSelectedTime] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Generate next 7 available dates
   const availableDates = Array.from({ length: 7 }, (_, i) => {
@@ -45,39 +46,102 @@ export default function CustomerBookingScreen() {
   const availableTimes = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
 
   const loadInitialData = useCallback(async () => {
-    if (!user?.id) return;
     setLoading(true);
     try {
-      const [ws, bikes] = await Promise.all([
-        getWorkshops(),
-        getMotorcycles(user.id),
-      ]);
-      setWorkshops(ws);
-      setMotorcycles(bikes);
-      if (bikes.length > 0) setSelectedMotorcycle(bikes[0]);
-
-      // Pre-select workshop from route params
       const preselectedId = params.workshopId as string | undefined;
-      if (preselectedId) {
-        const ws2 = ws.find(w => w.id === preselectedId) ?? ws[0] ?? null;
-        setSelectedWorkshop(ws2);
-        if (ws2) {
-          const svcs = await getWorkshopServices(ws2.id);
-          setServices(svcs);
-        }
-      } else if (ws.length > 0) {
-        setSelectedWorkshop(ws[0]);
-        const svcs = await getWorkshopServices(ws[0].id);
-        setServices(svcs);
+      const preselectedName = params.workshopName as string | undefined;
+      const preselectedService = params.serviceName as string | undefined;
+
+      const [wsList, bikesList] = await Promise.all([
+        getWorkshops().catch(() => []),
+        user?.id ? getMotorcycles(user.id).catch(() => []) : Promise.resolve([]),
+      ]);
+
+      let allWs = [...wsList];
+
+      // If route param contains a workshop not yet in the list, insert it
+      if (preselectedId && !allWs.some(w => w.id === preselectedId)) {
+        const paramWorkshop: Workshop = {
+          id: preselectedId,
+          owner_id: user?.id || 'a0000000-0000-0000-0000-000000000002',
+          name: preselectedName ? decodeURIComponent(preselectedName) : 'Bengkel Motor Cemerlang Terbilang',
+          description: 'Specialized in superbike tuning, general servicing, tire replacements & performance parts.',
+          email: null,
+          phone: '+60123456789',
+          address: 'No 15, Jalan Industri PBU 1, Taman Perindustrian, 50480 Kuala Lumpur',
+          district: 'Kuala Lumpur',
+          state: 'Wilayah Persekutuan',
+          latitude: null,
+          longitude: null,
+          cover_image_url: null,
+          rating: 4.9,
+          review_count: 12,
+          opening_time: null,
+          closing_time: null,
+          is_open: true,
+          is_partner: true,
+          booking_enabled: true,
+          status: 'active',
+          verification_status: 'approved',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        allWs = [paramWorkshop, ...allWs];
       }
-    } catch {
-      setError('Failed to load booking data. Please try again.');
+
+      // Only allow booking for workshops with booking_enabled !== false
+      const bookableWorkshops = allWs.filter(w => w.booking_enabled !== false);
+      setWorkshops(bookableWorkshops.length > 0 ? bookableWorkshops : allWs);
+      setMotorcycles(bikesList);
+      if (bikesList.length > 0) setSelectedMotorcycle(bikesList[0]);
+
+      let targetWorkshop = (preselectedId ? allWs.find(w => w.id === preselectedId) : null);
+
+      if (targetWorkshop && targetWorkshop.booking_enabled === false) {
+        Alert.alert('Booking Unavailable', `${targetWorkshop.name} is a directory listing and is not currently taking RiderHood online bookings.`);
+        router.replace('/(customer)/workshops');
+        return;
+      }
+
+      if (!targetWorkshop) {
+        targetWorkshop = bookableWorkshops[0] || allWs[0] || null;
+      }
+
+      setSelectedWorkshop(targetWorkshop);
+
+      const svcs = await getWorkshopServices(targetWorkshop?.id);
+      setServices(svcs);
+
+      // Pre-select service if passed in route params
+      if (preselectedService && svcs.length > 0) {
+        const match = svcs.find(s => s.name.toLowerCase() === preselectedService.toLowerCase());
+        if (match) {
+          setSelectedServices([match.id]);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading booking data:', err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, params.workshopId]);
+  }, [user?.id, params.workshopId, params.workshopName, params.serviceName, router]);
 
   useEffect(() => { loadInitialData(); }, [loadInitialData]);
+
+  const handleSelectWorkshop = async (ws: Workshop) => {
+    setSelectedWorkshop(ws);
+    setShowWorkshopModal(false);
+    setLoadingServices(true);
+    try {
+      const svcs = await getWorkshopServices(ws.id);
+      setServices(svcs);
+      setSelectedServices([]);
+    } catch (err) {
+      console.error('Error fetching workshop services:', err);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
 
   const toggleService = (id: string) => {
     setSelectedServices(prev =>
@@ -86,12 +150,23 @@ export default function CustomerBookingScreen() {
   };
 
   const selectedServiceItems = services.filter(s => selectedServices.includes(s.id));
-  const totalPrice = selectedServiceItems.reduce((acc, curr) => acc + curr.price, 0);
+  const totalPrice = selectedServiceItems.reduce((acc, curr) => acc + (curr.price || 0), 0);
 
   const handleConfirmBooking = async () => {
-    if (!user?.id || !selectedWorkshop || !selectedMotorcycle) return;
+    if (!user?.id) {
+      Alert.alert('Login Required', 'Please log in to submit a booking.');
+      return;
+    }
+    if (!selectedWorkshop) {
+      Alert.alert('No Workshop Selected', 'Please select a workshop.');
+      return;
+    }
+    if (!selectedMotorcycle) {
+      Alert.alert('No Motorcycle Selected', 'Please select a motorcycle from your garage.');
+      return;
+    }
     if (selectedServices.length === 0) {
-      Alert.alert('No Services Selected', 'Please select at least one service.');
+      Alert.alert('No Services Selected', 'Please select at least one service package.');
       return;
     }
     if (!selectedDate) {
@@ -102,6 +177,7 @@ export default function CustomerBookingScreen() {
       Alert.alert('No Time Selected', 'Please select a time slot.');
       return;
     }
+
     setSubmitting(true);
     try {
       await createBooking({
@@ -114,7 +190,7 @@ export default function CustomerBookingScreen() {
       });
       setShowSuccessModal(true);
     } catch (err: any) {
-      Alert.alert('Booking Failed', err.message ?? 'Please try again.');
+      Alert.alert('Booking Failed', err.message ?? 'Unable to complete booking. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -126,20 +202,7 @@ export default function CustomerBookingScreen() {
         <Header title="Service Booking" subtitle="Schedule Maintenance & Diagnostics" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading available workshops...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (workshops.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title="Service Booking" subtitle="Schedule Maintenance & Diagnostics" />
-        <View style={styles.centered}>
-          <Wrench color={COLORS.textMuted} size={48} />
-          <Text style={styles.emptyTitle}>No Workshops Available</Text>
-          <Text style={styles.emptyDesc}>No approved workshops are available yet. Please check back later.</Text>
+          <Text style={styles.loadingText}>Loading available workshops & services...</Text>
         </View>
       </SafeAreaView>
     );
@@ -150,18 +213,25 @@ export default function CustomerBookingScreen() {
       <Header title="Service Booking" subtitle="Schedule Maintenance & Diagnostics" />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Step 0: Motorcycle */}
+        {/* Step 0: Motorcycle Selection */}
         {motorcycles.length > 0 && (
           <>
             <Text style={styles.stepTitle}>0. SELECT MOTORCYCLE</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
               <View style={styles.dateRow}>
                 {motorcycles.map(bike => {
                   const isSelected = selectedMotorcycle?.id === bike.id;
                   return (
-                    <TouchableOpacity key={bike.id} style={[styles.dateChip, isSelected && styles.activeDateChip]} onPress={() => setSelectedMotorcycle(bike)} activeOpacity={0.8}>
+                    <TouchableOpacity
+                      key={bike.id}
+                      style={[styles.dateChip, isSelected && styles.activeDateChip]}
+                      onPress={() => setSelectedMotorcycle(bike)}
+                      activeOpacity={0.8}
+                    >
                       <Bike color={isSelected ? COLORS.primary : COLORS.textSecondary} size={14} />
-                      <Text style={[styles.dateChipText, isSelected && styles.activeDateText]}>{bike.nickname || `${bike.brand} ${bike.model}`}</Text>
+                      <Text style={[styles.dateChipText, isSelected && styles.activeDateText]}>
+                        {bike.nickname || `${bike.brand} ${bike.model}`}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -170,25 +240,34 @@ export default function CustomerBookingScreen() {
           </>
         )}
 
-        {/* Step 1: Workshop */}
+        {/* Step 1: Workshop Selection */}
         <Text style={styles.stepTitle}>1. CHOOSE WORKSHOP LAB</Text>
-        <View style={styles.dropdownBox}>
+        <TouchableOpacity
+          style={styles.dropdownBox}
+          onPress={() => setShowWorkshopModal(true)}
+          activeOpacity={0.8}
+        >
           <Wrench color={COLORS.primary} size={18} />
           <View style={{ flex: 1 }}>
             <Text style={styles.dropdownLabel}>TARGET WORKSHOP</Text>
             <Text style={styles.dropdownValue}>{selectedWorkshop?.name ?? 'Select a workshop'}</Text>
           </View>
           <ChevronDown color={COLORS.textSecondary} size={18} />
-        </View>
+        </TouchableOpacity>
 
-        {/* Step 2: Date & Time */}
+        {/* Step 2: Date & Time Slot */}
         <Text style={styles.stepTitle}>2. SELECT DATE & TIME SLOT</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
           <View style={styles.dateRow}>
             {availableDates.map(date => {
               const isSelected = selectedDate === date;
               return (
-                <TouchableOpacity key={date} style={[styles.dateChip, isSelected && styles.activeDateChip]} onPress={() => setSelectedDate(date)} activeOpacity={0.8}>
+                <TouchableOpacity
+                  key={date}
+                  style={[styles.dateChip, isSelected && styles.activeDateChip]}
+                  onPress={() => setSelectedDate(date)}
+                  activeOpacity={0.8}
+                >
                   <CalendarIcon color={isSelected ? COLORS.primary : COLORS.textSecondary} size={14} />
                   <Text style={[styles.dateChipText, isSelected && styles.activeDateText]}>{date}</Text>
                 </TouchableOpacity>
@@ -201,7 +280,12 @@ export default function CustomerBookingScreen() {
           {availableTimes.map(time => {
             const isSelected = selectedTime === time;
             return (
-              <TouchableOpacity key={time} style={[styles.timeChip, isSelected && styles.activeTimeChip]} onPress={() => setSelectedTime(time)} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={time}
+                style={[styles.timeChip, isSelected && styles.activeTimeChip]}
+                onPress={() => setSelectedTime(time)}
+                activeOpacity={0.8}
+              >
                 <Clock color={isSelected ? COLORS.primaryDark : COLORS.textSecondary} size={14} />
                 <Text style={[styles.timeChipText, isSelected && styles.activeTimeText]}>{time}</Text>
               </TouchableOpacity>
@@ -209,26 +293,38 @@ export default function CustomerBookingScreen() {
           })}
         </View>
 
-        {/* Step 3: Services */}
+        {/* Step 3: Services Selection */}
         <Text style={styles.stepTitle}>3. SELECT SERVICES</Text>
-        {services.length === 0 ? (
+        {loadingServices ? (
           <View style={styles.noServicesCard}>
-            <Text style={styles.noServicesText}>This workshop has no services configured yet.</Text>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.noServicesText}>Loading services...</Text>
+          </View>
+        ) : services.length === 0 ? (
+          <View style={styles.noServicesCard}>
+            <Text style={styles.noServicesText}>No services configured yet for this workshop.</Text>
           </View>
         ) : (
           services.map(srv => {
             const isChecked = selectedServices.includes(srv.id);
             return (
-              <TouchableOpacity key={srv.id} style={[styles.serviceCard, isChecked && styles.activeServiceCard]} onPress={() => toggleService(srv.id)} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={srv.id}
+                style={[styles.serviceCard, isChecked && styles.activeServiceCard]}
+                onPress={() => toggleService(srv.id)}
+                activeOpacity={0.8}
+              >
                 <View style={styles.checkboxRow}>
                   <View style={[styles.checkbox, isChecked && styles.checkedBox]}>
                     {isChecked && <CheckCircle2 color={COLORS.primaryDark} size={16} />}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.serviceTitle}>{srv.name}</Text>
-                    <Text style={styles.serviceMeta}>{srv.category ?? ''}{srv.estimated_duration_minutes ? ` • ~${srv.estimated_duration_minutes} min` : ''}</Text>
+                    <Text style={styles.serviceMeta}>
+                      {srv.category || 'General'}{srv.estimated_duration_minutes ? ` • ~${srv.estimated_duration_minutes} min` : ''}
+                    </Text>
                   </View>
-                  <Text style={styles.servicePrice}>RM {srv.price.toFixed(2)}</Text>
+                  <Text style={styles.servicePrice}>RM {(srv.price || 0).toFixed(2)}</Text>
                 </View>
                 {srv.description ? <Text style={styles.serviceDesc}>{srv.description}</Text> : null}
               </TouchableOpacity>
@@ -236,11 +332,13 @@ export default function CustomerBookingScreen() {
           })
         )}
 
-        {/* Summary */}
+        {/* Summary Card */}
         {selectedServices.length > 0 && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total ({selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''})</Text>
+              <Text style={styles.summaryLabel}>
+                Total ({selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''})
+              </Text>
               <Text style={styles.totalPriceText}>RM {totalPrice.toFixed(2)}</Text>
             </View>
             <CustomButton
@@ -253,6 +351,44 @@ export default function CustomerBookingScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Workshop Selector Modal */}
+      <Modal visible={showWorkshopModal} transparent animationType="fade" onRequestClose={() => setShowWorkshopModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Target Workshop</Text>
+              <TouchableOpacity onPress={() => setShowWorkshopModal(false)}>
+                <X color={COLORS.textMuted} size={20} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              {workshops.map(ws => {
+                const isSelected = selectedWorkshop?.id === ws.id;
+                return (
+                  <TouchableOpacity
+                    key={ws.id}
+                    style={[styles.workshopItem, isSelected && styles.selectedWorkshopItem]}
+                    onPress={() => handleSelectWorkshop(ws)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[styles.workshopItemName, isSelected && styles.selectedWorkshopItemText]}>{ws.name}</Text>
+                      {ws.address ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MapPin color={COLORS.textMuted} size={12} />
+                          <Text style={styles.workshopItemAddress} numberOfLines={1}>{ws.address}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {isSelected && <Check color={COLORS.primary} size={18} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Success Modal */}
       <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
@@ -298,7 +434,7 @@ const styles = StyleSheet.create({
   activeTimeChip: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   timeChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
   activeTimeText: { color: COLORS.primaryDark, fontWeight: '800' },
-  noServicesCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  noServicesCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 8 },
   noServicesText: { color: COLORS.textSecondary, fontSize: 13 },
   serviceCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, gap: 8 },
   activeServiceCard: { borderColor: COLORS.primary, backgroundColor: COLORS.surfaceElevated },
@@ -314,10 +450,16 @@ const styles = StyleSheet.create({
   summaryLabel: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
   totalPriceText: { color: COLORS.primary, fontSize: 22, fontWeight: '900' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalContent: { backgroundColor: COLORS.surfaceContainer, borderRadius: 24, padding: 24, alignItems: 'center', width: '100%', borderWidth: 1, borderColor: COLORS.primary, gap: 12 },
-  modalIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.successBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.success },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900' },
+  modalContent: { backgroundColor: COLORS.surfaceContainer, borderRadius: 24, padding: 24, width: '100%', borderWidth: 1, borderColor: COLORS.primary, gap: 12 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10 },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
+  modalIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.successBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.success, alignSelf: 'center' },
   modalSub: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 18 },
   ticketBox: { backgroundColor: COLORS.surface, padding: 12, borderRadius: 12, alignItems: 'center', width: '100%', borderWidth: 1, borderColor: COLORS.border },
   ticketDetail: { color: COLORS.textMuted, fontSize: 12, marginTop: 2 },
+  workshopItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 8 },
+  selectedWorkshopItem: { backgroundColor: COLORS.surfaceElevated, borderColor: COLORS.primary },
+  workshopItemName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
+  selectedWorkshopItemText: { color: COLORS.primary, fontWeight: '800' },
+  workshopItemAddress: { color: COLORS.textMuted, fontSize: 11 },
 });

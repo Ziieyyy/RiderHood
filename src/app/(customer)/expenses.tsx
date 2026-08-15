@@ -67,31 +67,7 @@ export default function CustomerExpensesScreen() {
 
       // Fetch expenses from DB via expenseService
       const dbExpenses = await getCustomerExpenses(user.id);
-      if (dbExpenses && dbExpenses.length > 0) {
-        setExpenses(dbExpenses as RiderExpense[]);
-      } else {
-        // Mock fallback if table empty
-        setExpenses([
-          {
-            id: 'exp-1',
-            customer_id: user.id,
-            category: 'Maintenance',
-            description: 'Engine Oil Change & Filter',
-            amount: 80.0,
-            expense_date: '2026-08-15',
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 'exp-2',
-            customer_id: user.id,
-            category: 'Parts',
-            description: 'Brake Pad Replacement (Front & Rear)',
-            amount: 200.0,
-            expense_date: '2026-08-10',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      }
+      setExpenses((dbExpenses || []) as RiderExpense[]);
     } catch (err) {
       console.log('Expenses fetch error:', err);
     } finally {
@@ -130,25 +106,10 @@ export default function CustomerExpensesScreen() {
       setShowAddModal(false);
       setDescription('');
       setAmount('');
-      Alert.alert('Saved', 'Expense record synced to database successfully.');
+      Alert.alert('Saved', 'Expense record saved to database successfully.');
     } catch (err: any) {
-      console.log('Expense save error:', err);
-      // Local fallback if DB insert fails
-      const fallbackExp: RiderExpense = {
-        id: `exp-${Date.now()}`,
-        customer_id: user.id,
-        motorcycle_id: selectedBikeId || undefined,
-        category,
-        description: description.trim(),
-        amount: numAmount,
-        expense_date: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-      };
-      setExpenses(prev => [fallbackExp, ...prev]);
-      setShowAddModal(false);
-      setDescription('');
-      setAmount('');
-      Alert.alert('Saved', 'Expense record added.');
+      console.error('Expense save error:', err);
+      Alert.alert('Error', 'Unable to save expense. Please try again.');
     } finally {
       setSavingExpense(false);
     }

@@ -1,60 +1,67 @@
-<<<<<<< HEAD
-# RiderHood
-=======
-# Welcome to your Expo app 👋
+# 🏍️ RiderHood Premium Moto Care
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+[![Expo](https://img.shields.io/badge/Expo-SDK%2057%2B-blue)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb)](https://reactnative.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%7C%20Auth%20%7C%20Storage-emerald)](https://supabase.com)
 
-## Get started
+**RiderHood** is an enterprise-grade, multi-tenant motorcycle telemetry, digital garage, and workshop management platform built with **Expo Router**, **React Native**, **TypeScript**, and **Supabase**.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 📚 Complete System Documentation
 
-2. Start the app
+For full technical specifications, database schema, persona workflows, service architecture, and deployment guides, please see:
 
-   ```bash
-   npx expo start
-   ```
+* 📖 **[Master System Documentation](file:///c:/Users/khair/.gemini/antigravity/scratch/riderhood-mobile/DOCUMENTATION.md)** — Complete deep dive into every subsystem, 17 database tables, business logic services, and external integrations.
+* 🗂️ **[Project Directory Structure](file:///c:/Users/khair/.gemini/antigravity/scratch/riderhood-mobile/PROJECT_STRUCTURE.md)** — Comprehensive directory map and routing guide.
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🌟 Key Features & User Personas
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. 🏍️ **Customer (Rider) Portal:** Motorcycle garage, telemetry health gauges (engine oil, brakes, tyres, chain), appointment scheduling, digital document wallet, maintenance reminders, and expense logging.
+2. 🛠️ **Workshop Partner Portal:** Workshop dashboard (KPIs, active service bays), booking queue workflow, service package rates, inventory SKU management, customer directory, and verified review responses.
+3. 🛡️ **Super Admin Command Center:** System-wide metrics, account moderation, workshop partner onboarding, platform booking supervisor, announcement broadcasts, and Google Places auto-sync engine.
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 🚀 Quick Start
 
+### 1. Install Dependencies
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Configure Environment Variables
+Ensure a `.env` file exists in the root directory:
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+EXPO_PUBLIC_GOOGLE_PLACES_API_KEY=your-google-places-api-key
+```
 
-### Other setup steps
+### 3. Start Development Server
+```bash
+# Start Expo development server
+npm start
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+# Run on Web
+npm run web
 
-## Learn more
+# Typecheck TypeScript
+npx tsc --noEmit
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🛠️ Tech Stack Overview
 
-## Join the community
+* **Frontend:** Expo SDK 54/57+, React Native 0.81, React 19, TypeScript 5.7, Expo Router v6
+* **Styling & UI:** High-contrast dark cyber-garage aesthetic (`src/constants/theme.ts`), Custom telemetry gauges, Lucide icons
+* **Backend:** Supabase PostgreSQL, Supabase Auth, Supabase Storage, Supabase Realtime, Supabase Edge Functions
+* **APIs:** Google Places API (New) with 24-hour caching layer
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
->>>>>>> a47bee2 (Initial commit)
+*For detailed technical information, refer to [DOCUMENTATION.md](file:///c:/Users/khair/.gemini/antigravity/scratch/riderhood-mobile/DOCUMENTATION.md).*

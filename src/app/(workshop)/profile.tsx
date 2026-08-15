@@ -9,13 +9,31 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { COLORS } from '../../constants/theme';
-import { Building2, CheckCircle2, RefreshCw } from 'lucide-react-native';
+import { Building2, CheckCircle2, RefreshCw, Clock, MapPin, Phone, Mail } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { useAuth } from '../../context/AuthContext';
 import { getMyWorkshop, updateWorkshop } from '../../services/workshopService';
 import type { Workshop } from '../../types/database';
+
+interface DaySchedule {
+  day: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
+const DEFAULT_WEEKLY_SCHEDULE: DaySchedule[] = [
+  { day: 'Monday', isOpen: true, openTime: '09:00 AM', closeTime: '07:00 PM' },
+  { day: 'Tuesday', isOpen: true, openTime: '09:00 AM', closeTime: '07:00 PM' },
+  { day: 'Wednesday', isOpen: true, openTime: '09:00 AM', closeTime: '07:00 PM' },
+  { day: 'Thursday', isOpen: true, openTime: '09:00 AM', closeTime: '07:00 PM' },
+  { day: 'Friday', isOpen: true, openTime: '09:00 AM', closeTime: '07:00 PM' },
+  { day: 'Saturday', isOpen: true, openTime: '09:00 AM', closeTime: '05:00 PM' },
+  { day: 'Sunday', isOpen: false, openTime: '09:00 AM', closeTime: '05:00 PM' },
+];
 
 export default function WorkshopProfileScreen() {
   const { profile } = useAuth();
@@ -30,8 +48,11 @@ export default function WorkshopProfileScreen() {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [hours, setHours] = useState('');
   const [district, setDistrict] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Structured Operating Hours
+  const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>(DEFAULT_WEEKLY_SCHEDULE);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
@@ -44,8 +65,19 @@ export default function WorkshopProfileScreen() {
         setAddress(ws.address || '');
         setPhone(ws.phone || '');
         setEmail(ws.email || '');
-        setHours(ws.operating_hours || '');
         setDistrict(ws.district || '');
+        setDescription(ws.description || '');
+
+        if (ws.operating_hours) {
+          try {
+            const parsed = typeof ws.operating_hours === 'string' ? JSON.parse(ws.operating_hours) : ws.operating_hours;
+            if (Array.isArray(parsed)) {
+              setWeeklySchedule(parsed);
+            }
+          } catch {
+            // Keep default if string format
+          }
+        }
       }
     } catch {
       setError('Failed to load workshop profile.');
@@ -54,7 +86,21 @@ export default function WorkshopProfileScreen() {
     }
   }, [profile?.id]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleToggleDay = (index: number) => {
+    const updated = [...weeklySchedule];
+    updated[index].isOpen = !updated[index].isOpen;
+    setWeeklySchedule(updated);
+  };
+
+  const handleUpdateTime = (index: number, field: 'openTime' | 'closeTime', val: string) => {
+    const updated = [...weeklySchedule];
+    updated[index][field] = val;
+    setWeeklySchedule(updated);
+  };
 
   const handleSave = async () => {
     if (!workshop?.id) return;
@@ -65,14 +111,14 @@ export default function WorkshopProfileScreen() {
         address: address.trim() || undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
-        operating_hours: hours.trim() || undefined,
         district: district.trim() || undefined,
+        description: description.trim() || undefined,
+        operating_hours: JSON.stringify(weeklySchedule),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: unknown) {
-      const error = err as { message?: string };
-      Alert.alert('Error', error?.message || 'Failed to save workshop profile.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to save workshop profile.');
     } finally {
       setSaving(false);
     }
@@ -120,11 +166,12 @@ export default function WorkshopProfileScreen() {
       {saved && (
         <View style={styles.savedAlert}>
           <CheckCircle2 color={COLORS.success} size={16} />
-          <Text style={styles.savedText}>Workshop details saved successfully!</Text>
+          <Text style={styles.savedText}>Workshop details & hours saved successfully!</Text>
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>WORKSHOP DETAILS</Text>
+      {/* General Info */}
+      <Text style={styles.sectionTitle}>WORKSHOP DETAILS & CONTACT</Text>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>WORKSHOP NAME</Text>
@@ -132,18 +179,25 @@ export default function WorkshopProfileScreen() {
       </View>
 
       <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>ABOUT / DESCRIPTION</Text>
+        <TextInput
+          style={[styles.input, { height: 60 }]}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          placeholder="Brief description of specialized services..."
+          placeholderTextColor={COLORS.textMuted}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>PHYSICAL ADDRESS</Text>
-        <TextInput style={[styles.input, { height: 60 }]} value={address} onChangeText={setAddress} multiline />
+        <TextInput style={[styles.input, { height: 50 }]} value={address} onChangeText={setAddress} multiline />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>DISTRICT / CITY</Text>
         <TextInput style={styles.input} value={district} onChangeText={setDistrict} />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>OPERATING HOURS</Text>
-        <TextInput style={styles.input} value={hours} onChangeText={setHours} placeholder="e.g. Mon-Sat: 9AM-7PM" placeholderTextColor={COLORS.textMuted} />
       </View>
 
       <View style={styles.inputGroup}>
@@ -156,11 +210,48 @@ export default function WorkshopProfileScreen() {
         <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       </View>
 
+      {/* Weekly Operating Hours Schedule */}
+      <Text style={[styles.sectionTitle, { marginTop: 12 }]}>WEEKLY OPERATING HOURS</Text>
+
+      <View style={styles.scheduleCard}>
+        {weeklySchedule.map((item, idx) => (
+          <View key={item.day} style={styles.dayRow}>
+            <View style={styles.dayLeft}>
+              <Switch
+                value={item.isOpen}
+                onValueChange={() => handleToggleDay(idx)}
+                trackColor={{ false: COLORS.surface, true: '#f59e0b' }}
+                thumbColor="#fff"
+              />
+              <Text style={[styles.dayName, !item.isOpen && { color: COLORS.textMuted }]}>{item.day}</Text>
+            </View>
+
+            {item.isOpen ? (
+              <View style={styles.timeInputsRow}>
+                <TextInput
+                  style={styles.timeInput}
+                  value={item.openTime}
+                  onChangeText={(val) => handleUpdateTime(idx, 'openTime', val)}
+                />
+                <Text style={{ color: COLORS.textMuted }}>-</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  value={item.closeTime}
+                  onChangeText={(val) => handleUpdateTime(idx, 'closeTime', val)}
+                />
+              </View>
+            ) : (
+              <Text style={styles.closedTag}>CLOSED</Text>
+            )}
+          </View>
+        ))}
+      </View>
+
       <CustomButton
         title={saving ? 'SAVING...' : 'SAVE WORKSHOP PROFILE'}
         onPress={handleSave}
         disabled={saving}
-        style={{ marginTop: 8 }}
+        style={{ marginTop: 12 }}
       />
     </ScrollView>
   );
@@ -184,4 +275,11 @@ const styles = StyleSheet.create({
   inputGroup: { gap: 6 },
   inputLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
   input: { backgroundColor: COLORS.surfaceContainer, borderRadius: 12, paddingHorizontal: 14, height: 46, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, fontSize: 14 },
+  scheduleCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
+  dayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dayLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dayName: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', width: 80 },
+  timeInputsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeInput: { backgroundColor: COLORS.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, color: COLORS.textPrimary, fontSize: 11, fontWeight: '700', borderWidth: 1, borderColor: COLORS.border, width: 75, textAlign: 'center' },
+  closedTag: { color: COLORS.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
 });
