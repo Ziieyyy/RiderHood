@@ -70,7 +70,7 @@ export async function fetchGooglePlaceDetails(
 
   // 1. Try Direct Google Places API (New) fetch first
   const resourceName = targetPlaceId.startsWith('places/') ? targetPlaceId : `places/${targetPlaceId}`;
-  const directUrl = `https://places.googleapis.com/v1/${resourceName}`;
+  const directUrl = `https://places.googleapis.com/v1/${resourceName}?key=${CLIENT_API_KEY}`;
   const fieldMask = 'id,displayName,formattedAddress,nationalPhoneNumber,regularOpeningHours,rating,userRatingCount,reviews,googleMapsUri';
 
   try {
@@ -216,7 +216,7 @@ export async function discoverGooglePlaceId(workshop: Partial<Workshop>): Promis
   const textQuery = queryParts.join(', ');
 
   try {
-    const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    const response = await fetch(`https://places.googleapis.com/v1/places:searchText?key=${CLIENT_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
