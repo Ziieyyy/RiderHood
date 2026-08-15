@@ -121,9 +121,27 @@ export async function fetchGooglePlaceDetails(
       }
 
       return result;
+    } else if (workshop) {
+      // If direct fetch returned 400/404 due to an invalid/legacy Place ID, re-discover real Place ID
+      const realPlaceId = await discoverGooglePlaceId(workshop);
+      if (realPlaceId && realPlaceId !== targetPlaceId) {
+        if (workshop.id) {
+          await supabase.from('workshops').update({ google_place_id: realPlaceId }).eq('id', workshop.id);
+        }
+        return fetchGooglePlaceDetails(realPlaceId, { ...workshop, google_place_id: realPlaceId }, forceRefresh);
+      }
     }
   } catch (directErr) {
-    console.log('[GooglePlaces] Direct API fetch error, trying Edge Function proxy:', directErr);
+    console.log('[GooglePlaces] Direct API fetch error, trying re-discovery or Edge Function proxy:', directErr);
+    if (workshop) {
+      const realPlaceId = await discoverGooglePlaceId(workshop);
+      if (realPlaceId && realPlaceId !== targetPlaceId) {
+        if (workshop.id) {
+          await supabase.from('workshops').update({ google_place_id: realPlaceId }).eq('id', workshop.id);
+        }
+        return fetchGooglePlaceDetails(realPlaceId, { ...workshop, google_place_id: realPlaceId }, forceRefresh);
+      }
+    }
   }
 
   // 2. Fallback to Supabase Edge Function Proxy if direct fetch is blocked
