@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Activi
 import { COLORS } from '../../constants/theme';
 import { Send, BellRing, Info } from 'lucide-react-native';
 import { broadcastNotification, getRecentBroadcasts } from '../../services/adminService';
+import { useTranslation } from '../../i18n';
 
 export default function AdminNotificationsScreen() {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -57,17 +59,17 @@ export default function AdminNotificationsScreen() {
       <ScrollView contentContainerStyle={styles.listContent}>
         
         <View style={styles.composeCard}>
-          <Text style={styles.composeTitle}>Broadcast New Announcement</Text>
+          <Text style={styles.composeTitle}>{t('superAdmin.broadcastNotification')}</Text>
           <TextInput 
             style={styles.inputTitle}
-            placeholder="Notification Title"
+            placeholder={`${t('navigation.notifications')} ${t('common.title')}`}
             placeholderTextColor={COLORS.textMuted}
             value={title}
             onChangeText={setTitle}
           />
           <TextInput 
             style={styles.inputBody}
-            placeholder="Type your message here..."
+            placeholder={t('reviews.commentPlaceholder')}
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={4}
@@ -86,20 +88,20 @@ export default function AdminNotificationsScreen() {
             ) : (
               <>
                 <Send color="#000" size={16} />
-                <Text style={styles.sendBtnText}>SEND TO ALL USERS</Text>
+                <Text style={styles.sendBtnText}>{t('superAdmin.sendToAll')}</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>RECENT BROADCASTS</Text>
+        <Text style={styles.sectionTitle}>{t('superAdmin.recentBroadcasts').toUpperCase()}</Text>
         
         {loading ? (
           <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 12 }} />
         ) : broadcasts.length === 0 ? (
           <View style={styles.emptyCard}>
             <Info color={COLORS.textMuted} size={28} />
-            <Text style={styles.emptyText}>No broadcasts sent yet.</Text>
+            <Text style={styles.emptyText}>{t('notifications.noNotifications')}</Text>
           </View>
         ) : (
           broadcasts.map((b) => (

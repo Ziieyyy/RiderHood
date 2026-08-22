@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { COLORS } from '../../constants/theme';
-import { ShieldAlert, KeyRound, Smartphone, HardDrive, RefreshCcw } from 'lucide-react-native';
-
+import { ShieldAlert, KeyRound, Smartphone, HardDrive, RefreshCcw, LogOut } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
+import { LanguageSelector } from '../../components/LanguageSelector';
 
 export default function AdminSettingsScreen() {
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [debugLogs, setDebugLogs] = useState(true);
 
@@ -15,7 +16,10 @@ export default function AdminSettingsScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.listContent}>
         
-        <Text style={styles.sectionTitle}>SYSTEM OPERATIONS</Text>
+        {/* Universal Language Selector */}
+        <LanguageSelector variant="card" />
+
+        <Text style={styles.sectionTitle}>{t('settings.security').toUpperCase()}</Text>
         
         <View style={styles.card}>
           <View style={styles.settingRow}>
@@ -24,8 +28,8 @@ export default function AdminSettingsScreen() {
                 <ShieldAlert color={COLORS.danger} size={18} />
               </View>
               <View>
-                <Text style={styles.settingTitle}>Maintenance Mode</Text>
-                <Text style={styles.settingDesc}>Block all user access</Text>
+                <Text style={styles.settingTitle}>{t('maintenance.title')}</Text>
+                <Text style={styles.settingDesc}>{t('common.status')}</Text>
               </View>
             </View>
             <Switch 
@@ -57,7 +61,7 @@ export default function AdminSettingsScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>SECURITY & API</Text>
+        <Text style={styles.sectionTitle}>{`${t('settings.security').toUpperCase()} & API`}</Text>
         
         <View style={styles.card}>
           <TouchableOpacity style={styles.actionRow} activeOpacity={0.7}>
@@ -65,7 +69,7 @@ export default function AdminSettingsScreen() {
               <KeyRound color={COLORS.textSecondary} size={18} />
               <Text style={styles.actionTitle}>Manage API Keys</Text>
             </View>
-            <Text style={styles.actionValue}>3 Active</Text>
+            <Text style={styles.actionValue}>3 {t('common.active')}</Text>
           </TouchableOpacity>
           
           <View style={styles.divider} />
@@ -73,15 +77,15 @@ export default function AdminSettingsScreen() {
           <TouchableOpacity style={styles.actionRow} activeOpacity={0.7}>
             <View style={styles.settingInfo}>
               <Smartphone color={COLORS.textSecondary} size={18} />
-              <Text style={styles.actionTitle}>Active Devices</Text>
+              <Text style={styles.actionTitle}>{t('settings.activeSessions')}</Text>
             </View>
-            <Text style={styles.actionValue}>Manage</Text>
+            <Text style={styles.actionValue}>{t('common.edit')}</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.btnDanger} activeOpacity={0.8}>
           <RefreshCcw color={COLORS.danger} size={18} />
-          <Text style={styles.btnDangerText}>FORCE RESTART CORE SERVICES</Text>
+          <Text style={styles.btnDangerText}>{`${t('common.retry').toUpperCase()} CORE SERVICES`}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -90,7 +94,7 @@ export default function AdminSettingsScreen() {
           activeOpacity={0.8}
         >
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.btnDangerText}>LOGOUT SUPER ADMIN SESSION</Text>
+          <Text style={styles.btnDangerText}>{`${t('common.logout')} (${t('superAdmin.superAdminRole').toUpperCase()})`}</Text>
         </TouchableOpacity>
 
       </ScrollView>

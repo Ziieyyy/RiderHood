@@ -35,8 +35,9 @@ import {
   ExternalLink,
   ChevronRight,
   Bike,
+  Search,
 } from 'lucide-react-native';
-import { getWorkshop, getWorkshopServices } from '../../services/workshopService';
+import { getWorkshop, getWorkshopServices, canBookWorkshop } from '../../services/workshopService';
 import { getWorkshopParts } from '../../services/partsService';
 import {
   getWorkshopReviews,
@@ -47,9 +48,10 @@ import {
   subscribeToRealtimeReviews,
   type ReviewStats,
 } from '../../services/reviewService';
-import { getWorkshopOpenStatus } from '../../utils/operatingHours';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import { fetchGooglePlaceDetails, type GooglePlaceDetailsResult } from '../../services/googlePlacesService';
+import { getWorkshopOpenStatus } from '../../utils/operatingHours';
 import type { Service, Workshop, Part, Review } from '../../types/database';
 
 export default function WorkshopDetailsScreen() {
@@ -57,12 +59,13 @@ export default function WorkshopDetailsScreen() {
   const params = useLocalSearchParams();
   const workshopId = params.id as string;
   const { user } = useAuth();
+  const { t, formatDate } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'services' | 'parts'>('services');
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [googlePlaceDetails, setGooglePlaceDetails] = useState<GooglePlaceDetailsResult | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [parts, setParts] = useState<Part[]>([]);
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
+  const [searchService, setSearchService] = useState('');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({
     average: 0,
@@ -81,11 +84,6 @@ export default function WorkshopDetailsScreen() {
   const [newRating, setNewRating] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
-
-  // Buy Part Modal State
-  const [selectedPartToBuy, setSelectedPartToBuy] = useState<Part | null>(null);
-  const [buyQuantity, setBuyQuantity] = useState(1);
-  const [buySuccessModal, setBuySuccessModal] = useState(false);
 
   const name = workshop?.name || (params.name as string) || 'Workshop Details';
   const address = workshop?.address || (params.address as string) || 'Address not provided';
@@ -114,16 +112,14 @@ export default function WorkshopDetailsScreen() {
     setGooglePlaceDetails(null);
     setReviews([]);
     setServices([]);
-    setParts([]);
     setLoading(true);
 
     const loadDetails = async () => {
       if (!workshopId) return;
       try {
-        const [wsData, svcData, partsData, revData, statsData] = await Promise.all([
+        const [wsData, svcData, revData, statsData] = await Promise.all([
           getWorkshop(workshopId).catch(() => null),
           getWorkshopServices(workshopId).catch(() => []),
-          getWorkshopParts(workshopId).catch(() => []),
           getWorkshopReviews(workshopId).catch(() => []),
           getReviewStats(workshopId).catch(() => ({
             average: 0,
@@ -136,7 +132,6 @@ export default function WorkshopDetailsScreen() {
           loadGoogleDetails(wsData);
         }
         setServices(svcData ?? []);
-        setParts(partsData ?? []);
         setReviews(revData ?? []);
         setReviewStats(statsData);
 
@@ -166,12 +161,22 @@ export default function WorkshopDetailsScreen() {
 
 
 
-  const isPartner = Boolean(workshop ? (workshop.is_partner && workshop.booking_enabled) : true);
+  const isPartner = canBookWorkshop(workshop);
   const openStatus = getWorkshopOpenStatus(workshop || { is_open: isOpen });
 
   const handleBookNow = (serviceName?: string) => {
-    if (workshop && workshop.booking_enabled === false) {
-      Alert.alert('Booking Unavailable', 'This workshop is a directory-only listing and is currently not accepting RiderHood online bookings.');
+    if (!canBookWorkshop(workshop)) {
+      Alert.alert(
+        'Online Booking Unavailable',
+        `Online appointment booking is currently available exclusively with Wan Legacy Motor. You can call ${name} directly at ${phone || 'their contact number'}.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Call Workshop',
+            onPress: () => phone && Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`),
+          },
+        ]
+      );
       return;
     }
     router.push({
@@ -254,11 +259,6 @@ export default function WorkshopDetailsScreen() {
     }
   };
 
-  const handleConfirmPartPurchase = () => {
-    if (!selectedPartToBuy) return;
-    setBuySuccessModal(true);
-  };
-
   const formatTimeAgo = (dateStr: string): string => {
     const now = new Date();
     const date = new Date(dateStr);
@@ -302,10 +302,11 @@ export default function WorkshopDetailsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Banner / Workshop Image Header */}
         <View style={styles.photoContainer}>
-          <View style={styles.photoPlaceholder}>
-            <Wrench color={COLORS.primary} size={44} />
-            <Text style={styles.photoPlaceholderText}>{isPartner ? 'RiderHood Certified Partner Lab' : 'Directory Motorcycle Workshop'}</Text>
-          </View>
+          <Image
+            source={{ uri: workshop?.cover_image_url || 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80' }}
+            style={styles.workshopCoverImage}
+            resizeMode="cover"
+          />
           <View style={[styles.statusBadge, { backgroundColor: openStatus.isOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
             <Text style={[styles.statusText, { color: openStatus.isOpen ? COLORS.success : COLORS.danger }]}>
               {openStatus.statusText.toUpperCase()}
@@ -320,7 +321,7 @@ export default function WorkshopDetailsScreen() {
               <Text style={styles.workshopName}>{name}</Text>
               <View style={[styles.partnerTag, isPartner ? styles.partnerTagActive : styles.partnerTagDir]}>
                 <Text style={[styles.partnerTagText, isPartner ? styles.partnerTagTextActive : styles.partnerTagTextDir]}>
-                  {isPartner ? 'ACTIVE RIDERHOOD PARTNER' : 'DIRECTORY LISTING ONLY'}
+                  {isPartner ? t('workshop.verified').toUpperCase() : t('workshop.directoryListing').toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -337,153 +338,192 @@ export default function WorkshopDetailsScreen() {
           {workshop?.address ? (
             <View style={styles.detailRow}>
               <MapPin color={COLORS.primary} size={16} />
-              <Text style={styles.detailText}>Address: {workshop.address}</Text>
+              <Text style={styles.detailText}>{t('workshop.address')}: {workshop.address}</Text>
             </View>
           ) : null}
 
           {workshop?.phone ? (
             <View style={styles.detailRow}>
               <Phone color={COLORS.primary} size={16} />
-              <Text style={styles.detailText}>Phone: {workshop.phone}</Text>
+              <Text style={styles.detailText}>{t('workshop.phone')}: {workshop.phone}</Text>
             </View>
           ) : null}
 
           {openStatus.scheduleText ? (
             <View style={styles.detailRow}>
               <Clock color={COLORS.primary} size={16} />
-              <Text style={styles.detailText}>Hours: {openStatus.scheduleText}</Text>
+              <Text style={styles.detailText}>{t('workshop.operatingHours')}: {openStatus.scheduleText}</Text>
             </View>
           ) : null}
         </View>
 
-        {/* Segmented Tab Controls: Services vs Spare Parts */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'services' && styles.activeTabButton]}
-            onPress={() => setActiveTab('services')}
-          >
-            <Wrench color={activeTab === 'services' ? COLORS.primaryDark : COLORS.textSecondary} size={16} />
-            <Text style={[styles.tabButtonText, activeTab === 'services' && styles.activeTabText]}>
-              SERVICES & TUNING ({services.length})
+        {/* ─── EXPLICIT BOOKING SECTION (SECTION 8 OF SPEC) ──────── */}
+        {isPartner ? (
+          <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.primary, marginBottom: 16, gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <CheckCircle2 color={COLORS.primary} size={18} />
+              <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.onlineBookingAvailable').toUpperCase()}</Text>
+            </View>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 12, lineHeight: 16 }}>
+              {t('workshop.onlineBookingAvailDesc')}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'parts' && styles.activeTabButton]}
-            onPress={() => setActiveTab('parts')}
-          >
-            <Package color={activeTab === 'parts' ? COLORS.primaryDark : COLORS.textSecondary} size={16} />
-            <Text style={[styles.tabButtonText, activeTab === 'parts' && styles.activeTabText]}>
-              SPARE PARTS ({parts.length})
+            <TouchableOpacity
+              style={{ backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4 }}
+              onPress={() => handleBookNow()}
+            >
+              <Calendar color="#FFFFFF" size={15} />
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{t('common.bookNow')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Info color={COLORS.textMuted} size={18} />
+              <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.directoryListing').toUpperCase()}</Text>
+            </View>
+            <Text style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 16 }}>
+              {t('workshop.directoryListingDesc')}
             </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Content Tab 1: Services List */}
-        {activeTab === 'services' && (
-          <View style={{ gap: 10 }}>
-            {loading ? (
-              <ActivityIndicator color={COLORS.primary} size="large" style={{ marginVertical: 20 }} />
-            ) : services.length === 0 ? (
-              <View style={styles.emptyServiceBox}>
-                <Text style={styles.emptyServiceText}>
-                  {isPartner
-                    ? 'Tap below to book your service at this workshop.'
-                    : 'No service packages configured for this directory listing.'}
-                </Text>
-              </View>
-            ) : (
-              services.map((serv) => (
-                <View key={serv.id} style={styles.serviceItem}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.servNameRow}>
-                      <CheckCircle2 color={COLORS.primary} size={16} />
-                      <Text style={styles.serviceName}>{serv.name}</Text>
-                    </View>
-                    {serv.description ? (
-                      <Text style={styles.serviceDesc}>{serv.description}</Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.priceActionCol}>
-                    <Text style={styles.servicePrice}>RM{Number(serv.price).toFixed(0)}</Text>
-                    {isPartner && (
-                      <TouchableOpacity style={styles.selectServBtn} onPress={() => handleBookNow(serv.name)}>
-                        <Text style={styles.selectServBtnText}>Book Service</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              ))
+            {phone && (
+              <TouchableOpacity
+                style={{ backgroundColor: COLORS.surface, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border, marginTop: 4 }}
+                onPress={() => Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`)}
+              >
+                <Phone color={COLORS.textPrimary} size={14} />
+                <Text style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' }}>{t('workshop.callWorkshop')} ({phone})</Text>
+              </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* Content Tab 2: Spare Parts Section */}
-        {activeTab === 'parts' && (
-          <View style={{ gap: 12 }}>
-            <View style={styles.partsBannerNote}>
-              <ShoppingBag color={COLORS.primary} size={18} />
-              <Text style={styles.partsBannerNoteText}>
-                Buy spare parts directly from <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{name}</Text> or request installation during service booking.
+        {/* ─── WORKSHOP SERVICES & TUNING CATALOGUE ──────────────── */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Wrench color={COLORS.primary} size={18} />
+              <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' }}>
+                {t('services.title').toUpperCase()} ({services.length})
               </Text>
             </View>
-
-            {loading ? (
-              <ActivityIndicator color={COLORS.primary} size="large" style={{ marginVertical: 20 }} />
-            ) : parts.length === 0 ? (
-              <View style={styles.emptyServiceBox}>
-                <Text style={styles.emptyServiceText}>No spare parts information available for this directory listing.</Text>
-              </View>
-            ) : (
-              parts.map((part) => (
-                <View key={part.id} style={styles.partCard}>
-                  <View style={styles.partIconBox}>
-                    <Package color={COLORS.primary} size={24} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.brandBadge}>
-                      <Text style={styles.brandText}>{part.brand ? part.brand.toUpperCase() : 'SPARE PART'}</Text>
-                    </View>
-                    <Text style={styles.partName}>{part.name}</Text>
-                    {part.description ? <Text style={styles.partDesc} numberOfLines={2}>{part.description}</Text> : null}
-                    <Text style={styles.partPrice}>RM {(part.price || 0).toFixed(2)}</Text>
-                  </View>
-
-                  <View style={{ gap: 6, justifyContent: 'center' }}>
-                    <TouchableOpacity
-                      style={styles.buyPartOnlyBtn}
-                      onPress={() => {
-                        setSelectedPartToBuy(part);
-                        setBuyQuantity(1);
-                      }}
-                    >
-                      <ShoppingBag color={COLORS.primaryDark} size={14} />
-                      <Text style={styles.buyPartOnlyBtnText}>Buy Part Only</Text>
-                    </TouchableOpacity>
-
-                    {isPartner && (
-                      <TouchableOpacity
-                        style={styles.installWithServiceBtn}
-                        onPress={() => handleBookNow(part.name)}
-                      >
-                        <Calendar color={COLORS.primary} size={14} />
-                        <Text style={styles.installWithServiceBtnText}>Get Service</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              ))
-            )}
+            <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
+              {t('workshop.standardRates')}
+            </Text>
           </View>
-        )}
+
+          {/* Quick Search within Workshop Services */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, height: 38, marginBottom: 10 }}>
+            <Search color={COLORS.textMuted} size={16} style={{ marginRight: 8 }} />
+            <TextInput
+              style={{ flex: 1, color: COLORS.textPrimary, fontSize: 12 }}
+              value={searchService}
+              onChangeText={setSearchService}
+              placeholder={t('workshop.searchPlaceholder')}
+              placeholderTextColor={COLORS.textMuted}
+            />
+            {searchService ? (
+              <TouchableOpacity onPress={() => setSearchService('')}>
+                <X color={COLORS.textMuted} size={15} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Sort / Filter by Categories Pills */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            {['All', 'Full Service', 'Minyak Hitam', 'Gear Oil', 'CVT', 'Throttle Body', 'Brake Pad', 'Chain & Sprocket', 'Tayar Depan', 'Tayar Belakang', 'Spark Plug', 'Bateri', 'Coolant', 'Brake Fluid', 'Fork Oil', '2T'].map(cat => {
+              const isActive = selectedServiceCategory === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryFilterChip,
+                    isActive && styles.activeCategoryFilterChip,
+                  ]}
+                  onPress={() => setSelectedServiceCategory(cat)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.categoryFilterChipText,
+                      isActive && styles.activeCategoryFilterChipText,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginVertical: 20 }} />
+          ) : services.length === 0 ? (
+            <View style={styles.emptyServiceBox}>
+              <Text style={styles.emptyServiceText}>
+                {isPartner
+                  ? t('workshop.onlineBookingAvailDesc')
+                  : t('services.noServicesConfigured')}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {services
+                .filter((serv) => {
+                  if (selectedServiceCategory !== 'All') {
+                    const sCat = (serv.category || '').toLowerCase();
+                    const fCat = selectedServiceCategory.toLowerCase();
+                    if (!sCat.includes(fCat) && !fCat.includes(sCat)) return false;
+                  }
+                  if (searchService.trim()) {
+                    const q = searchService.toLowerCase();
+                    const n = (serv.name || '').toLowerCase();
+                    const d = (serv.description || '').toLowerCase();
+                    if (!n.includes(q) && !d.includes(q)) return false;
+                  }
+                  return true;
+                })
+                .map((serv) => (
+                  <View key={serv.id} style={styles.serviceItem}>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.servNameRow}>
+                        <CheckCircle2 color={COLORS.primary} size={16} />
+                        <Text style={styles.serviceName}>{serv.name}</Text>
+                      </View>
+                      {serv.description ? (
+                        <Text style={styles.serviceDesc}>{serv.description}</Text>
+                      ) : null}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                        <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: COLORS.primary, fontSize: 9, fontWeight: '800' }}>
+                            {(serv.category || 'SERVICE').toUpperCase()}
+                          </Text>
+                        </View>
+                        {serv.estimated_duration_minutes ? (
+                          <Text style={{ color: COLORS.textMuted, fontSize: 11 }}>
+                            ⏱ ~{serv.estimated_duration_minutes} mins
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <View style={styles.priceActionCol}>
+                      <Text style={styles.servicePrice}>RM{Number(serv.price).toFixed(0)}</Text>
+                      {isPartner && (
+                        <TouchableOpacity style={styles.selectServBtn} onPress={() => handleBookNow(serv.name)}>
+                          <Text style={styles.selectServBtnText}>{t('common.bookNow')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+            </View>
+          )}
+        </View>
 
         {/* ═══════════════════════════════════════════════════════════ */}
         {/* CUSTOMER REVIEWS SECTION                                  */}
-        {/* Directly below Services & Spare Parts                      */}
         {/* ═══════════════════════════════════════════════════════════ */}
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitleHeader}>CUSTOMER REVIEWS</Text>
+          <Text style={styles.sectionTitleHeader}>{t('reviews.customerReviews').toUpperCase()}</Text>
         </View>
 
         {/* RiderHood Rating Summary Box */}
@@ -491,7 +531,7 @@ export default function WorkshopDetailsScreen() {
           <View style={styles.ratingBigCol}>
             <Text style={styles.ratingBigNum}>⭐ {riderhoodRating > 0 ? riderhoodRating.toFixed(1) : '0.0'}</Text>
             <Text style={styles.ratingCountText}>
-              Based on {reviewStats.count} RiderHood review{reviewStats.count !== 1 ? 's' : ''}
+              {t('reviews.totalReviews')}: {reviewStats.count}
             </Text>
           </View>
 
@@ -516,7 +556,7 @@ export default function WorkshopDetailsScreen() {
         {canReview && (
           <TouchableOpacity style={styles.writeReviewBtn} onPress={handleOpenWriteReviewModal}>
             <Edit2 color="#000" size={16} />
-            <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+            <Text style={styles.writeReviewBtnText}>{t('reviews.writeReview')}</Text>
           </TouchableOpacity>
         )}
 
@@ -524,8 +564,8 @@ export default function WorkshopDetailsScreen() {
         {reviews.length === 0 ? (
           <View style={styles.emptyServiceBox}>
             <Star color={COLORS.textMuted} size={28} />
-            <Text style={styles.emptyReviewTitle}>No RiderHood reviews yet.</Text>
-            <Text style={styles.emptyReviewSub}>Be the first to share your experience after completing a service booking.</Text>
+            <Text style={styles.emptyReviewTitle}>{t('reviews.noReviewsYet')}</Text>
+            <Text style={styles.emptyReviewSub}>{t('reviews.noReviewsDesc')}</Text>
           </View>
         ) : (
           <>
@@ -563,7 +603,7 @@ export default function WorkshopDetailsScreen() {
                 {/* Workshop Reply */}
                 {rev.reply ? (
                   <View style={styles.workshopReplyBox}>
-                    <Text style={styles.replyHeader}>Workshop Reply:</Text>
+                    <Text style={styles.replyHeader}>{t('reviews.workshopResponse')}:</Text>
                     <Text style={styles.replyText}>{rev.reply}</Text>
                   </View>
                 ) : null}
@@ -582,7 +622,7 @@ export default function WorkshopDetailsScreen() {
                 onPress={() => setShowAllReviews(!showAllReviews)}
               >
                 <Text style={styles.viewAllBtnText}>
-                  {showAllReviews ? 'Show Less' : `View All ${reviews.length} RiderHood Reviews`}
+                  {showAllReviews ? t('common.showLess') : `${t('common.viewAll')} (${reviews.length})`}
                 </Text>
                 <ChevronRight color={COLORS.primary} size={14} />
               </TouchableOpacity>
@@ -595,7 +635,7 @@ export default function WorkshopDetailsScreen() {
         {/* ═══════════════════════════════════════════════════════════ */}
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitleHeader}>GOOGLE REVIEWS</Text>
+          <Text style={styles.sectionTitleHeader}>{t('reviews.googleReviewsTitle').toUpperCase()}</Text>
           <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>Powered by Google Maps</Text>
         </View>
 
@@ -618,7 +658,7 @@ export default function WorkshopDetailsScreen() {
                 </View>
               ) : (
                 <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 2 }}>
-                  Google rating unavailable
+                  {t('reviews.noReviewsYet')}
                 </Text>
               )}
             </View>
@@ -628,7 +668,7 @@ export default function WorkshopDetailsScreen() {
           {googleLoading ? (
             <View style={{ paddingVertical: 16, alignItems: 'center' }}>
               <ActivityIndicator color="#4285F4" size="small" />
-              <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 8 }}>Loading Google Reviews...</Text>
+              <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 8 }}>{t('common.loading')}</Text>
             </View>
           ) : null}
 
@@ -636,13 +676,13 @@ export default function WorkshopDetailsScreen() {
           {!googleLoading && googlePlaceDetails?.status === 'error' ? (
             <View style={{ paddingVertical: 12, alignItems: 'center', gap: 8 }}>
               <Text style={{ color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' }}>
-                Google reviews are temporarily unavailable.
+                {t('reviews.noReviewsYet')}
               </Text>
               <TouchableOpacity
                 style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: COLORS.surfaceContainer, borderWidth: 1, borderColor: COLORS.border }}
                 onPress={() => loadGoogleDetails(workshop)}
               >
-                <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Try Again</Text>
+                <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>{t('common.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -651,7 +691,7 @@ export default function WorkshopDetailsScreen() {
           {!googleLoading && !workshop?.google_place_id && !googlePlaceDetails ? (
             <View style={{ paddingVertical: 12, alignItems: 'center' }}>
               <Text style={{ color: COLORS.textMuted, fontSize: 13, textAlign: 'center' }}>
-                Google information is currently unavailable for this workshop.
+                {t('workshop.directoryListingDesc')}
               </Text>
             </View>
           ) : null}
@@ -660,7 +700,7 @@ export default function WorkshopDetailsScreen() {
           {!googleLoading && (googlePlaceDetails?.status === 'no_reviews' || (googlePlaceDetails && googlePlaceDetails.reviews.length === 0)) ? (
             <View style={{ paddingVertical: 12, alignItems: 'center' }}>
               <Text style={{ color: COLORS.textMuted, fontSize: 13, textAlign: 'center' }}>
-                No Google reviews are currently available.
+                {t('reviews.noReviewsYet')}
               </Text>
             </View>
           ) : null}
@@ -698,7 +738,7 @@ export default function WorkshopDetailsScreen() {
                   onPress={() => setShowAllGoogleReviews(!showAllGoogleReviews)}
                 >
                   <Text style={styles.viewAllBtnText}>
-                    {showAllGoogleReviews ? 'Show Less' : `View All ${googlePlaceDetails.reviews.length} Google Reviews`}
+                    {showAllGoogleReviews ? t('common.showLess') : `${t('common.viewAll')} (${googlePlaceDetails.reviews.length})`}
                   </Text>
                   <ChevronRight color={COLORS.primary} size={14} />
                 </TouchableOpacity>
@@ -710,7 +750,7 @@ export default function WorkshopDetailsScreen() {
           {(googlePlaceDetails?.googleMapsUrl || workshop?.google_maps_url) ? (
             <TouchableOpacity style={styles.googleReviewBtn} onPress={handleGoogleReview}>
               <ExternalLink color="#FFF" size={14} />
-              <Text style={styles.googleReviewBtnText}>View on Google Maps</Text>
+              <Text style={styles.googleReviewBtnText}>{t('reviews.viewOnGoogleMaps')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -722,7 +762,7 @@ export default function WorkshopDetailsScreen() {
 
         {isPartner ? (
           <CustomButton
-            title="BOOK SERVICE AT THIS WORKSHOP →"
+            title={`${t('common.bookNow').toUpperCase()} →`}
             onPress={() => handleBookNow()}
             style={{ marginTop: 14 }}
           />
@@ -730,7 +770,7 @@ export default function WorkshopDetailsScreen() {
           <View style={styles.unavailableBannerBox}>
             <Info color={COLORS.textMuted} size={18} />
             <Text style={styles.unavailableBannerText}>
-              Online booking is currently unavailable for this directory listing.
+              {t('workshop.directoryListingDesc')}
             </Text>
           </View>
         )}
@@ -743,7 +783,7 @@ export default function WorkshopDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Write a Review</Text>
+              <Text style={styles.modalTitle}>{t('reviews.writeReview')}</Text>
               <TouchableOpacity onPress={() => setWriteReviewModalVisible(false)}>
                 <X color={COLORS.textMuted} size={20} />
               </TouchableOpacity>
@@ -754,7 +794,7 @@ export default function WorkshopDetailsScreen() {
                 {/* Completed Booking Selector */}
                 {completedBookings.length > 0 && (
                   <View style={{ gap: 6 }}>
-                    <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>SELECT COMPLETED BOOKING</Text>
+                    <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>{t('reviews.selectBookingToReview').toUpperCase()}</Text>
                     {completedBookings.map((bk) => (
                       <TouchableOpacity
                         key={bk.id}
@@ -769,7 +809,7 @@ export default function WorkshopDetailsScreen() {
                           <Text style={{ color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' }}>
                             {bk.motorcycle?.nickname || bk.motorcycle?.brand || 'Motorcycle'} ({bk.motorcycle?.plate_number})
                           </Text>
-                          <Text style={{ color: COLORS.textMuted, fontSize: 10 }}>Date: {bk.booking_date}</Text>
+                          <Text style={{ color: COLORS.textMuted, fontSize: 10 }}>{t('common.date')}: {bk.booking_date}</Text>
                         </View>
                         {selectedBookingForReview?.id === bk.id && <Check color={COLORS.primary} size={16} />}
                       </TouchableOpacity>
@@ -779,7 +819,7 @@ export default function WorkshopDetailsScreen() {
 
                 {/* Rating Stars */}
                 <View style={{ alignItems: 'center', gap: 6, marginVertical: 8 }}>
-                  <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' }}>YOUR RATING</Text>
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' }}>{t('reviews.yourRating').toUpperCase()}</Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {[1, 2, 3, 4, 5].map((i) => (
                       <TouchableOpacity key={i} onPress={() => setNewRating(i)}>
@@ -790,12 +830,12 @@ export default function WorkshopDetailsScreen() {
                 </View>
 
                 {/* Comment Text Area */}
-                <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>YOUR COMMENT (OPTIONAL)</Text>
+                <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>{t('reviews.yourComment').toUpperCase()} ({t('common.optional').toUpperCase()})</Text>
                 <TextInput
                   style={styles.reviewCommentInput}
                   value={newComment}
                   onChangeText={setNewComment}
-                  placeholder="Share details of your experience..."
+                  placeholder={t('reviews.commentPlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   multiline
                   numberOfLines={3}
@@ -807,89 +847,15 @@ export default function WorkshopDetailsScreen() {
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
               <TouchableOpacity style={styles.cancelReviewBtn} onPress={() => setWriteReviewModalVisible(false)}>
-                <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' }}>Cancel</Text>
+                <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' }}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title={submittingReview ? 'SUBMITTING...' : 'SUBMIT REVIEW'}
+                title={submittingReview ? t('common.submitting').toUpperCase() : t('reviews.submitReview').toUpperCase()}
                 onPress={handleSubmitReview}
                 disabled={submittingReview || newRating === 0}
                 style={{ flex: 1 }}
               />
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Buy Part Modal */}
-      <Modal visible={!!selectedPartToBuy && !buySuccessModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buy Spare Part Only</Text>
-              <TouchableOpacity onPress={() => setSelectedPartToBuy(null)}>
-                <X color={COLORS.textMuted} size={20} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedPartToBuy && (
-              <View style={{ gap: 12, paddingVertical: 8 }}>
-                <Text style={styles.partNameModal}>{selectedPartToBuy.name}</Text>
-                <Text style={styles.partShopModal}>Sold by: {name}</Text>
-
-                <View style={styles.qtyRow}>
-                  <Text style={styles.qtyLabel}>Quantity:</Text>
-                  <View style={styles.qtyBox}>
-                    <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() => setBuyQuantity(q => Math.max(1, q - 1))}
-                    >
-                      <Text style={styles.qtyBtnText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.qtyValue}>{buyQuantity}</Text>
-                    <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() => setBuyQuantity(q => q + 1)}
-                    >
-                      <Text style={styles.qtyBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Price:</Text>
-                  <Text style={styles.totalVal}>RM {((selectedPartToBuy.price || 0) * buyQuantity).toFixed(2)}</Text>
-                </View>
-
-                <CustomButton
-                  title="CONFIRM PURCHASE & PICKUP"
-                  onPress={handleConfirmPartPurchase}
-                  style={{ marginTop: 10 }}
-                />
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Purchase Success Modal */}
-      <Modal visible={buySuccessModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.successIconBox}>
-              <Check color={COLORS.success} size={40} />
-            </View>
-            <Text style={styles.modalTitle}>PURCHASE SUCCESSFUL!</Text>
-            <Text style={styles.modalSub}>
-              Your spare part order for <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{selectedPartToBuy?.name}</Text> has been placed at <Text style={{ color: COLORS.primary }}>{name}</Text>.
-            </Text>
-            <Text style={styles.ticketDetail}>Please present order reference at workshop for self-pickup.</Text>
-            <CustomButton
-              title="DONE"
-              onPress={() => {
-                setBuySuccessModal(false);
-                setSelectedPartToBuy(null);
-              }}
-            />
           </View>
         </View>
       </Modal>
@@ -903,7 +869,8 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   topTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  photoContainer: { height: 160, borderRadius: 20, overflow: 'hidden', marginBottom: 16, position: 'relative' },
+  photoContainer: { height: 180, borderRadius: 20, overflow: 'hidden', marginBottom: 16, position: 'relative', backgroundColor: COLORS.surfaceContainer, borderWidth: 1, borderColor: COLORS.border },
+  workshopCoverImage: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, backgroundColor: COLORS.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.primaryGlow, gap: 8 },
   photoPlaceholderText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
   statusBadge: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
@@ -923,11 +890,10 @@ const styles = StyleSheet.create({
   ratingText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   detailText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600', flex: 1 },
-  tabContainer: { flexDirection: 'row', backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16 },
-  tabButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 10 },
-  activeTabButton: { backgroundColor: COLORS.primary, borderWidth: 1, borderColor: COLORS.primary },
-  tabButtonText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' },
-  activeTabText: { color: COLORS.primaryDark },
+  categoryFilterChip: { backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, marginRight: 8 },
+  activeCategoryFilterChip: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: COLORS.primary },
+  categoryFilterChipText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
+  activeCategoryFilterChipText: { color: COLORS.primary, fontWeight: '800' },
   emptyServiceBox: { backgroundColor: COLORS.surfaceContainer, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6 },
   emptyServiceText: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
   serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
@@ -937,20 +903,7 @@ const styles = StyleSheet.create({
   priceActionCol: { alignItems: 'flex-end', gap: 6 },
   servicePrice: { color: COLORS.primary, fontSize: 15, fontWeight: '900' },
   selectServBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  selectServBtnText: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800' },
-  partsBannerNote: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: COLORS.border },
-  partsBannerNoteText: { color: COLORS.textSecondary, fontSize: 12, flex: 1, lineHeight: 16 },
-  partCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  partIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.primaryGlow, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary },
-  brandBadge: { alignSelf: 'flex-start', backgroundColor: COLORS.surface, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 4 },
-  brandText: { color: COLORS.primary, fontSize: 9, fontWeight: '800' },
-  partName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800' },
-  partDesc: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
-  partPrice: { color: COLORS.primary, fontSize: 15, fontWeight: '900', marginTop: 4 },
-  buyPartOnlyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 },
-  buyPartOnlyBtnText: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800' },
-  installWithServiceBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.surface, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary },
-  installWithServiceBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
+  selectServBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
 
   // ─── Section Headers ────────────────────────────────────────
   sectionHeaderRow: { marginTop: 20, marginBottom: 8 },

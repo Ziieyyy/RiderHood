@@ -36,8 +36,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
 import { createMotorcycle } from '../../services/motorcycleService';
 import { createReminder } from '../../services/maintenanceService';
-import { createDocument } from '../../services/documentService';
+import { createDocument, uploadAndCreateDocument } from '../../services/documentService';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../i18n';
 
 const BRANDS = ['Yamaha', 'Honda', 'Modenas', 'Suzuki', 'Kawasaki', 'SYM', 'Benelli', 'KTM', 'BMW', 'Ducati'];
 const POPULAR_MODELS = ['Y15ZR', 'Y16ZR', 'RS150R', 'LC135', 'EX5', 'NVX 155', 'VF3i', 'Dash 125', 'MT-09', 'R15', 'Ninja 250'];
@@ -51,6 +52,7 @@ const MONTH_NAMES = [
 ];
 
 export default function SetupMotorcycleScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -93,8 +95,11 @@ export default function SetupMotorcycleScreen() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [insuranceDocName, setInsuranceDocName] = useState<string | null>(null);
+  const [insuranceDocAsset, setInsuranceDocAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [roadTaxDocName, setRoadTaxDocName] = useState<string | null>(null);
+  const [roadTaxDocAsset, setRoadTaxDocAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [warrantyDocName, setWarrantyDocName] = useState<string | null>(null);
+  const [warrantyDocAsset, setWarrantyDocAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
   const finalBrand = customBrand.trim() || brand;
   const finalModel = customModel.trim() || model;
@@ -152,7 +157,7 @@ export default function SetupMotorcycleScreen() {
       }
     } catch (err: any) {
       console.error('Step navigation error:', err);
-      Alert.alert('Navigation Error', 'An error occurred while proceeding. Please check your input fields.');
+      Alert.alert(t('common.error'), t('errors.invalidForm'));
     }
   };
 
@@ -289,54 +294,47 @@ export default function SetupMotorcycleScreen() {
     title: string,
     currentName: string | null,
     setName: (val: string | null) => void,
+    setAsset: (val: DocumentPicker.DocumentPickerAsset | null) => void,
     defaultFileName: string
   ) => {
     if (currentName) {
       setName(null);
+      setAsset(null);
       return;
     }
 
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const doc = result.assets[0];
         setName(doc.name || defaultFileName);
+        setAsset(doc);
       }
     } catch (err: any) {
       console.error('Error launching document picker:', err);
-      Alert.alert(
-        `Attach ${title}`,
-        `Attach file "${defaultFileName}" for ${plateNumber || 'this motorcycle'}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Attach File',
-            onPress: () => setName(defaultFileName),
-          },
-        ]
-      );
+      Alert.alert('File Picker Error', 'Unable to open file picker. Please try again.');
     }
   };
 
   // Helper for step header subtitle
   const getHeaderSubtitle = () => {
-    if (step === 1) return 'Step 1 of 4 — Basic Information';
-    if (step === 2) return 'Step 2 of 4 — Technical Details';
-    if (step === 3) return 'Step 3 of 4 — Status & Mileage';
-    if (step === 4) return 'Step 4 of 4 — Photo & Documents';
-    if (step === 5) return 'Final Step — Review & Confirm';
-    if (step === 6) return 'Added to My Garage';
-    return 'Setup Profile';
+    if (step === 1) return t('motorcycle.step1BasicInfo');
+    if (step === 2) return t('motorcycle.step2Specifications');
+    if (step === 3) return t('motorcycle.currentOdometer');
+    if (step === 4) return t('motorcycle.step3Photo');
+    if (step === 5) return t('motorcycle.registerMotorcycle');
+    if (step === 6) return t('motorcycle.garage');
+    return t('motorcycle.registerNew');
   };
 
   // ─── FINAL REGISTRATION (SAVE TO DB) WITH BULLETPROOF EXCEPTION HANDLING
   const handleFinalRegister = async () => {
     if (!user?.id) {
-      Alert.alert('Authentication Required', 'Please sign in to register your motorcycle to your garage.');
+      Alert.alert(t('common.required'), t('errors.unauthorized'));
       return;
     }
 
@@ -366,8 +364,6 @@ export default function SetupMotorcycleScreen() {
           front_tyre_size: frontTyre.trim() || null,
           rear_tyre_size: rearTyre.trim() || null,
           current_mileage: odo,
-          last_service_date: cleanLastServiceDate,
-          warranty_expiry_date: cleanWarrantyExpiry,
           photo_url: photoUrl || null,
         });
       } catch (bikeErr: any) {
@@ -416,41 +412,41 @@ export default function SetupMotorcycleScreen() {
         console.warn('Initial reminder creation warning (non-fatal):', remErr);
       }
 
-      // 4. Insert digital documents into database (fault tolerant)
+      // 4. Upload digital documents to Supabase Storage + insert DB records (fault tolerant)
       try {
-        if (insuranceDocName) {
-          await createDocument({
+        if (insuranceDocAsset) {
+          await uploadAndCreateDocument({
             customer_id: user.id,
             motorcycle_id: bike.id,
             title: `Insurance Policy - ${plateNumber.trim().toUpperCase()}`,
             type: 'Insurance',
-            file_path: `docs/${user.id}/insurance_${bike.id}.pdf`,
+            file: insuranceDocAsset,
             expiry_date: cleanWarrantyExpiry,
           });
         }
 
-        if (roadTaxDocName) {
-          await createDocument({
+        if (roadTaxDocAsset) {
+          await uploadAndCreateDocument({
             customer_id: user.id,
             motorcycle_id: bike.id,
             title: `Road Tax License - ${plateNumber.trim().toUpperCase()}`,
             type: 'Road Tax',
-            file_path: `docs/${user.id}/roadtax_${bike.id}.pdf`,
+            file: roadTaxDocAsset,
           });
         }
 
-        if (warrantyDocName) {
-          await createDocument({
+        if (warrantyDocAsset) {
+          await uploadAndCreateDocument({
             customer_id: user.id,
             motorcycle_id: bike.id,
             title: `Manufacturer Warranty Certificate`,
             type: 'Warranty',
-            file_path: `docs/${user.id}/warranty_${bike.id}.pdf`,
+            file: warrantyDocAsset,
             expiry_date: cleanWarrantyExpiry,
           });
         }
       } catch (docErr) {
-        console.warn('Document creation warning (non-fatal):', docErr);
+        console.warn('Document upload warning (non-fatal):', docErr);
       }
 
       setStep(6);
@@ -470,7 +466,7 @@ export default function SetupMotorcycleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title={step === 6 ? 'Registration Complete' : 'Register New Motorcycle'}
+        title={step === 6 ? t('motorcycle.registrationComplete') : t('motorcycle.registerNew')}
         subtitle={getHeaderSubtitle()}
       />
 
@@ -507,21 +503,21 @@ export default function SetupMotorcycleScreen() {
         {/* ==================== STEP 1: BASIC INFO ==================== */}
         {step === 1 && (
           <View style={styles.formCard}>
-            <Text style={styles.stepTitle}>STEP 1 — BASIC MOTORCYCLE INFORMATION</Text>
-            <Text style={styles.stepDesc}>Enter your motorcycle identity and registration details.</Text>
+            <Text style={styles.stepTitle}>{t('motorcycle.step1BasicInfo').toUpperCase()}</Text>
+            <Text style={styles.stepDesc}>{t('motorcycle.details')}</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MOTORCYCLE NICKNAME</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.nickname').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={nickname}
                 onChangeText={setNickname}
-                placeholder="e.g. Y16 or My Beast"
+                placeholder={t('motorcycle.nicknamePlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
 
-            <Text style={[styles.inputLabel, { marginTop: 12 }]}>BRAND / MANUFACTURER</Text>
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.brand').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {BRANDS.map((b) => (
                 <TouchableOpacity
@@ -539,11 +535,11 @@ export default function SetupMotorcycleScreen() {
               style={styles.input}
               value={customBrand}
               onChangeText={setCustomBrand}
-              placeholder="Or type other brand (e.g. BMW, Royal Enfield)"
+              placeholder={t('motorcycle.selectBrand')}
               placeholderTextColor={COLORS.textMuted}
             />
 
-            <Text style={[styles.inputLabel, { marginTop: 12 }]}>MODEL</Text>
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.model').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {POPULAR_MODELS.map((m) => (
                 <TouchableOpacity
@@ -561,29 +557,29 @@ export default function SetupMotorcycleScreen() {
               style={styles.input}
               value={customModel}
               onChangeText={setCustomModel}
-              placeholder="Or type custom model (e.g. Y16ZR ABS / NVX 155 V2)"
+              placeholder={t('motorcycle.selectModel')}
               placeholderTextColor={COLORS.textMuted}
             />
 
             <View style={styles.twoColRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>MANUFACTURING YEAR</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.year').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={year}
                   onChangeText={setYear}
-                  placeholder="e.g. 2024"
+                  placeholder={t('motorcycle.yearPlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="number-pad"
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>REGISTRATION / PLATE NO.</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.plateNumber').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={plateNumber}
                   onChangeText={setPlateNumber}
-                  placeholder="e.g. ABC 1234"
+                  placeholder={t('motorcycle.plateNumberPlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   autoCapitalize="characters"
                 />
@@ -591,7 +587,7 @@ export default function SetupMotorcycleScreen() {
             </View>
 
             <CustomButton
-              title="Continue to Technical Details →"
+              title={`${t('common.next')} →`}
               onPress={handleNextStep}
               style={{ marginTop: 24 }}
             />
@@ -601,11 +597,11 @@ export default function SetupMotorcycleScreen() {
         {/* ==================== STEP 2: TECHNICAL INFO ==================== */}
         {step === 2 && (
           <View style={styles.formCard}>
-            <Text style={styles.stepTitle}>STEP 2 — TECHNICAL INFORMATION</Text>
-            <Text style={styles.stepDesc}>Configure engine and tyre specifications for accurate parts matching.</Text>
+            <Text style={styles.stepTitle}>{t('motorcycle.technicalInfo').toUpperCase()}</Text>
+            <Text style={styles.stepDesc}>{t('motorcycle.technicalInfoDesc')}</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>ENGINE CAPACITY (CC)</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.engineCapacity').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={engineCc}
@@ -616,7 +612,7 @@ export default function SetupMotorcycleScreen() {
               />
             </View>
 
-            <Text style={[styles.inputLabel, { marginTop: 12 }]}>FUEL TYPE</Text>
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.fuelType').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {FUEL_TYPES.map((ft) => (
                 <TouchableOpacity
@@ -629,20 +625,20 @@ export default function SetupMotorcycleScreen() {
               ))}
             </View>
 
-            <Text style={[styles.inputLabel, { marginTop: 12 }]}>TRANSMISSION</Text>
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.transmission').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
-              {TRANSMISSIONS.map((t) => (
+              {TRANSMISSIONS.map((tItem) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.chip, transmission === t && styles.chipActive]}
-                  onPress={() => setTransmission(t)}
+                  key={tItem}
+                  style={[styles.chip, transmission === tItem && styles.chipActive]}
+                  onPress={() => setTransmission(tItem)}
                 >
-                  <Text style={[styles.chipText, transmission === t && styles.chipTextActive]}>{t}</Text>
+                  <Text style={[styles.chipText, transmission === tItem && styles.chipTextActive]}>{tItem}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={[styles.inputLabel, { marginTop: 12 }]}>RECOMMENDED ENGINE OIL GRADE</Text>
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.engineOilGrade').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {ENGINE_OILS.map((eo) => (
                 <TouchableOpacity
@@ -657,7 +653,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.twoColRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>FRONT TYRE SIZE</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.tyreFront').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={frontTyre}
@@ -667,7 +663,7 @@ export default function SetupMotorcycleScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>REAR TYRE SIZE</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.tyreRear').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={rearTyre}
@@ -681,10 +677,10 @@ export default function SetupMotorcycleScreen() {
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
                 <ArrowLeft color={COLORS.textPrimary} size={16} />
-                <Text style={styles.backStepText}>Back</Text>
+                <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title="Continue to Status →"
+                title={`${t('common.next')} →`}
                 onPress={handleNextStep}
                 style={{ flex: 1 }}
               />
@@ -695,11 +691,11 @@ export default function SetupMotorcycleScreen() {
         {/* ==================== STEP 3: STATUS & MILEAGE ==================== */}
         {step === 3 && (
           <View style={styles.formCard}>
-            <Text style={styles.stepTitle}>STEP 3 — MOTORCYCLE STATUS & MILEAGE</Text>
-            <Text style={styles.stepDesc}>Used by RiderHood to calculate automated maintenance reminders.</Text>
+            <Text style={styles.stepTitle}>{t('motorcycle.statusAndMileage').toUpperCase()}</Text>
+            <Text style={styles.stepDesc}>{t('motorcycle.statusAndMileageDesc')}</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CURRENT ODOMETER MILEAGE (KM) *</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.currentOdometer').toUpperCase()} *</Text>
               <TextInput
                 style={styles.input}
                 value={currentMileage}
@@ -712,7 +708,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.twoColRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>LAST SERVICE DATE</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.lastServiceDate').toUpperCase()}</Text>
                 <TouchableOpacity
                   style={styles.datePickerBtn}
                   onPress={() => openDatePicker('lastService')}
@@ -720,13 +716,13 @@ export default function SetupMotorcycleScreen() {
                 >
                   <CalendarIcon color={COLORS.primary} size={16} />
                   <Text style={[styles.datePickerBtnText, !lastServiceDate && { color: COLORS.textMuted }]}>
-                    {lastServiceDate || 'Select Date 📅'}
+                    {lastServiceDate || `${t('common.date')} 📅`}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>LAST SERVICE MILEAGE</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.lastServiceMileage').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={lastServiceMileage}
@@ -740,7 +736,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.twoColRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>NEXT SERVICE TARGET (KM)</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.nextServiceTarget').toUpperCase()}</Text>
                 <TextInput
                   style={styles.input}
                   value={nextServiceMileage}
@@ -752,7 +748,7 @@ export default function SetupMotorcycleScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>WARRANTY EXPIRY (OPTIONAL)</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.warrantyExpiry').toUpperCase()} ({t('common.optional').toUpperCase()})</Text>
                 <TouchableOpacity
                   style={styles.datePickerBtn}
                   onPress={() => openDatePicker('warranty')}
@@ -760,7 +756,7 @@ export default function SetupMotorcycleScreen() {
                 >
                   <CalendarIcon color={COLORS.primary} size={16} />
                   <Text style={[styles.datePickerBtnText, !warrantyExpiry && { color: COLORS.textMuted }]}>
-                    {warrantyExpiry || 'Select Date 📅'}
+                    {warrantyExpiry || `${t('common.date')} 📅`}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -769,10 +765,10 @@ export default function SetupMotorcycleScreen() {
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
                 <ArrowLeft color={COLORS.textPrimary} size={16} />
-                <Text style={styles.backStepText}>Back</Text>
+                <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title="Continue to Media →"
+                title={`${t('common.next')} →`}
                 onPress={handleNextStep}
                 style={{ flex: 1 }}
               />
@@ -783,10 +779,10 @@ export default function SetupMotorcycleScreen() {
         {/* ==================== STEP 4: PHOTO & DOCUMENTS ==================== */}
         {step === 4 && (
           <View style={styles.formCard}>
-            <Text style={styles.stepTitle}>STEP 4 — MOTORCYCLE PHOTO & DOCUMENTS</Text>
-            <Text style={styles.stepDesc}>Upload digital copies of road tax, insurance, and warranty documents.</Text>
+            <Text style={styles.stepTitle}>{t('motorcycle.photoAndDocs').toUpperCase()}</Text>
+            <Text style={styles.stepDesc}>{t('motorcycle.photoAndDocsDesc')}</Text>
 
-            <Text style={styles.sectionHeaderLabel}>MOTORCYCLE PHOTO</Text>
+            <Text style={styles.sectionHeaderLabel}>{t('motorcycle.step3Photo').toUpperCase()}</Text>
             <TouchableOpacity
               style={[styles.uploadBox, photoUrl && styles.uploadBoxActive]}
               onPress={handlePickCoverPhoto}
@@ -797,39 +793,39 @@ export default function SetupMotorcycleScreen() {
                   <Image source={{ uri: photoUrl }} style={styles.previewImage} resizeMode="cover" />
                   <View style={styles.photoActiveBadge}>
                     <Check color="#000" size={14} />
-                    <Text style={styles.photoActiveText}>{photoName || 'Photo Selected'}</Text>
+                    <Text style={styles.photoActiveText}>{photoName || t('motorcycle.photoUrl')}</Text>
                   </View>
-                  <Text style={{ color: COLORS.textMuted, fontSize: 10, marginTop: 4 }}>Tap to change photo</Text>
+                  <Text style={{ color: COLORS.textMuted, fontSize: 10, marginTop: 4 }}>{t('motorcycle.tapToChange')}</Text>
                 </View>
               ) : (
                 <>
                   <Camera color={COLORS.primary} size={32} />
-                  <Text style={styles.uploadBoxTitle}>+ Choose Photo from Gallery / Device</Text>
-                  <Text style={styles.uploadBoxSub}>Supports PNG, JPG up to 5MB</Text>
+                  <Text style={styles.uploadBoxTitle}>+ {t('motorcycle.chooseFromGallery')}</Text>
+                  <Text style={styles.uploadBoxSub}>{t('motorcycle.photoFormatNotice')}</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <Text style={[styles.sectionHeaderLabel, { marginTop: 16 }]}>DIGITAL DOCUMENTS (OPTIONAL)</Text>
+            <Text style={[styles.sectionHeaderLabel, { marginTop: 16 }]}>{t('motorcycle.digitalVault').toUpperCase()} ({t('common.optional').toUpperCase()})</Text>
             <View style={styles.docUploadGrid}>
               {[
-                { title: 'Insurance Policy', state: insuranceDocName, setter: setInsuranceDocName, defaultVal: 'Insurance_Policy_2026.pdf' },
-                { title: 'Road Tax License', state: roadTaxDocName, setter: setRoadTaxDocName, defaultVal: 'RoadTax_Permit_2026.pdf' },
-                { title: 'Warranty Certificate', state: warrantyDocName, setter: setWarrantyDocName, defaultVal: 'Warranty_Certificate.pdf' },
+                { title: t('motorcycle.insurance'), state: insuranceDocName, setter: setInsuranceDocName, assetSetter: setInsuranceDocAsset, defaultVal: 'Insurance_Policy_2026.pdf' },
+                { title: t('motorcycle.roadtax'), state: roadTaxDocName, setter: setRoadTaxDocName, assetSetter: setRoadTaxDocAsset, defaultVal: 'RoadTax_Permit_2026.pdf' },
+                { title: t('motorcycle.warranty'), state: warrantyDocName, setter: setWarrantyDocName, assetSetter: setWarrantyDocAsset, defaultVal: 'Warranty_Certificate.pdf' },
               ].map((doc) => (
                 <View key={doc.title} style={styles.docRowItem}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.docItemTitle}>{doc.title}</Text>
-                    <Text style={styles.docItemFile}>{doc.state ? `📄 ${doc.state}` : 'Not attached'}</Text>
+                    <Text style={styles.docItemFile}>{doc.state ? `📄 ${doc.state}` : t('common.none')}</Text>
                   </View>
                   <TouchableOpacity
                     style={[styles.docUploadBtn, doc.state && styles.docUploadBtnSuccess]}
-                    onPress={() => handlePickDocumentFile(doc.title, doc.state, doc.setter, doc.defaultVal)}
+                    onPress={() => handlePickDocumentFile(doc.title, doc.state, doc.setter, doc.assetSetter, doc.defaultVal)}
                     activeOpacity={0.8}
                   >
                     <FolderOpen color={doc.state ? COLORS.success : COLORS.primary} size={14} />
                     <Text style={[styles.docUploadBtnText, doc.state && { color: COLORS.success }]}>
-                      {doc.state ? 'Remove' : 'Choose File'}
+                      {doc.state ? t('common.remove') : t('common.upload')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -839,10 +835,10 @@ export default function SetupMotorcycleScreen() {
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
                 <ArrowLeft color={COLORS.textPrimary} size={16} />
-                <Text style={styles.backStepText}>Back</Text>
+                <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title="Review Motorcycle Details →"
+                title={`${t('common.reviewDetails')} →`}
                 onPress={() => setStep(5)}
                 style={{ flex: 1 }}
               />
@@ -853,8 +849,8 @@ export default function SetupMotorcycleScreen() {
         {/* ==================== STEP 5: REVIEW MOTORCYCLE ==================== */}
         {step === 5 && (
           <View style={styles.formCard}>
-            <Text style={styles.stepTitle}>REVIEW MOTORCYCLE</Text>
-            <Text style={styles.stepDesc}>Verify all entered information before registering to your garage database.</Text>
+            <Text style={styles.stepTitle}>{t('motorcycle.reviewMotorcycle').toUpperCase()}</Text>
+            <Text style={styles.stepDesc}>{t('motorcycle.reviewMotorcycleDesc')}</Text>
 
             <View style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
@@ -866,7 +862,7 @@ export default function SetupMotorcycleScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reviewTitle}>🏍️ {nickname || `${finalBrand} ${finalModel}`}</Text>
                   <Text style={styles.reviewSub}>{finalBrand} {finalModel} • {year}</Text>
-                  <Text style={styles.reviewPlate}>Plate: {plateNumber.toUpperCase()}</Text>
+                  <Text style={styles.reviewPlate}>{t('motorcycle.plateNumber')}: {plateNumber.toUpperCase()}</Text>
                 </View>
               </View>
 
@@ -874,23 +870,23 @@ export default function SetupMotorcycleScreen() {
 
               <View style={styles.specsGrid}>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>ENGINE</Text>
+                  <Text style={styles.specLabel}>{t('motorcycle.engine').toUpperCase()}</Text>
                   <Text style={styles.specVal}>{engineCc ? `${engineCc} cc` : 'N/A'} ({fuelType || 'Petrol'})</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>TRANSMISSION</Text>
+                  <Text style={styles.specLabel}>{t('motorcycle.transmission').toUpperCase()}</Text>
                   <Text style={styles.specVal}>{transmission || 'Manual'}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>LAST SERVICE DATE</Text>
+                  <Text style={styles.specLabel}>{t('motorcycle.lastServiceDate').toUpperCase()}</Text>
                   <Text style={styles.specVal}>{lastServiceDate || 'N/A'}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>WARRANTY EXPIRY</Text>
+                  <Text style={styles.specLabel}>{t('motorcycle.warrantyExpiry').toUpperCase()}</Text>
                   <Text style={styles.specVal}>{warrantyExpiry || 'N/A'}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>TYRES</Text>
+                  <Text style={styles.specLabel}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                   <Text style={styles.specVal}>{frontTyre || 'N/A'} / {rearTyre || 'N/A'}</Text>
                 </View>
               </View>
@@ -900,7 +896,7 @@ export default function SetupMotorcycleScreen() {
               <View style={styles.mileageSummaryBox}>
                 <Gauge color={COLORS.primary} size={20} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.mileageLabel}>CURRENT ODOMETER</Text>
+                  <Text style={styles.mileageLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                   <Text style={styles.mileageVal}>{parseInt(currentMileage || '0', 10).toLocaleString()} km</Text>
                 </View>
               </View>
@@ -909,10 +905,10 @@ export default function SetupMotorcycleScreen() {
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={() => setStep(4)}>
                 <ArrowLeft color={COLORS.textPrimary} size={16} />
-                <Text style={styles.backStepText}>← Edit</Text>
+                <Text style={styles.backStepText}>← {t('common.edit')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title={loading ? 'SAVING TO DATABASE...' : 'REGISTER MOTORCYCLE'}
+                title={loading ? t('common.saving').toUpperCase() : t('motorcycle.registerMotorcycle').toUpperCase()}
                 onPress={handleFinalRegister}
                 disabled={loading}
                 style={{ flex: 1 }}
@@ -928,18 +924,18 @@ export default function SetupMotorcycleScreen() {
               <CheckCircle2 color={COLORS.success} size={56} />
             </View>
 
-            <Text style={styles.successTitle}>✓ Motorcycle Registered</Text>
+            <Text style={styles.successTitle}>✓ {t('motorcycle.registrationComplete')}</Text>
             <Text style={styles.successDesc}>
-              Your <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully saved into the Supabase database with active maintenance tracking.
+              Your <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully saved into the database.
             </Text>
 
             <View style={styles.successActions}>
               <CustomButton
-                title="View Garage & Profile"
+                title={t('navigation.garage')}
                 onPress={() => router.replace('/(customer)/profile')}
               />
               <CustomButton
-                title="Back to Customer Dashboard"
+                title={t('navigation.home')}
                 variant="secondary"
                 onPress={() => router.replace('/(customer)/home')}
               />
@@ -959,7 +955,7 @@ export default function SetupMotorcycleScreen() {
           <View style={styles.dateModalCard}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalHeaderTitle}>
-                📅 Select {targetDateField === 'lastService' ? 'Last Service Date' : 'Warranty Expiry Date'}
+                📅 {t('common.date')}
               </Text>
               <TouchableOpacity onPress={() => setDateModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <X color={COLORS.textSecondary} size={20} />
@@ -967,21 +963,21 @@ export default function SetupMotorcycleScreen() {
             </View>
 
             {/* Quick Preset Buttons */}
-            <Text style={styles.modalSub}>Quick Presets:</Text>
+            <Text style={styles.modalSub}>{t('common.filter')}:</Text>
             <View style={styles.datePresetsRow}>
               {targetDateField === 'lastService' ? (
                 <>
                   <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(0)}>
-                    <Text style={styles.presetChipText}>Today</Text>
+                    <Text style={styles.presetChipText}>{t('common.today')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-1)}>
-                    <Text style={styles.presetChipText}>1 Mo Ago</Text>
+                    <Text style={styles.presetChipText}>1 Mo</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-3)}>
-                    <Text style={styles.presetChipText}>3 Mos Ago</Text>
+                    <Text style={styles.presetChipText}>3 Mos</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.presetChip} onPress={() => setPresetDate(-6)}>
-                    <Text style={styles.presetChipText}>6 Mos Ago</Text>
+                    <Text style={styles.presetChipText}>6 Mos</Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -1051,7 +1047,7 @@ export default function SetupMotorcycleScreen() {
               style={styles.closeModalBtn}
               onPress={() => setDateModalVisible(false)}
             >
-              <Text style={styles.closeModalBtnText}>Close Calendar</Text>
+              <Text style={styles.closeModalBtnText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

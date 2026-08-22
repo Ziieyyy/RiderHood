@@ -27,6 +27,7 @@ import {
   CheckCircle,
   RefreshCw,
 } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
 
 const NOTIF_ICONS: Record<string, { icon: any; color: string; bg: string }> = {
   booking:     { icon: Calendar, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
@@ -38,6 +39,7 @@ const NOTIF_ICONS: Record<string, { icon: any; color: string; bg: string }> = {
 };
 
 export default function WorkshopNotificationsScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,10 +98,10 @@ export default function WorkshopNotificationsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Notifications" subtitle="Workshop alerts & activity" />
+        <Header title={t('navigation.notifications')} subtitle={t('notifications.title')} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -108,13 +110,13 @@ export default function WorkshopNotificationsScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Notifications" subtitle="Workshop alerts & activity" />
+        <Header title={t('navigation.notifications')} subtitle={t('notifications.title')} />
         <View style={styles.centered}>
           <RefreshCw color={COLORS.danger} size={40} />
-          <Text style={styles.errorTitle}>Failed to load</Text>
+          <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
           <Text style={styles.errorDesc}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -124,13 +126,13 @@ export default function WorkshopNotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Notifications"
-        subtitle={unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+        title={t('navigation.notifications')}
+        subtitle={unreadCount > 0 ? `${unreadCount} ${t('notifications.unread')}` : t('notifications.title')}
         rightElement={
           unreadCount > 0 ? (
             <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
               <CheckCircle color={COLORS.primary} size={16} />
-              <Text style={styles.markAllText}>Mark all read</Text>
+              <Text style={styles.markAllText}>{t('notifications.markAllAsRead')}</Text>
             </TouchableOpacity>
           ) : undefined
         }
@@ -139,10 +141,10 @@ export default function WorkshopNotificationsScreen() {
       {/* Filter Chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
         {[
-          { key: 'all', label: `All (${notifications.length})` },
-          { key: 'unread', label: `Unread (${unreadCount})` },
-          { key: 'booking', label: 'Bookings' },
-          { key: 'inventory', label: 'Inventory & System' },
+          { key: 'all', label: `${t('common.all')} (${notifications.length})` },
+          { key: 'unread', label: `${t('notifications.unread')} (${unreadCount})` },
+          { key: 'booking', label: t('navigation.bookings') },
+          { key: 'inventory', label: t('workshopAdmin.manageSpareParts') },
         ].map((f) => (
           <TouchableOpacity
             key={f.key}
@@ -166,8 +168,8 @@ export default function WorkshopNotificationsScreen() {
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Bell color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>No notifications found</Text>
-            <Text style={styles.emptyDesc}>New booking requests, stock alerts, and reviews will appear here.</Text>
+            <Text style={styles.emptyTitle}>{t('notifications.noNotifications')}</Text>
+            <Text style={styles.emptyDesc}>{t('notifications.noNotificationsDesc')}</Text>
           </View>
         ) : (
           filtered.map((item) => {

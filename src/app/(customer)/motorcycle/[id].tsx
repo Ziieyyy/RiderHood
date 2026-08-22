@@ -12,6 +12,7 @@ import {
   TextInput,
   Dimensions,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,6 +40,7 @@ import {
   Star,
   AlertCircle,
   Calendar,
+  Upload,
 } from 'lucide-react-native';
 import {
   getMotorcycle,
@@ -61,6 +63,13 @@ import {
   updateDocument,
   deleteDocument,
   getDocumentExpiryStatus,
+  getPublicDocumentUrl,
+  getSignedDocumentUrl,
+  uploadAndCreateDocument,
+  deleteDocumentWithStorage,
+  replaceDocumentFile,
+  validateDocumentFile,
+  openDocumentFile,
 } from '../../../services/documentService';
 import {
   getMotorcyclePhotos,
@@ -68,6 +77,10 @@ import {
   deleteMotorcyclePhoto,
   setMainMotorcyclePhoto,
 } from '../../../services/photoService';
+import {
+  openDocument,
+  getDocumentFileType,
+} from '../../../services/documentViewerService';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import type {
@@ -79,10 +92,12 @@ import type {
   MotorcyclePhoto,
   Booking,
 } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function MotorcycleDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -159,6 +174,10 @@ export default function MotorcycleDetailScreen() {
   // Document Viewer Modal State
   const [previewDoc, setPreviewDoc] = useState<RiderDoc | null>(null);
   const [docPreviewVisible, setDocPreviewVisible] = useState(false);
+  const [previewSignedUrl, setPreviewSignedUrl] = useState<string | null>(null);
+  const [loadingPreviewUrl, setLoadingPreviewUrl] = useState(false);
+  const [previewUrlError, setPreviewUrlError] = useState<string | null>(null);
+  const [selectedEditDocFile, setSelectedEditDocFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
   // ─── LOAD ALL DATA BY MOTORCYCLE_ID (SINGLE SOURCE OF TRUTH) ────
   const loadMotorcycleData = useCallback(async () => {
@@ -255,14 +274,14 @@ export default function MotorcycleDetailScreen() {
 
       setBike(updated);
 
-      // Save document attachment if provided in edit form
-      if (newDocTitle.trim() && user?.id) {
-        const createdDoc = await createDocument({
+      // Save document attachment if provided in edit form — ONLY if an actual file is selected
+      if (newDocTitle.trim() && user?.id && selectedDocFile) {
+        const createdDoc = await uploadAndCreateDocument({
           customer_id: user.id,
           motorcycle_id: bike.id,
           title: newDocTitle.trim(),
           type: newDocType,
-          file_path: selectedDocFile ? selectedDocFile.uri : `documents/${user.id}/${bike.id}_${Date.now()}_${newDocTitle.replace(/\s+/g, '_')}.pdf`,
+          file: selectedDocFile,
           expiry_date: newDocExpiryDate && newDocExpiryDate.trim() ? newDocExpiryDate.trim() : null,
         });
 
@@ -479,19 +498,19 @@ export default function MotorcycleDetailScreen() {
   };
 
   const handleDeletePhoto = (photo: MotorcyclePhoto) => {
-    Alert.alert('Delete Photo', 'Are you sure you want to delete this motorcycle photo?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('dialogs.deletePhotoTitle'), t('dialogs.deletePhotoMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteMotorcyclePhoto(photo.id, photo.file_path);
             setPhotos(prev => prev.filter(p => p.id !== photo.id));
             if (lightboxVisible) setLightboxVisible(false);
-            Alert.alert('Deleted', 'Photo removed from database.');
+            Alert.alert(t('common.success'), t('common.delete'));
           } catch (err: any) {
-            Alert.alert('Error', err?.message || 'Failed to delete photo.');
+            Alert.alert(t('common.error'), err?.message || t('errors.deleteFailed'));
           }
         },
       },
@@ -511,9 +530,92 @@ export default function MotorcycleDetailScreen() {
   };
 
   // ─── DOCUMENT MANAGEMENT ───────────────────────────────────
-  const handleViewDocument = (doc: RiderDoc) => {
-    setPreviewDoc(doc);
-    setDocPreviewVisible(true);
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+
+  const fetchSignedUrlForDoc = async (doc: RiderDoc) => {
+    setLoadingPreviewUrl(true);
+    setPreviewUrlError(null);
+    setPreviewSignedUrl(null);
+    try {
+      const path = doc.file_path || doc.file_url || '';
+      const { signedUrl, error, objectExists } = await getSignedDocumentUrl(path);
+      if (signedUrl && objectExists !== false) {
+        setPreviewSignedUrl(signedUrl);
+      } else {
+        setPreviewUrlError(error || 'This document file is missing from cloud storage.');
+      }
+    } catch (err: any) {
+      setPreviewUrlError('Unable to access document storage.');
+    } finally {
+      setLoadingPreviewUrl(false);
+    }
+  };
+
+  const handleViewDocument = async (doc: RiderDoc) => {
+    try {
+      setOpeningDocId(doc.id);
+      const path = doc.file_path || doc.file_url || '';
+      const fileType = getDocumentFileType(path, doc.type);
+
+      const { signedUrl, error, objectExists } = await getSignedDocumentUrl(path);
+
+      if (!signedUrl || objectExists === false) {
+        setPreviewDoc(doc);
+        setPreviewUrlError(error || 'This document file is missing from cloud storage.');
+        setDocPreviewVisible(true);
+        return;
+      }
+
+      if (fileType === 'image') {
+        setPreviewDoc(doc);
+        setPreviewSignedUrl(signedUrl);
+        setPreviewUrlError(null);
+        setDocPreviewVisible(true);
+      } else {
+        await openDocument(signedUrl, fileType);
+      }
+    } catch (err: any) {
+      console.error('MOTORCYCLE DOCUMENT VIEW ERROR:', err);
+      Alert.alert(
+        t('errors.documentLoadError'),
+        err?.message || t('errors.documentLoadError')
+      );
+    } finally {
+      setOpeningDocId(null);
+    }
+  };
+
+  const handleReplacePreviewDocFile = async () => {
+    if (!previewDoc || !user?.id) return;
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const selectedFile = res.assets[0];
+        setLoadingPreviewUrl(true);
+
+        const newPath = await replaceDocumentFile(
+          previewDoc.id,
+          previewDoc.file_path,
+          selectedFile,
+          user.id,
+          bike?.id
+        );
+
+        const updatedDoc = { ...previewDoc, file_path: newPath };
+        setPreviewDoc(updatedDoc);
+        setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+
+        Alert.alert('Success', 'Document file uploaded and attached to Supabase Storage.');
+        await fetchSignedUrlForDoc(updatedDoc);
+      }
+    } catch (err: any) {
+      Alert.alert('Upload Error', err?.message || 'Failed to upload document file.');
+    } finally {
+      setLoadingPreviewUrl(false);
+    }
   };
 
   const handleUploadDocumentSubmit = async () => {
@@ -521,24 +623,36 @@ export default function MotorcycleDetailScreen() {
       Alert.alert('Required', 'Please enter a document title.');
       return;
     }
+    if (!selectedDocFile || !selectedDocFile.uri) {
+      Alert.alert('Required', 'Please select a document file (PDF, JPG, PNG, WEBP).');
+      return;
+    }
+
+    const valRes = validateDocumentFile(selectedDocFile);
+    if (!valRes.valid) {
+      Alert.alert('Invalid File', valRes.error || 'Please attach a valid PDF or image file.');
+      return;
+    }
+
     setUploadingDoc(true);
     try {
-      const created = await createDocument({
+      const created = await uploadAndCreateDocument({
         customer_id: user.id,
         motorcycle_id: bike.id,
         title: newDocTitle.trim(),
         type: newDocType,
-        file_path: `documents/${user.id}/${bike.id}_${Date.now()}_${newDocTitle.replace(/\s+/g, '_')}.pdf`,
+        file: selectedDocFile,
         expiry_date: newDocExpiryDate && newDocExpiryDate.trim() ? newDocExpiryDate.trim() : null,
       });
 
       setDocuments(prev => [created, ...prev]);
       setNewDocTitle('');
       setNewDocExpiryDate('');
+      setSelectedDocFile(null);
       setShowUploadDocModal(false);
       Alert.alert('Success', 'Document uploaded and attached to motorcycle database.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to save document.');
+      Alert.alert('Upload Error', err?.message || 'Unable to upload document. Please try again.');
     } finally {
       setUploadingDoc(false);
     }
@@ -549,7 +663,22 @@ export default function MotorcycleDetailScreen() {
     setEditDocTitle(doc.title);
     setEditDocType(doc.type);
     setEditDocExpiryDate(doc.expiry_date || '');
+    setSelectedEditDocFile(null);
     setShowEditDocModal(true);
+  };
+
+  const handlePickEditDocFile = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        setSelectedEditDocFile(res.assets[0]);
+      }
+    } catch (err: any) {
+      console.log('Edit doc picker error:', err);
+    }
   };
 
   const handleSaveEditDocument = async () => {
@@ -559,14 +688,27 @@ export default function MotorcycleDetailScreen() {
     }
     setSavingEditDoc(true);
     try {
+      let finalPath = editingDoc.file_path;
+      if (selectedEditDocFile && selectedEditDocFile.uri && user?.id) {
+        finalPath = await replaceDocumentFile(
+          editingDoc.id,
+          editingDoc.file_path,
+          selectedEditDocFile,
+          user.id,
+          bike?.id
+        );
+      }
+
       const updated = await updateDocument(editingDoc.id, {
         title: editDocTitle.trim(),
         type: editDocType,
+        file_path: finalPath,
         expiry_date: editDocExpiryDate && editDocExpiryDate.trim() ? editDocExpiryDate.trim() : null,
       });
 
       setDocuments(prev => prev.map(d => d.id === updated.id ? updated : d));
       setShowEditDocModal(false);
+      setSelectedEditDocFile(null);
       Alert.alert('Success', 'Document details updated.');
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to update document.');
@@ -575,17 +717,17 @@ export default function MotorcycleDetailScreen() {
     }
   };
 
-  const handleDeleteDocument = (docId: string, title: string) => {
-    Alert.alert('Delete Document', `Are you sure you want to delete "${title}"?`, [
+  const handleDeleteDocument = (doc: RiderDoc) => {
+    Alert.alert('Delete Document', `Are you sure you want to delete "${doc.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteDocument(docId);
-            setDocuments(prev => prev.filter(d => d.id !== docId));
-            Alert.alert('Deleted', `"${title}" has been deleted.`);
+            await deleteDocumentWithStorage(doc.id, doc.file_path);
+            setDocuments(prev => prev.filter(d => d.id !== doc.id));
+            Alert.alert('Deleted', `"${doc.title}" has been deleted.`);
           } catch (err: any) {
             Alert.alert('Error', err?.message || 'Failed to delete document.');
           }
@@ -655,20 +797,20 @@ export default function MotorcycleDetailScreen() {
     <SafeAreaView style={styles.container}>
       <Header
         title={isEditingMode ? 'Edit Motorcycle Specs' : (bike.nickname || `${bike.brand} ${bike.model}`)}
-        subtitle={isEditingMode ? 'Update all motorcycle fields' : `${bike.plate_number} • Year ${bike.year}`}
+        subtitle={isEditingMode ? t('motorcycle.updateMotorcycle') : `${bike.plate_number} • ${t('motorcycle.year')} ${bike.year}`}
         showBack
       />
 
       {!isEditingMode && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-          {(['OVERVIEW', 'PHOTOS', 'DOCUMENTS', 'MAINTENANCE', 'HISTORY', 'BOOKINGS'] as const).map(t => (
+          {(['OVERVIEW', 'PHOTOS', 'DOCUMENTS', 'MAINTENANCE', 'HISTORY', 'BOOKINGS'] as const).map(tabKey => (
             <TouchableOpacity
-              key={t}
-              style={[styles.tabItem, activeTab === t && styles.tabItemActive]}
-              onPress={() => setActiveTab(t)}
+              key={tabKey}
+              style={[styles.tabItem, activeTab === tabKey && styles.tabItemActive]}
+              onPress={() => setActiveTab(tabKey)}
             >
-              <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-                {t === 'PHOTOS' ? `PHOTOS (${photos.length})` : t === 'DOCUMENTS' ? `DOCS (${documents.length})` : t}
+              <Text style={[styles.tabText, activeTab === tabKey && styles.tabTextActive]}>
+                {tabKey === 'PHOTOS' ? `${t('common.photos').toUpperCase()} (${photos.length})` : tabKey === 'DOCUMENTS' ? `${t('motorcycle.documents').toUpperCase()} (${documents.length})` : tabKey === 'MAINTENANCE' ? t('navigation.maintenance').toUpperCase() : tabKey === 'HISTORY' ? t('maintenance.serviceHistory').toUpperCase() : tabKey === 'BOOKINGS' ? t('navigation.bookings').toUpperCase() : t('common.overview').toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
@@ -680,102 +822,102 @@ export default function MotorcycleDetailScreen() {
         {isEditingMode ? (
           <View style={styles.card}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.modalTitle}>✏️ Edit All Motorcycle Data</Text>
+              <Text style={styles.modalTitle}>✏️ {t('motorcycle.edit')}</Text>
               <TouchableOpacity onPress={() => setIsEditingMode(false)}>
                 <X color={COLORS.textSecondary} size={20} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalInputGroup}>
-              <Text style={styles.inputCategoryHeader}>1. IDENTITY & REGISTRATION</Text>
+              <Text style={styles.inputCategoryHeader}>{t('motorcycle.step1BasicInfo').toUpperCase()}</Text>
 
-              <Text style={styles.inputLabel}>MOTORCYCLE NICKNAME</Text>
-              <TextInput style={styles.modalInput} value={editNickname} onChangeText={setEditNickname} placeholder="e.g. Ahxia" placeholderTextColor={COLORS.textMuted} />
+              <Text style={styles.inputLabel}>{t('motorcycle.nickname').toUpperCase()}</Text>
+              <TextInput style={styles.modalInput} value={editNickname} onChangeText={setEditNickname} placeholder={t('motorcycle.nicknamePlaceholder')} placeholderTextColor={COLORS.textMuted} />
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>BRAND *</Text>
-                  <TextInput style={styles.modalInput} value={editBrand} onChangeText={setEditBrand} placeholder="PERODUA" placeholderTextColor={COLORS.textMuted} />
+                  <Text style={styles.inputLabel}>{t('motorcycle.brand').toUpperCase()} *</Text>
+                  <TextInput style={styles.modalInput} value={editBrand} onChangeText={setEditBrand} placeholder={t('motorcycle.selectBrand')} placeholderTextColor={COLORS.textMuted} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>MODEL *</Text>
-                  <TextInput style={styles.modalInput} value={editModel} onChangeText={setEditModel} placeholder="axia" placeholderTextColor={COLORS.textMuted} />
+                  <Text style={styles.inputLabel}>{t('motorcycle.model').toUpperCase()} *</Text>
+                  <TextInput style={styles.modalInput} value={editModel} onChangeText={setEditModel} placeholder={t('motorcycle.selectModel')} placeholderTextColor={COLORS.textMuted} />
                 </View>
               </View>
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>MANUFACTURING YEAR</Text>
-                  <TextInput style={styles.modalInput} value={editYear} onChangeText={setEditYear} placeholder="2016" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
+                  <Text style={styles.inputLabel}>{t('motorcycle.year').toUpperCase()}</Text>
+                  <TextInput style={styles.modalInput} value={editYear} onChangeText={setEditYear} placeholder={t('motorcycle.yearPlaceholder')} placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>PLATE NUMBER *</Text>
-                  <TextInput style={styles.modalInput} value={editPlate} onChangeText={setEditPlate} placeholder="ABC113" placeholderTextColor={COLORS.textMuted} autoCapitalize="characters" />
+                  <Text style={styles.inputLabel}>{t('motorcycle.plateNumber').toUpperCase()} *</Text>
+                  <TextInput style={styles.modalInput} value={editPlate} onChangeText={setEditPlate} placeholder={t('motorcycle.plateNumberPlaceholder')} placeholderTextColor={COLORS.textMuted} autoCapitalize="characters" />
                 </View>
               </View>
 
-              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>2. ENGINE & TELEMETRY</Text>
+              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>{t('motorcycle.technicalInfo').toUpperCase()}</Text>
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>ENGINE CC</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.engineCapacity').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editEngineCc} onChangeText={setEditEngineCc} placeholder="1500" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>CURRENT ODOMETER (KM)</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editMileage} onChangeText={setEditMileage} placeholder="2000" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
                 </View>
               </View>
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>FUEL TYPE</Text>
-                  <TextInput style={styles.modalInput} value={editFuelType} onChangeText={setEditFuelType} placeholder="Petrol" placeholderTextColor={COLORS.textMuted} />
+                  <Text style={styles.inputLabel}>{t('motorcycle.fuelType').toUpperCase()}</Text>
+                  <TextInput style={styles.modalInput} value={editFuelType} onChangeText={setEditFuelType} placeholder={t('motorcycle.selectFuelType')} placeholderTextColor={COLORS.textMuted} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>TRANSMISSION</Text>
-                  <TextInput style={styles.modalInput} value={editTransmission} onChangeText={setEditTransmission} placeholder="Manual" placeholderTextColor={COLORS.textMuted} />
+                  <Text style={styles.inputLabel}>{t('motorcycle.transmission').toUpperCase()}</Text>
+                  <TextInput style={styles.modalInput} value={editTransmission} onChangeText={setEditTransmission} placeholder={t('motorcycle.selectTransmission')} placeholderTextColor={COLORS.textMuted} />
                 </View>
               </View>
 
-              <Text style={styles.inputLabel}>ENGINE OIL GRADE</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.engineOilGrade').toUpperCase()}</Text>
               <TextInput style={styles.modalInput} value={editEngineOil} onChangeText={setEditEngineOil} placeholder="10W-40" placeholderTextColor={COLORS.textMuted} />
 
-              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>3. SERVICE & WARRANTY DATES</Text>
+              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>{t('motorcycle.statusAndMileage').toUpperCase()}</Text>
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>LAST SERVICE DATE</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.lastServiceDate').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editLastServiceDate} onChangeText={setEditLastServiceDate} placeholder="e.g. 2026-08-12" placeholderTextColor={COLORS.textMuted} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>WARRANTY EXPIRY</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.warrantyExpiry').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editWarrantyExpiry} onChangeText={setEditWarrantyExpiry} placeholder="e.g. 2026-08-13" placeholderTextColor={COLORS.textMuted} />
                 </View>
               </View>
 
-              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>4. TYRES & COVER PHOTO</Text>
+              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>{t('motorcycle.photoAndDocs').toUpperCase()}</Text>
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>FRONT TYRE SIZE</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.tyreFront').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editFrontTyre} onChangeText={setEditFrontTyre} placeholder="100" placeholderTextColor={COLORS.textMuted} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>REAR TYRE SIZE</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.tyreRear').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={editRearTyre} onChangeText={setEditRearTyre} placeholder="100" placeholderTextColor={COLORS.textMuted} />
                 </View>
               </View>
 
-              <Text style={styles.inputLabel}>MAIN PHOTO FILE / URL</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.photoUrl').toUpperCase()}</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TextInput style={[styles.modalInput, { flex: 1 }]} value={editPhotoUrl} onChangeText={setEditPhotoUrl} placeholder="file:///..." placeholderTextColor={COLORS.textMuted} />
                 <TouchableOpacity style={styles.actionHeaderBtn} onPress={handlePickCoverPhoto}>
                   <Camera color={COLORS.primary} size={14} />
-                  <Text style={styles.actionHeaderBtnText}>Pick Photo</Text>
+                  <Text style={styles.actionHeaderBtnText}>{t('common.photos')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>5. DIGITAL DOCUMENTS (ATTACHMENTS)</Text>
+              <Text style={[styles.inputCategoryHeader, { marginTop: 14 }]}>{t('motorcycle.digitalVault').toUpperCase()}</Text>
 
               {documents.length > 0 ? (
                 documents.map(doc => (
@@ -783,37 +925,37 @@ export default function MotorcycleDetailScreen() {
                     <FileText color={COLORS.primary} size={16} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.docItemTitle}>{doc.title}</Text>
-                      <Text style={styles.docItemMeta}>{doc.type} • {doc.expiry_date ? `Expires: ${doc.expiry_date}` : 'No Expiry'}</Text>
+                      <Text style={styles.docItemMeta}>{doc.type} • {doc.expiry_date ? `${t('motorcycle.expiryDate')}: ${doc.expiry_date}` : ''}</Text>
                     </View>
                     <TouchableOpacity style={styles.docIconBtn} onPress={() => handleViewDocument(doc)}>
                       <Eye color={COLORS.primary} size={14} />
-                      <Text style={{ color: COLORS.primary, fontSize: 10, fontWeight: '800' }}>View</Text>
+                      <Text style={{ color: COLORS.primary, fontSize: 10, fontWeight: '800' }}>{t('common.view')}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.docIconBtn, { borderColor: COLORS.dangerBg }]} onPress={() => handleDeleteDocument(doc.id, doc.title)}>
+                    <TouchableOpacity style={[styles.docIconBtn, { borderColor: COLORS.dangerBg }]} onPress={() => handleDeleteDocument(doc)}>
                       <Trash2 color={COLORS.danger} size={14} />
                     </TouchableOpacity>
                   </View>
                 ))
               ) : (
-                <Text style={{ color: COLORS.textMuted, fontSize: 11, fontStyle: 'italic' }}>No digital documents attached yet.</Text>
+                <Text style={{ color: COLORS.textMuted, fontSize: 11, fontStyle: 'italic' }}>{t('empty.noDocuments')}</Text>
               )}
 
-              <Text style={[styles.inputLabel, { marginTop: 6 }]}>ATTACH NEW DOCUMENT TITLE</Text>
+              <Text style={[styles.inputLabel, { marginTop: 6 }]}>{t('motorcycle.uploadDocument').toUpperCase()}</Text>
               <TextInput
                 style={styles.modalInput}
                 value={newDocTitle}
                 onChangeText={setNewDocTitle}
-                placeholder="e.g. Insurance Policy - ABC113"
+                placeholder={t('motorcycle.uploadDocument')}
                 placeholderTextColor={COLORS.textMuted}
               />
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>CATEGORY</Text>
+                  <Text style={styles.inputLabel}>{t('common.category').toUpperCase()}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginVertical: 4 }}>
-                    {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(t => (
-                      <TouchableOpacity key={t} style={[styles.pill, newDocType === t && styles.pillActive]} onPress={() => setNewDocType(t)}>
-                        <Text style={[styles.pillText, newDocType === t && styles.pillTextActive]}>{t}</Text>
+                    {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(tType => (
+                      <TouchableOpacity key={tType} style={[styles.pill, newDocType === tType && styles.pillActive]} onPress={() => setNewDocType(tType)}>
+                        <Text style={[styles.pillText, newDocType === tType && styles.pillTextActive]}>{tType}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -822,7 +964,7 @@ export default function MotorcycleDetailScreen() {
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>EXPIRY DATE (YYYY-MM-DD)</Text>
+                  <Text style={styles.inputLabel}>{t('motorcycle.expiryDate').toUpperCase()} (YYYY-MM-DD)</Text>
                   <TextInput
                     style={styles.modalInput}
                     value={newDocExpiryDate}
@@ -836,17 +978,17 @@ export default function MotorcycleDetailScreen() {
               <TouchableOpacity style={[styles.actionHeaderBtn, { marginTop: 6 }]} onPress={handlePickDocumentFile}>
                 <FileText color={COLORS.primary} size={14} />
                 <Text style={styles.actionHeaderBtnText}>
-                  {selectedDocFile ? `📄 ${selectedDocFile.name}` : '+ Pick PDF / Image File'}
+                  {selectedDocFile ? `📄 ${selectedDocFile.name}` : `+ ${t('motorcycle.tapToUpload')}`}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditingMode(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title={savingEdit ? 'SAVING CHANGES...' : 'SAVE MOTORCYCLE DATA'}
+                title={savingEdit ? t('common.saving').toUpperCase() : t('common.saveChanges').toUpperCase()}
                 onPress={handleSaveAllData}
                 disabled={savingEdit}
                 style={{ flex: 1 }}
@@ -874,12 +1016,12 @@ export default function MotorcycleDetailScreen() {
                   <View style={styles.headerInfoRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.bikeTitleText}>{bike.nickname || `${bike.brand} ${bike.model}`}</Text>
-                      <Text style={styles.bikeSubtitleText}>{bike.brand} {bike.model} • Year {bike.year}</Text>
+                      <Text style={styles.bikeSubtitleText}>{bike.brand} {bike.model} • {t('motorcycle.year')} {bike.year}</Text>
                     </View>
                     {/* SINGLE PRIMARY EDIT BUTTON ON PAGE */}
                     <TouchableOpacity style={styles.editSpecsBtn} onPress={startEditingAllData}>
                       <Edit2 color={COLORS.primary} size={14} />
-                      <Text style={styles.editSpecsBtnText}>[ Edit Motorcycle ]</Text>
+                      <Text style={styles.editSpecsBtnText}>[ {t('motorcycle.edit')} ]</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -892,15 +1034,15 @@ export default function MotorcycleDetailScreen() {
 
                     <View style={{ flex: 1 }}>
                       <View style={styles.healthHeaderRow}>
-                        <Text style={styles.scoreTitle}>HEALTH STATUS</Text>
+                        <Text style={styles.scoreTitle}>{t('motorcycle.healthScore').toUpperCase()}</Text>
                         <View style={[styles.statusBadge, { backgroundColor: isHealthy ? COLORS.successBg : '#fef3c7' }]}>
                           <Text style={[styles.statusBadgeText, { color: isHealthy ? COLORS.success : '#d97706' }]}>
-                            {isHealthy ? 'Good (100%)' : 'Needs Service'}
+                            {isHealthy ? `${t('motorcycle.healthGood')} (100%)` : t('motorcycle.healthPoor')}
                           </Text>
                         </View>
                       </View>
                       <Text style={styles.scoreSub}>
-                        {isHealthy ? 'Optimal Condition. Engine & maintenance items clear.' : 'Service due. Check maintenance reminders tab.'}
+                        {isHealthy ? t('dashboard.goodCondition') : t('motorcycle.healthScoreDesc')}
                       </Text>
                     </View>
                   </View>
@@ -910,7 +1052,7 @@ export default function MotorcycleDetailScreen() {
                     <View style={styles.telemetryCard}>
                       <Gauge color={COLORS.primary} size={18} />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.telemetryLabel}>CURRENT ODOMETER</Text>
+                        <Text style={styles.telemetryLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                         <Text style={styles.telemetryVal}>{bike.current_mileage.toLocaleString()} km</Text>
                       </View>
                     </View>
@@ -918,7 +1060,7 @@ export default function MotorcycleDetailScreen() {
                     <View style={styles.telemetryCard}>
                       <Disc color={COLORS.primary} size={18} />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.telemetryLabel}>RECOMMENDED TYRES</Text>
+                        <Text style={styles.telemetryLabel}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                         <Text style={styles.telemetryVal}>{bike.front_tyre_size || '100'} / {bike.rear_tyre_size || '100'}</Text>
                       </View>
                     </View>
@@ -926,63 +1068,63 @@ export default function MotorcycleDetailScreen() {
 
                   {/* SPECIFICATIONS GRID */}
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitleHeader}>MOTORCYCLE SPECIFICATIONS</Text>
+                    <Text style={styles.sectionTitleHeader}>{t('motorcycle.specs').toUpperCase()}</Text>
                   </View>
 
                   <View style={styles.specsGrid}>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Brand</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.brand')}</Text>
                       <Text style={styles.specVal}>{bike.brand}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Model</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.model')}</Text>
                       <Text style={styles.specVal}>{bike.model}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Year</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.year')}</Text>
                       <Text style={styles.specVal}>{bike.year}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Plate Number</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.plateNumber')}</Text>
                       <Text style={[styles.specVal, { color: COLORS.primary }]}>{bike.plate_number}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Engine CC</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.engineCapacity')}</Text>
                       <Text style={styles.specVal}>{bike.engine_cc ? `${bike.engine_cc} cc` : 'N/A'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Fuel</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.fuelType')}</Text>
                       <Text style={styles.specVal}>{bike.fuel_type || 'Petrol'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Transmission</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.transmission')}</Text>
                       <Text style={styles.specVal}>{bike.transmission || 'Manual'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Engine Oil</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.engineOil')}</Text>
                       <Text style={styles.specVal}>{bike.engine_oil_type || '10W-40'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Last Service Date</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.lastServiceDate')}</Text>
                       <Text style={styles.specVal}>{bike.last_service_date || 'N/A'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Warranty Expiry</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.warrantyExpiry')}</Text>
                       <Text style={styles.specVal}>{bike.warranty_expiry_date || 'N/A'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Tyre Size</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.tyreSize')}</Text>
                       <Text style={styles.specVal}>{bike.front_tyre_size || '100'} / {bike.rear_tyre_size || '100'}</Text>
                     </View>
                     <View style={styles.specBox}>
-                      <Text style={styles.specLabel}>Current Odometer</Text>
+                      <Text style={styles.specLabel}>{t('motorcycle.currentOdometer')}</Text>
                       <Text style={[styles.specVal, { color: COLORS.primary }]}>{bike.current_mileage.toLocaleString()} km</Text>
                     </View>
                   </View>
                 </View>
 
                 <CustomButton
-                  title="📅 BOOK WORKSHOP SERVICE"
+                  title={`📅 ${t('common.bookNow').toUpperCase()}`}
                   onPress={() => router.push('/(customer)/booking')}
                 />
               </>
@@ -992,19 +1134,19 @@ export default function MotorcycleDetailScreen() {
             {activeTab === 'PHOTOS' && (
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitleHeader}>MOTORCYCLE PHOTOS ({photos.length})</Text>
+                  <Text style={styles.sectionTitleHeader}>{t('common.photos').toUpperCase()} ({photos.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={handleUploadPhoto} disabled={uploadingPhoto}>
                     <Camera color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>{uploadingPhoto ? 'Uploading...' : '+ Upload Photos'}</Text>
+                    <Text style={styles.actionHeaderBtnText}>{uploadingPhoto ? t('common.uploading') : `+ ${t('common.upload')} ${t('common.photos')}`}</Text>
                   </TouchableOpacity>
                 </View>
 
                 {photos.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <Camera color={COLORS.textMuted} size={40} />
-                    <Text style={styles.emptyTitle}>No motorcycle photos uploaded yet.</Text>
-                    <Text style={styles.emptySub}>Upload photos of your motorcycle to store in your digital garage vault.</Text>
-                    <CustomButton title="[Upload Photos]" onPress={handleUploadPhoto} style={{ marginTop: 12 }} />
+                    <Text style={styles.emptyTitle}>{t('motorcycle.noPhotoSelected')}</Text>
+                    <Text style={styles.emptySub}>{t('motorcycle.photoAndDocsDesc')}</Text>
+                    <CustomButton title={`[${t('common.upload')} ${t('common.photos')}]`} onPress={handleUploadPhoto} style={{ marginTop: 12 }} />
                   </View>
                 ) : (
                   <View style={styles.photoGrid}>
@@ -1022,7 +1164,7 @@ export default function MotorcycleDetailScreen() {
                         {p.is_main && (
                           <View style={styles.mainPhotoTag}>
                             <Star color={COLORS.primary} size={10} fill={COLORS.primary} />
-                            <Text style={styles.mainPhotoTagText}>Main</Text>
+                            <Text style={styles.mainPhotoTagText}>{t('motorcycle.primaryBadge')}</Text>
                           </View>
                         )}
                       </TouchableOpacity>
@@ -1036,10 +1178,10 @@ export default function MotorcycleDetailScreen() {
             {activeTab === 'DOCUMENTS' && (
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitleHeader}>MOTORCYCLE DOCUMENTS ({documents.length})</Text>
+                  <Text style={styles.sectionTitleHeader}>{t('motorcycle.documents').toUpperCase()} ({documents.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowUploadDocModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ Upload Document</Text>
+                    <Text style={styles.actionHeaderBtnText}>+ {t('motorcycle.uploadDocument')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1059,9 +1201,9 @@ export default function MotorcycleDetailScreen() {
                 {filteredDocs.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <FileText color={COLORS.textMuted} size={40} />
-                    <Text style={styles.emptyTitle}>No motorcycle documents uploaded yet.</Text>
-                    <Text style={styles.emptySub}>Keep digital road tax, insurance policies, and service receipts attached directly to this motorcycle.</Text>
-                    <CustomButton title="[Upload Document]" onPress={() => setShowUploadDocModal(true)} style={{ marginTop: 12 }} />
+                    <Text style={styles.emptyTitle}>{t('empty.noDocuments')}</Text>
+                    <Text style={styles.emptySub}>{t('empty.noDocumentsSub')}</Text>
+                    <CustomButton title={`[${t('motorcycle.uploadDocument')}]`} onPress={() => setShowUploadDocModal(true)} style={{ marginTop: 12 }} />
                   </View>
                 ) : (
                   filteredDocs.map(doc => {
@@ -1071,38 +1213,66 @@ export default function MotorcycleDetailScreen() {
 
                     return (
                       <View key={doc.id} style={styles.docCard}>
-                        <FileText color={COLORS.primary} size={24} />
-                        <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditDocModal(doc)}>
-                          <Text style={styles.docCardTitle}>{doc.title}</Text>
-                          <Text style={styles.docCardSub}>
-                            {doc.type} • Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                          </Text>
-                          {doc.expiry_date ? (
-                            <Text style={styles.docCardExpiry}>Expires: {doc.expiry_date}</Text>
-                          ) : null}
-                        </TouchableOpacity>
-
-                        {/* Expiry Badge */}
-                        {doc.expiry_date && (
-                          <View style={[
-                            styles.expBadge,
-                            isExp ? styles.expBadgeExpired : isExpSoon ? styles.expBadgeSoon : styles.expBadgeValid
-                          ]}>
-                            <Text style={[
-                              styles.expBadgeText,
-                              isExp ? styles.expTextExpired : isExpSoon ? styles.expTextSoon : styles.expTextValid
-                            ]}>
-                              {expInfo.label}
+                        <View style={styles.docCardHeader}>
+                          <FileText color={COLORS.primary} size={24} />
+                          <TouchableOpacity style={{ flex: 1 }} onPress={() => handleViewDocument(doc)}>
+                            <Text style={styles.docCardTitle}>{doc.title}</Text>
+                            <Text style={styles.docCardSub}>
+                              {doc.type} • {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ''}
                             </Text>
-                          </View>
-                        )}
+                            {doc.expiry_date ? (
+                              <Text style={styles.docCardExpiry}>{t('motorcycle.expiryDate')}: {doc.expiry_date}</Text>
+                            ) : null}
+                          </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={[styles.docIconBtn, { borderColor: COLORS.dangerBg, marginLeft: 8 }]}
-                          onPress={() => handleDeleteDocument(doc.id, doc.title)}
-                        >
-                          <Trash2 color={COLORS.danger} size={14} />
-                        </TouchableOpacity>
+                          {/* Expiry Badge */}
+                          {doc.expiry_date && (
+                            <View style={[
+                              styles.expBadge,
+                              isExp ? styles.expBadgeExpired : isExpSoon ? styles.expBadgeSoon : styles.expBadgeValid
+                            ]}>
+                              <Text style={[
+                                styles.expBadgeText,
+                                isExp ? styles.expTextExpired : isExpSoon ? styles.expTextSoon : styles.expTextValid
+                              ]}>
+                                {expInfo.label}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={styles.docActionRow}>
+                          <TouchableOpacity
+                            style={styles.viewDocBtn}
+                            onPress={() => handleViewDocument(doc)}
+                            disabled={openingDocId === doc.id}
+                          >
+                            {openingDocId === doc.id ? (
+                              <ActivityIndicator size="small" color={COLORS.primary} />
+                            ) : (
+                              <Eye color={COLORS.primary} size={14} />
+                            )}
+                            <Text style={styles.viewDocBtnText}>
+                              {openingDocId === doc.id ? t('common.loading') : t('motorcycle.viewDocument')}
+                            </Text>
+                          </TouchableOpacity>
+
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            <TouchableOpacity
+                              style={styles.docIconBtn}
+                              onPress={() => openEditDocModal(doc)}
+                            >
+                              <Edit2 color={COLORS.textSecondary} size={14} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={[styles.docIconBtn, { borderColor: COLORS.dangerBg }]}
+                              onPress={() => handleDeleteDocument(doc)}
+                            >
+                              <Trash2 color={COLORS.danger} size={14} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       </View>
                     );
                   })
@@ -1114,19 +1284,19 @@ export default function MotorcycleDetailScreen() {
             {activeTab === 'MAINTENANCE' && (
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitleHeader}>MAINTENANCE REMINDERS ({reminders.length})</Text>
+                  <Text style={styles.sectionTitleHeader}>{t('maintenance.reminder').toUpperCase()} ({reminders.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowAddReminderModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ Add Reminder</Text>
+                    <Text style={styles.actionHeaderBtnText}>+ {t('common.add')} {t('maintenance.reminder')}</Text>
                   </TouchableOpacity>
                 </View>
 
                 {reminders.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <CheckCircle2 color={COLORS.success} size={40} />
-                    <Text style={styles.emptyTitle}>NO PENDING SERVICE REMINDERS</Text>
-                    <Text style={styles.emptySub}>All maintenance intervals for this motorcycle are up to date.</Text>
-                    <CustomButton title="+ Create Reminder" onPress={() => setShowAddReminderModal(true)} style={{ marginTop: 12 }} />
+                    <Text style={styles.emptyTitle}>{t('maintenance.upToDate').toUpperCase()}</Text>
+                    <Text style={styles.emptySub}>{t('motorcycle.healthScoreDesc')}</Text>
+                    <CustomButton title={`+ ${t('common.add')} ${t('maintenance.reminder')}`} onPress={() => setShowAddReminderModal(true)} style={{ marginTop: 12 }} />
                   </View>
                 ) : (
                   reminders.map(rem => (
@@ -1134,7 +1304,7 @@ export default function MotorcycleDetailScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.remTitle}>{rem.title}</Text>
                         <Text style={styles.remSub}>
-                          Target: {rem.next_service_mileage ? `${rem.next_service_mileage.toLocaleString()} km` : rem.next_service_date ? `Date: ${rem.next_service_date}` : 'Scheduled Interval'}
+                          {t('maintenance.dueSoon')}: {rem.next_service_mileage ? `${rem.next_service_mileage.toLocaleString()} km` : rem.next_service_date ? `${t('common.date')}: ${rem.next_service_date}` : ''}
                         </Text>
                       </View>
 
@@ -1151,7 +1321,7 @@ export default function MotorcycleDetailScreen() {
                               }
                             }}
                           >
-                            <Text style={styles.doneBtnText}>✓ DONE</Text>
+                            <Text style={styles.doneBtnText}>✓ {t('common.done').toUpperCase()}</Text>
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
@@ -1171,25 +1341,25 @@ export default function MotorcycleDetailScreen() {
             {activeTab === 'HISTORY' && (
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitleHeader}>SERVICE HISTORY ({records.length})</Text>
+                  <Text style={styles.sectionTitleHeader}>{t('maintenance.serviceHistory').toUpperCase()} ({records.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowAddRecordModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ Add Service Log</Text>
+                    <Text style={styles.actionHeaderBtnText}>+ {t('maintenance.addLog')}</Text>
                   </TouchableOpacity>
                 </View>
 
                 {records.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <Clock color={COLORS.textMuted} size={40} />
-                    <Text style={styles.emptyTitle}>No service history yet.</Text>
-                    <Text style={styles.emptySub}>Book a service with a RiderHood partner workshop to build your digital service log.</Text>
-                    <CustomButton title="+ Add Service Log" onPress={() => setShowAddRecordModal(true)} style={{ marginTop: 12 }} />
+                    <Text style={styles.emptyTitle}>{t('empty.noMaintenanceLogs')}</Text>
+                    <Text style={styles.emptySub}>{t('empty.noMaintenanceLogsSub')}</Text>
+                    <CustomButton title={`+ ${t('maintenance.addLog')}`} onPress={() => setShowAddRecordModal(true)} style={{ marginTop: 12 }} />
                   </View>
                 ) : (
                   records.map(rec => (
                     <View key={rec.id} style={styles.remCard}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.remTitle}>{rec.description || 'Routine Maintenance'}</Text>
+                        <Text style={styles.remTitle}>{rec.description || t('maintenance.generalService')}</Text>
                         <Text style={styles.remSub}>
                           {rec.service_date} • {rec.mileage ? `${rec.mileage.toLocaleString()} km` : 'N/A'}
                         </Text>
@@ -1212,19 +1382,19 @@ export default function MotorcycleDetailScreen() {
             {/* ================= 6. BOOKINGS TAB ================= */}
             {activeTab === 'BOOKINGS' && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitleHeader}>BOOKING HISTORY ({bookings.length})</Text>
+                <Text style={styles.sectionTitleHeader}>{t('navigation.bookings').toUpperCase()} ({bookings.length})</Text>
                 {bookings.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <Calendar color={COLORS.textMuted} size={40} />
-                    <Text style={styles.emptyTitle}>No bookings for this motorcycle.</Text>
-                    <Text style={styles.emptySub}>Book a workshop appointment to view booking records here.</Text>
+                    <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
+                    <Text style={styles.emptySub}>{t('empty.noBookingsSub')}</Text>
                   </View>
                 ) : (
                   bookings.map(b => (
                     <View key={b.id} style={styles.remCard}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.remTitle}>Appointment on {b.booking_date}</Text>
-                        <Text style={styles.remSub}>Status: {b.status.toUpperCase()} • Time: {b.booking_time}</Text>
+                        <Text style={styles.remTitle}>{t('booking.bookingDate')}: {b.booking_date}</Text>
+                        <Text style={styles.remSub}>{t('common.status')}: {b.status.toUpperCase()} • {t('common.time')}: {b.booking_time}</Text>
                       </View>
                       <Text style={styles.costText}>RM {Number(b.total_amount || 0).toFixed(2)}</Text>
                     </View>
@@ -1235,11 +1405,11 @@ export default function MotorcycleDetailScreen() {
 
             {/* DANGER ZONE */}
             <View style={styles.dangerZoneCard}>
-              <Text style={styles.dangerTitle}>DANGER ZONE</Text>
-              <Text style={styles.dangerSub}>Permanently delete this motorcycle record and clear garage access.</Text>
+              <Text style={styles.dangerTitle}>{t('common.dangerZone')}</Text>
+              <Text style={styles.dangerSub}>{t('dialogs.deleteMotorcycleMessage')}</Text>
               <TouchableOpacity style={styles.deleteBikeBtn} onPress={handleDeleteBike}>
                 <Trash2 color={COLORS.danger} size={16} />
-                <Text style={styles.deleteBikeBtnText}>Delete Motorcycle</Text>
+                <Text style={styles.deleteBikeBtnText}>{t('motorcycle.delete')}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -1250,23 +1420,23 @@ export default function MotorcycleDetailScreen() {
       <Modal visible={showAddReminderModal} transparent animationType="fade" onRequestClose={() => setShowAddReminderModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.editModalCard}>
-            <Text style={styles.modalTitle}>+ Create Service Reminder</Text>
+            <Text style={styles.modalTitle}>+ {t('common.add')} {t('maintenance.reminder')}</Text>
             <View style={styles.modalInputGroup}>
-              <Text style={styles.inputLabel}>REMINDER TITLE *</Text>
+              <Text style={styles.inputLabel}>{t('common.name').toUpperCase()} *</Text>
               <TextInput style={styles.modalInput} value={newReminderTitle} onChangeText={setNewReminderTitle} placeholder="e.g. Engine Oil Service Interval" placeholderTextColor={COLORS.textMuted} />
 
-              <Text style={styles.inputLabel}>TARGET MILEAGE (KM)</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.nextServiceTarget').toUpperCase()}</Text>
               <TextInput style={styles.modalInput} value={newReminderMileage} onChangeText={setNewReminderMileage} placeholder="e.g. 5000" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
 
-              <Text style={styles.inputLabel}>TARGET SERVICE DATE (YYYY-MM-DD)</Text>
+              <Text style={styles.inputLabel}>{t('maintenance.nextServiceDue').toUpperCase()} (YYYY-MM-DD)</Text>
               <TextInput style={styles.modalInput} value={newReminderDate} onChangeText={setNewReminderDate} placeholder="e.g. 2026-12-01" placeholderTextColor={COLORS.textMuted} />
             </View>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddReminderModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <CustomButton title={savingReminder ? 'SAVING...' : 'SAVE REMINDER'} onPress={handleCreateReminderSubmit} disabled={savingReminder} style={{ flex: 1 }} />
+              <CustomButton title={savingReminder ? t('common.saving').toUpperCase() : t('common.save').toUpperCase()} onPress={handleCreateReminderSubmit} disabled={savingReminder} style={{ flex: 1 }} />
             </View>
           </View>
         </View>
@@ -1276,31 +1446,31 @@ export default function MotorcycleDetailScreen() {
       <Modal visible={showAddRecordModal} transparent animationType="fade" onRequestClose={() => setShowAddRecordModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.editModalCard}>
-            <Text style={styles.modalTitle}>+ Add Service History Record</Text>
+            <Text style={styles.modalTitle}>+ {t('maintenance.addLog')}</Text>
             <View style={styles.modalInputGroup}>
-              <Text style={styles.inputLabel}>SERVICE DESCRIPTION *</Text>
+              <Text style={styles.inputLabel}>{t('common.description').toUpperCase()} *</Text>
               <TextInput style={styles.modalInput} value={newRecordDesc} onChangeText={setNewRecordDesc} placeholder="e.g. Full Oil Change & Filter Replacement" placeholderTextColor={COLORS.textMuted} />
 
               <View style={styles.twoColRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>MILEAGE (KM)</Text>
+                  <Text style={styles.inputLabel}>{t('maintenance.mileageAtService').toUpperCase()}</Text>
                   <TextInput style={styles.modalInput} value={newRecordMileage} onChangeText={setNewRecordMileage} placeholder="2000" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>TOTAL COST (RM)</Text>
+                  <Text style={styles.inputLabel}>{t('maintenance.cost').toUpperCase()} (RM)</Text>
                   <TextInput style={styles.modalInput} value={newRecordCost} onChangeText={setNewRecordCost} placeholder="120.00" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
                 </View>
               </View>
 
-              <Text style={styles.inputLabel}>SERVICE DATE (YYYY-MM-DD)</Text>
+              <Text style={styles.inputLabel}>{t('maintenance.serviceDate').toUpperCase()} (YYYY-MM-DD)</Text>
               <TextInput style={styles.modalInput} value={newRecordDate} onChangeText={setNewRecordDate} placeholder="e.g. 2026-08-11" placeholderTextColor={COLORS.textMuted} />
             </View>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddRecordModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <CustomButton title={savingRecord ? 'SAVING...' : 'SAVE SERVICE LOG'} onPress={handleCreateRecordSubmit} disabled={savingRecord} style={{ flex: 1 }} />
+              <CustomButton title={savingRecord ? t('common.saving').toUpperCase() : t('common.save').toUpperCase()} onPress={handleCreateRecordSubmit} disabled={savingRecord} style={{ flex: 1 }} />
             </View>
           </View>
         </View>
@@ -1318,14 +1488,14 @@ export default function MotorcycleDetailScreen() {
               <Image source={{ uri: photos[activePhotoIndex].photo_url }} style={styles.lightboxImg} resizeMode="contain" />
 
               <View style={styles.lightboxMetaRow}>
-                <Text style={styles.lightboxCounter}>{activePhotoIndex + 1} of {photos.length}</Text>
+                <Text style={styles.lightboxCounter}>{activePhotoIndex + 1} {t('common.of')} {photos.length}</Text>
                 <TouchableOpacity style={styles.lightboxActionBtn} onPress={() => handleSetCoverPhoto(photos[activePhotoIndex])}>
                   <Star color={photos[activePhotoIndex].is_main ? COLORS.primary : '#FFF'} size={16} fill={photos[activePhotoIndex].is_main ? COLORS.primary : 'transparent'} />
-                  <Text style={styles.lightboxActionText}>{photos[activePhotoIndex].is_main ? 'Main Cover' : 'Set as Main'}</Text>
+                  <Text style={styles.lightboxActionText}>{photos[activePhotoIndex].is_main ? t('motorcycle.primaryBadge') : t('motorcycle.setPrimary')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.lightboxActionBtn} onPress={() => handleDeletePhoto(photos[activePhotoIndex])}>
                   <Trash2 color={COLORS.danger} size={16} />
-                  <Text style={[styles.lightboxActionText, { color: COLORS.danger }]}>Delete</Text>
+                  <Text style={[styles.lightboxActionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1350,29 +1520,29 @@ export default function MotorcycleDetailScreen() {
       <Modal visible={showUploadDocModal} transparent animationType="fade" onRequestClose={() => setShowUploadDocModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.editModalCard}>
-            <Text style={styles.modalTitle}>Upload Motorcycle Document</Text>
+            <Text style={styles.modalTitle}>{t('motorcycle.uploadDocument')}</Text>
             <View style={styles.modalInputGroup}>
-              <Text style={styles.inputLabel}>DOCUMENT TITLE *</Text>
+              <Text style={styles.inputLabel}>{t('common.name').toUpperCase()} *</Text>
               <TextInput style={styles.modalInput} value={newDocTitle} onChangeText={setNewDocTitle} placeholder="e.g. Insurance Policy - ABC113" placeholderTextColor={COLORS.textMuted} />
 
-              <Text style={styles.inputLabel}>DOCUMENT CATEGORY</Text>
+              <Text style={styles.inputLabel}>{t('common.category').toUpperCase()}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginVertical: 4 }}>
-                {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(t => (
-                  <TouchableOpacity key={t} style={[styles.pill, newDocType === t && styles.pillActive]} onPress={() => setNewDocType(t)}>
-                    <Text style={[styles.pillText, newDocType === t && styles.pillTextActive]}>{t}</Text>
+                {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(tType => (
+                  <TouchableOpacity key={tType} style={[styles.pill, newDocType === tType && styles.pillActive]} onPress={() => setNewDocType(tType)}>
+                    <Text style={[styles.pillText, newDocType === tType && styles.pillTextActive]}>{tType}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>EXPIRY DATE (OPTIONAL - YYYY-MM-DD)</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.expiryDate').toUpperCase()} ({t('common.optional').toUpperCase()} - YYYY-MM-DD)</Text>
               <TextInput style={styles.modalInput} value={newDocExpiryDate} onChangeText={setNewDocExpiryDate} placeholder="e.g. 2026-08-10" placeholderTextColor={COLORS.textMuted} />
             </View>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowUploadDocModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <CustomButton title={uploadingDoc ? 'UPLOADING...' : 'SAVE DOCUMENT'} onPress={handleUploadDocumentSubmit} disabled={uploadingDoc} style={{ flex: 1 }} />
+              <CustomButton title={uploadingDoc ? t('common.uploading').toUpperCase() : t('common.save').toUpperCase()} onPress={handleUploadDocumentSubmit} disabled={uploadingDoc} style={{ flex: 1 }} />
             </View>
           </View>
         </View>
@@ -1382,29 +1552,29 @@ export default function MotorcycleDetailScreen() {
       <Modal visible={showEditDocModal} transparent animationType="fade" onRequestClose={() => setShowEditDocModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.editModalCard}>
-            <Text style={styles.modalTitle}>✏️ Edit Document Details</Text>
+            <Text style={styles.modalTitle}>✏️ {t('motorcycle.editDocument')}</Text>
             <View style={styles.modalInputGroup}>
-              <Text style={styles.inputLabel}>DOCUMENT TITLE *</Text>
+              <Text style={styles.inputLabel}>{t('common.name').toUpperCase()} *</Text>
               <TextInput style={styles.modalInput} value={editDocTitle} onChangeText={setEditDocTitle} placeholder="Document Title" placeholderTextColor={COLORS.textMuted} />
 
-              <Text style={styles.inputLabel}>DOCUMENT TYPE</Text>
+              <Text style={styles.inputLabel}>{t('common.type').toUpperCase()}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginVertical: 4 }}>
-                {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(t => (
-                  <TouchableOpacity key={t} style={[styles.pill, editDocType === t && styles.pillActive]} onPress={() => setEditDocType(t)}>
-                    <Text style={[styles.pillText, editDocType === t && styles.pillTextActive]}>{t}</Text>
+                {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as DocumentType[]).map(tType => (
+                  <TouchableOpacity key={tType} style={[styles.pill, editDocType === tType && styles.pillActive]} onPress={() => setEditDocType(tType)}>
+                    <Text style={[styles.pillText, editDocType === tType && styles.pillTextActive]}>{tType}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>EXPIRY DATE (YYYY-MM-DD)</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.expiryDate').toUpperCase()} (YYYY-MM-DD)</Text>
               <TextInput style={styles.modalInput} value={editDocExpiryDate} onChangeText={setEditDocExpiryDate} placeholder="e.g. 2026-08-10" placeholderTextColor={COLORS.textMuted} />
             </View>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEditDocModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <CustomButton title={savingEditDoc ? 'SAVING...' : 'SAVE CHANGES'} onPress={handleSaveEditDocument} disabled={savingEditDoc} style={{ flex: 1 }} />
+              <CustomButton title={savingEditDoc ? t('common.saving').toUpperCase() : t('common.saveChanges').toUpperCase()} onPress={handleSaveEditDocument} disabled={savingEditDoc} style={{ flex: 1 }} />
             </View>
           </View>
         </View>
@@ -1417,7 +1587,7 @@ export default function MotorcycleDetailScreen() {
             <View style={styles.modalHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                 <FileText color={COLORS.primary} size={20} />
-                <Text style={styles.modalTitle} numberOfLines={1}>{previewDoc?.title || 'Document Viewer'}</Text>
+                <Text style={styles.modalTitle} numberOfLines={1}>{previewDoc?.title || t('motorcycle.viewDocument')}</Text>
               </View>
               <TouchableOpacity onPress={() => setDocPreviewVisible(false)}>
                 <X color={COLORS.textSecondary} size={22} />
@@ -1430,7 +1600,7 @@ export default function MotorcycleDetailScreen() {
                   {/* Meta Header */}
                   <View style={{ backgroundColor: COLORS.surface, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, gap: 4 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '900' }}>CATEGORY: {previewDoc.type.toUpperCase()}</Text>
+                      <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '900' }}>{t('common.category').toUpperCase()}: {previewDoc.type.toUpperCase()}</Text>
                       {previewDoc.expiry_date && (
                         <View style={[
                           styles.expBadge,
@@ -1454,47 +1624,92 @@ export default function MotorcycleDetailScreen() {
                       )}
                     </View>
                     <Text style={{ color: COLORS.textSecondary, fontSize: 11 }}>
-                      Uploaded: {new Date(previewDoc.created_at).toLocaleDateString()}
+                      {t('common.date')}: {new Date(previewDoc.created_at).toLocaleDateString()}
                     </Text>
                     {previewDoc.expiry_date && (
                       <Text style={{ color: COLORS.textSecondary, fontSize: 11 }}>
-                        Expiry Date: {previewDoc.expiry_date}
+                        {t('motorcycle.expiryDate')}: {previewDoc.expiry_date}
                       </Text>
                     )}
                   </View>
 
                   {/* Document File Content Preview Box */}
-                  <View style={{ height: 260, backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                    {previewDoc.file_path && (previewDoc.file_path.endsWith('.jpg') || previewDoc.file_path.endsWith('.jpeg') || previewDoc.file_path.endsWith('.png') || previewDoc.file_path.startsWith('file://')) ? (
-                      <Image source={{ uri: previewDoc.file_path }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-                    ) : (
-                      <View style={{ alignItems: 'center', padding: 20, gap: 10 }}>
-                        <FileText color={COLORS.primary} size={48} />
-                        <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center' }}>{previewDoc.title}</Text>
-                        <Text style={{ color: COLORS.textMuted, fontSize: 10, textAlign: 'center' }}>Path: {previewDoc.file_path || 'Attached Record'}</Text>
-                      </View>
-                    )}
+                  <View style={{ height: 260, backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: 16 }}>
+                    {(() => {
+                      if (loadingPreviewUrl) {
+                        return (
+                          <View style={{ alignItems: 'center', gap: 10 }}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
+                            <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>{t('common.loading')}</Text>
+                          </View>
+                        );
+                      }
+
+                      if (previewUrlError) {
+                        return (
+                          <View style={{ alignItems: 'center', gap: 10, padding: 12 }}>
+                            <FileText color={COLORS.danger} size={40} />
+                            <Text style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: '700', textAlign: 'center' }}>
+                              {t('motorcycle.docNotFound')}
+                            </Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 11, textAlign: 'center' }}>
+                              {t('motorcycle.docNotFoundDesc')}
+                            </Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                              <TouchableOpacity
+                                style={{ backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                onPress={handleReplacePreviewDocFile}
+                              >
+                                <Upload color="#FFFFFF" size={14} />
+                                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>+ {t('motorcycle.uploadDocument')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{ backgroundColor: COLORS.surface, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border }}
+                                onPress={() => previewDoc && fetchSignedUrlForDoc(previewDoc)}
+                              >
+                                <Text style={{ color: COLORS.textSecondary, fontWeight: '700', fontSize: 12 }}>{t('common.retry')}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      }
+
+                      const activeUrl = previewSignedUrl || '';
+                      if (!activeUrl) {
+                        return (
+                          <View style={{ alignItems: 'center', padding: 20, gap: 10 }}>
+                            <FileText color={COLORS.primary} size={48} />
+                            <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center' }}>{previewDoc.title}</Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 10, textAlign: 'center' }}>{previewDoc.file_path || ''}</Text>
+                          </View>
+                        );
+                      }
+
+                      // Modal only shows for images (PDFs are routed to browser by handleViewDocument)
+                      return <Image source={{ uri: activeUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />;
+                    })()}
                   </View>
                 </View>
               )}
             </ScrollView>
 
             <View style={styles.modalBtnRow}>
-              {previewDoc?.file_path ? (
-                <CustomButton
-                  title="OPEN FULL FILE"
-                  onPress={() => {
-                    if (previewDoc.file_path) {
-                      Linking.openURL(previewDoc.file_path).catch(() => {
-                        Alert.alert('Opening File', `Viewing ${previewDoc.title} document file.`);
-                      });
+              <CustomButton
+                title={t('motorcycle.viewDocument').toUpperCase()}
+                onPress={async () => {
+                  if (previewSignedUrl) {
+                    try {
+                      await openDocument(previewSignedUrl);
+                    } catch (err: any) {
+                      Alert.alert(t('common.error'), err?.message || 'Unable to open document.');
                     }
-                  }}
-                  style={{ flex: 1 }}
-                />
-              ) : null}
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setDocPreviewVisible(false)}>
-                <Text style={styles.cancelBtnText}>Close</Text>
+                <Text style={styles.cancelBtnText}>{t('common.close')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1556,10 +1771,14 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primary },
   pillText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
   pillTextActive: { color: COLORS.primary, fontWeight: '900' },
-  docCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
+  docCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
+  docCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   docCardTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
   docCardSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
   docCardExpiry: { color: COLORS.primary, fontSize: 10, fontWeight: '700', marginTop: 2 },
+  docActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
+  viewDocBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
+  viewDocBtnText: { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
   expBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
   expBadgeValid: { backgroundColor: COLORS.successBg, borderColor: COLORS.success },
   expBadgeSoon: { backgroundColor: '#fef3c7', borderColor: '#d97706' },

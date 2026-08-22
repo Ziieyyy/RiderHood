@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { COLORS } from '../../constants/theme';
 import { TrendingUp, Users, Building2, Calendar, Activity, Star } from 'lucide-react-native';
 import { getPlatformStats } from '../../services/adminService';
+import { useTranslation } from '../../i18n';
 
 export default function AdminReportsScreen() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,76 +42,76 @@ export default function AdminReportsScreen() {
         ) : (
           <>
             {/* Platform Overview */}
-            <Text style={styles.sectionTitle}>PLATFORM OVERVIEW</Text>
+            <Text style={styles.sectionTitle}>{t('superAdmin.platformStatistics').toUpperCase()}</Text>
             <View style={styles.grid}>
               <View style={styles.statCard}>
                 <Users color={COLORS.primary} size={24} />
                 <Text style={styles.statValue}>{stats?.totalUsers ?? 0}</Text>
-                <Text style={styles.statLabel}>Total Users</Text>
+                <Text style={styles.statLabel}>{t('superAdmin.totalUsers')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Building2 color="#f59e0b" size={24} />
                 <Text style={styles.statValue}>{stats?.totalWorkshops ?? 0}</Text>
-                <Text style={styles.statLabel}>Workshops</Text>
+                <Text style={styles.statLabel}>{t('superAdmin.totalWorkshops')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Calendar color={COLORS.success} size={24} />
                 <Text style={styles.statValue}>{stats?.totalBookings ?? 0}</Text>
-                <Text style={styles.statLabel}>Total Bookings</Text>
+                <Text style={styles.statLabel}>{t('superAdmin.allBookings')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Activity color={COLORS.primary} size={24} />
                 <Text style={styles.statValue}>{activeUsers}</Text>
-                <Text style={styles.statLabel}>Active Users</Text>
+                <Text style={styles.statLabel}>{t('superAdmin.activeUsers')}</Text>
               </View>
             </View>
 
             {/* User Breakdown */}
-            <Text style={styles.sectionTitle}>USER BREAKDOWN</Text>
+            <Text style={styles.sectionTitle}>{`${t('superAdmin.userManagement').toUpperCase()} ${t('common.status').toUpperCase()}`}</Text>
             <View style={styles.breakdownCard}>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.success }]} />
-                <Text style={styles.breakdownLabel}>Active</Text>
+                <Text style={styles.breakdownLabel}>{t('common.active')}</Text>
                 <Text style={styles.breakdownValue}>{activeUsers}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.danger }]} />
-                <Text style={styles.breakdownLabel}>Suspended</Text>
+                <Text style={styles.breakdownLabel}>{t('common.suspended')}</Text>
                 <Text style={styles.breakdownValue}>{suspendedUsers}</Text>
               </View>
             </View>
 
             {/* Workshop Breakdown */}
-            <Text style={styles.sectionTitle}>WORKSHOP STATUS</Text>
+            <Text style={styles.sectionTitle}>{`${t('navigation.workshops').toUpperCase()} ${t('common.status').toUpperCase()}`}</Text>
             <View style={styles.breakdownCard}>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.success }]} />
-                <Text style={styles.breakdownLabel}>Approved</Text>
+                <Text style={styles.breakdownLabel}>{t('superAdmin.approved')}</Text>
                 <Text style={styles.breakdownValue}>{approvedWorkshops}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: '#f59e0b' }]} />
-                <Text style={styles.breakdownLabel}>Pending</Text>
+                <Text style={styles.breakdownLabel}>{t('superAdmin.pending')}</Text>
                 <Text style={styles.breakdownValue}>{pendingWorkshops}</Text>
               </View>
             </View>
 
             {/* Booking Breakdown */}
-            <Text style={styles.sectionTitle}>BOOKING STATUS</Text>
+            <Text style={styles.sectionTitle}>{`${t('navigation.bookings').toUpperCase()} ${t('common.status').toUpperCase()}`}</Text>
             <View style={styles.breakdownCard}>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.success }]} />
-                <Text style={styles.breakdownLabel}>Completed</Text>
+                <Text style={styles.breakdownLabel}>{t('booking.bookingCompleted')}</Text>
                 <Text style={styles.breakdownValue}>{completedBookings}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: '#f59e0b' }]} />
-                <Text style={styles.breakdownLabel}>Pending</Text>
+                <Text style={styles.breakdownLabel}>{t('booking.pendingApproval')}</Text>
                 <Text style={styles.breakdownValue}>{pendingBookings}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.danger }]} />
-                <Text style={styles.breakdownLabel}>Cancelled</Text>
+                <Text style={styles.breakdownLabel}>{t('booking.bookingCancelled')}</Text>
                 <Text style={styles.breakdownValue}>{cancelledBookings}</Text>
               </View>
             </View>

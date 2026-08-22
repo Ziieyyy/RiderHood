@@ -6,10 +6,12 @@ import { TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function AdminDrawerLayout() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <Drawer
@@ -35,80 +37,81 @@ export default function AdminDrawerLayout() {
       <Drawer.Screen
         name="index"
         options={{
-          drawerLabel: 'Command Center',
-          title: 'Command Center',
+          drawerLabel: t('superAdmin.commandCenter'),
+          title: t('superAdmin.commandCenter'),
           drawerIcon: ({ color }) => <Home color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="users"
         options={{
-          drawerLabel: 'User Management',
-          title: 'Users',
+          drawerLabel: t('superAdmin.userManagement'),
+          title: t('superAdmin.userManagement'),
           drawerIcon: ({ color }) => <Users color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="workshops"
         options={{
-          drawerLabel: 'Workshops',
-          title: 'Workshops',
+          drawerLabel: t('navigation.workshops'),
+          title: t('navigation.workshops'),
           drawerIcon: ({ color }) => <Wrench color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="bookings"
         options={{
-          drawerLabel: 'Bookings',
-          title: 'Bookings',
+          drawerLabel: t('navigation.bookings'),
+          title: t('navigation.bookings'),
           drawerIcon: ({ color }) => <CalendarDays color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="services"
         options={{
-          drawerLabel: 'Services',
-          title: 'Services',
+          drawerLabel: t('navigation.services'),
+          title: t('navigation.services'),
           drawerIcon: ({ color }) => <Layers color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="parts"
         options={{
-          drawerLabel: 'Parts & Inventory',
-          title: 'Parts',
+          drawerItemStyle: { display: 'none' },
+          drawerLabel: t('navigation.spareParts'),
+          title: t('navigation.spareParts'),
           drawerIcon: ({ color }) => <Package color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="reviews"
         options={{
-          drawerLabel: 'Reviews',
-          title: 'Reviews',
+          drawerLabel: t('reviews.title'),
+          title: t('reviews.title'),
           drawerIcon: ({ color }) => <Star color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="notifications"
         options={{
-          drawerLabel: 'Notifications',
-          title: 'Notifications',
+          drawerLabel: t('navigation.notifications'),
+          title: t('navigation.notifications'),
           drawerIcon: ({ color }) => <Bell color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="reports"
         options={{
-          drawerLabel: 'Reports & Analytics',
-          title: 'Reports',
+          drawerLabel: t('navigation.reports'),
+          title: t('navigation.reports'),
           drawerIcon: ({ color }) => <BarChart3 color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="settings"
         options={{
-          drawerLabel: 'System Settings',
-          title: 'Settings',
+          drawerLabel: t('settings.title'),
+          title: t('settings.title'),
           drawerIcon: ({ color }) => <Settings color={color} size={20} />,
         }}
       />

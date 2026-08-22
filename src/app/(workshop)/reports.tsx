@@ -29,8 +29,10 @@ import {
   WorkshopReportMetrics,
   ReportTimeframe,
 } from '../../services/reportService';
+import { useTranslation } from '../../i18n';
 
 export default function WorkshopReportsScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,7 +117,7 @@ ${(report.inventoryUsage || [])
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Computing Analytics & Reports...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -124,10 +126,10 @@ ${(report.inventoryUsage || [])
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Failed to load analytics</Text>
+        <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <Text style={styles.errorDesc}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -146,8 +148,8 @@ ${(report.inventoryUsage || [])
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Analytics & Reports"
-        subtitle="Workshop Performance Metrics & Revenue Analytics"
+        title={t('workshopAdmin.revenueAndReports')}
+        subtitle={t('dashboard.revenue')}
       />
 
       {/* Time Range Filter Bar & Export */}
@@ -158,7 +160,7 @@ ${(report.inventoryUsage || [])
               { id: '7days', label: '7 DAYS' },
               { id: '30days', label: '30 DAYS' },
               { id: '1year', label: 'YTD' },
-              { id: 'all', label: 'ALL TIME' },
+              { id: 'all', label: t('common.all').toUpperCase() },
             ] as const
           ).map((item) => {
             const isSel = timeRange === item.id;
@@ -178,7 +180,7 @@ ${(report.inventoryUsage || [])
 
         <TouchableOpacity style={styles.exportBtn} onPress={handleExportReport} activeOpacity={0.8}>
           <Download color="#FFFFFF" size={14} />
-          <Text style={styles.exportText}>Export</Text>
+          <Text style={styles.exportText}>{t('workshopAdmin.exportReport')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -203,13 +205,13 @@ ${(report.inventoryUsage || [])
             <View style={styles.heroIconBox}>
               <TrendingUp color={COLORS.primary} size={22} />
             </View>
-            <Text style={styles.heroLabel}>GROSS REVENUE</Text>
+            <Text style={styles.heroLabel}>{t('dashboard.revenue').toUpperCase()}</Text>
           </View>
           <Text style={styles.heroVal}>
             RM {(report?.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </Text>
           <Text style={styles.heroSubText}>
-            Generated from {report?.completedBookingsCount ?? 0} completed service jobs
+            {report?.completedBookingsCount ?? 0} {t('booking.bookingCompleted')}
           </Text>
         </View>
 
@@ -218,41 +220,41 @@ ${(report.inventoryUsage || [])
           <View style={styles.kpiCard}>
             <View style={styles.kpiHeader}>
               <Calendar color={COLORS.primary} size={14} />
-              <Text style={styles.kpiLabel}>TOTAL JOBS</Text>
+              <Text style={styles.kpiLabel}>{t('workshopAdmin.totalBookingsCount').toUpperCase()}</Text>
             </View>
             <Text style={styles.kpiValue}>{totalAllBookings}</Text>
-            <Text style={styles.kpiSub}>Appointments</Text>
+            <Text style={styles.kpiSub}>{t('navigation.bookings')}</Text>
           </View>
 
           <View style={styles.kpiCard}>
             <View style={styles.kpiHeader}>
               <CheckCircle2 color={COLORS.success} size={14} />
-              <Text style={styles.kpiLabel}>COMPLETED</Text>
+              <Text style={styles.kpiLabel}>{t('workshopAdmin.completedServices').toUpperCase()}</Text>
             </View>
             <Text style={[styles.kpiValue, { color: COLORS.success }]}>
               {report?.completedBookingsCount ?? 0}
             </Text>
-            <Text style={styles.kpiSub}>Jobs Done</Text>
+            <Text style={styles.kpiSub}>{t('booking.bookingCompleted')}</Text>
           </View>
 
           <View style={styles.kpiCard}>
             <View style={styles.kpiHeader}>
               <Percent color={COLORS.secondaryOrange} size={14} />
-              <Text style={styles.kpiLabel}>COMPLETION RATE</Text>
+              <Text style={styles.kpiLabel}>{t('workshopAdmin.completedCount').toUpperCase()} %</Text>
             </View>
             <Text style={styles.kpiValue}>{completionRate.toFixed(1)}%</Text>
-            <Text style={styles.kpiSub}>Success Rate</Text>
+            <Text style={styles.kpiSub}>{t('common.status')}</Text>
           </View>
 
           <View style={styles.kpiCard}>
             <View style={styles.kpiHeader}>
               <DollarSign color={COLORS.primary} size={14} />
-              <Text style={styles.kpiLabel}>AVG TICKET</Text>
+              <Text style={styles.kpiLabel}>{t('workshopAdmin.totalAmount').toUpperCase()}</Text>
             </View>
             <Text style={styles.kpiValue}>
               RM {(report?.averageBookingValue ?? 0).toFixed(0)}
             </Text>
-            <Text style={styles.kpiSub}>Per Job</Text>
+            <Text style={styles.kpiSub}>{t('common.price')}</Text>
           </View>
         </View>
 
@@ -260,7 +262,7 @@ ${(report.inventoryUsage || [])
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderLine}>
             <Wrench color={COLORS.primary} size={18} />
-            <Text style={styles.sectionTitleText}>TOP POPULAR SERVICES</Text>
+            <Text style={styles.sectionTitleText}>{t('workshopAdmin.manageServices').toUpperCase()}</Text>
           </View>
 
           {!report?.popularServices || report.popularServices.length === 0 ? (
@@ -272,7 +274,7 @@ ${(report.inventoryUsage || [])
                   <Text style={styles.itemName}>
                     {idx + 1}. {svc.service_name}
                   </Text>
-                  <Text style={styles.itemSub}>{svc.count} Jobs Completed</Text>
+                  <Text style={styles.itemSub}>{svc.count} {t('booking.bookingCompleted')}</Text>
                 </View>
                 <Text style={styles.itemRevenue}>RM {svc.revenue.toFixed(2)}</Text>
               </View>
@@ -284,7 +286,7 @@ ${(report.inventoryUsage || [])
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderLine}>
             <Package color={COLORS.primary} size={18} />
-            <Text style={styles.sectionTitleText}>MOST USED INVENTORY PARTS</Text>
+            <Text style={styles.sectionTitleText}>{t('workshopAdmin.manageSpareParts').toUpperCase()}</Text>
           </View>
 
           {!report?.inventoryUsage || report.inventoryUsage.length === 0 ? (

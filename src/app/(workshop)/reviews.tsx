@@ -18,8 +18,10 @@ import { getMyWorkshop } from '../../services/workshopService';
 import { getWorkshopReviews } from '../../services/reviewService';
 import { supabase } from '../../lib/supabase';
 import type { Review, Workshop } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function WorkshopReviewsScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -76,9 +78,9 @@ export default function WorkshopReviewsScreen() {
         prev.map((r) => (r.id === reviewId ? { ...r, reply: text.trim(), reply_at: new Date().toISOString() } : r))
       );
       setReplyText({ ...replyText, [reviewId]: '' });
-      Alert.alert('Response Published', 'Your reply has been saved and is now visible to the customer.');
+      Alert.alert(t('common.success'), t('workshopAdmin.replySaved'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to send reply.');
+      Alert.alert(t('common.error'), err?.message || t('errors.saveFailed'));
     } finally {
       setReplyLoading(null);
     }
@@ -110,7 +112,7 @@ export default function WorkshopReviewsScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Workshop Reviews...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -119,9 +121,9 @@ export default function WorkshopReviewsScreen() {
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Failed to load reviews</Text>
+        <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -130,8 +132,8 @@ export default function WorkshopReviewsScreen() {
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Customer Reviews"
-        subtitle={`Average Rating: ${workshop ? Number(workshop.rating).toFixed(1) : avgRating} ★`}
+        title={t('workshopAdmin.customerReviews')}
+        subtitle={`${t('reviews.averageRating')}: ${workshop ? Number(workshop.rating).toFixed(1) : avgRating} ★`}
       />
 
       <ScrollView
@@ -158,7 +160,7 @@ export default function WorkshopReviewsScreen() {
               {'☆'.repeat(5 - Math.round(Number(workshop?.rating ?? avgRating)))}
             </Text>
             <Text style={styles.totalCountText}>
-              {workshop?.review_count ?? totalCount} Verified Ratings
+              {workshop?.review_count ?? totalCount} {t('workshopAdmin.reviews')}
             </Text>
           </View>
 
@@ -183,7 +185,12 @@ export default function WorkshopReviewsScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
           {(['all', 'pending', '5', '4', '3', '2', '1'] as const).map((filter) => {
             const isSel = selectedFilter === filter;
-            let label = filter === 'all' ? 'ALL REVIEWS' : filter === 'pending' ? 'PENDING REPLY' : `${filter} STARS`;
+            let label =
+              filter === 'all'
+                ? t('reviews.allReviews').toUpperCase()
+                : filter === 'pending'
+                ? t('reviews.pendingReply').toUpperCase()
+                : `${filter} ${t('reviews.ratingStars').toUpperCase()}`;
             return (
               <TouchableOpacity
                 key={filter}
@@ -198,13 +205,13 @@ export default function WorkshopReviewsScreen() {
           })}
         </ScrollView>
 
-        <Text style={styles.sectionHeaderTitle}>REVIEWS QUEUE ({filteredReviews.length})</Text>
+        <Text style={styles.sectionHeaderTitle}>{t('workshopAdmin.reviews').toUpperCase()} ({filteredReviews.length})</Text>
 
         {filteredReviews.length === 0 ? (
           <View style={styles.emptyState}>
             <Users color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>No reviews match filter</Text>
-            <Text style={styles.emptyDesc}>Customer reviews for completed services will appear here.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noReviews')}</Text>
+            <Text style={styles.emptyDesc}>{t('empty.noReviewsSub')}</Text>
           </View>
         ) : (
           filteredReviews.map((rev) => {
@@ -232,7 +239,7 @@ export default function WorkshopReviewsScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.comment}>{rev.comment || 'No written comment provided.'}</Text>
+                <Text style={styles.comment}>{rev.comment || '-'}</Text>
 
                 {/* Existing Reply or Reply Input */}
                 {hasReply ? (
@@ -240,8 +247,8 @@ export default function WorkshopReviewsScreen() {
                     <CornerDownRight color={COLORS.primary} size={14} />
                     <View style={{ flex: 1 }}>
                       <View style={styles.replyHeaderLine}>
-                        <Text style={styles.replyTitle}>WORKSHOP RESPONSE</Text>
-                        <Text style={styles.repliedTag}>REPLIED</Text>
+                        <Text style={styles.replyTitle}>{t('reviews.reply').toUpperCase()}</Text>
+                        <Text style={styles.repliedTag}>{t('reviews.replied').toUpperCase()}</Text>
                       </View>
                       <Text style={styles.replyTextContent}>{rev.reply || (rev as any).workshop_reply}</Text>
                     </View>
@@ -252,7 +259,7 @@ export default function WorkshopReviewsScreen() {
                       style={styles.replyInput}
                       value={replyText[rev.id] || ''}
                       onChangeText={(t) => setReplyText({ ...replyText, [rev.id]: t })}
-                      placeholder="Type official response to customer review..."
+                      placeholder={t('reviews.replyPlaceholder')}
                       placeholderTextColor={COLORS.textMuted}
                       multiline
                     />
@@ -267,7 +274,7 @@ export default function WorkshopReviewsScreen() {
                       ) : (
                         <>
                           <MessageSquare color="#FFFFFF" size={14} />
-                          <Text style={styles.sendText}>Publish Response</Text>
+                          <Text style={styles.sendText}>{t('reviews.reply')}</Text>
                         </>
                       )}
                     </TouchableOpacity>

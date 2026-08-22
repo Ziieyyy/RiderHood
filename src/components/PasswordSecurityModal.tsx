@@ -32,6 +32,8 @@ export interface PasswordSecurityModalProps {
   customMessage?: string;
 }
 
+import { useTranslation } from '../i18n';
+
 export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
   visible,
   mode,
@@ -42,6 +44,7 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
   customTitle,
   customMessage,
 }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   const handlePressAction = () => {
@@ -64,11 +67,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <Lock color={COLORS.danger} size={32} />,
           iconBg: COLORS.dangerBg,
           borderColor: 'rgba(239, 68, 68, 0.4)',
-          title: customTitle || 'Incorrect Password',
-          message:
-            customMessage ||
-            'The password you entered is incorrect. Please check your details and try again.',
-          buttonText: 'Try Again',
+          title: customTitle || t('auth.wrongPasswordTitle'),
+          message: customMessage || t('auth.wrongPasswordMsg'),
+          buttonText: t('common.retry'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -77,10 +78,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <CheckCircle2 color={COLORS.success} size={32} />,
           iconBg: COLORS.successBg,
           borderColor: 'rgba(34, 197, 94, 0.4)',
-          title: customTitle || 'Password Updated',
-          message:
-            customMessage || 'Your password has been successfully changed.',
-          buttonText: 'Done',
+          title: customTitle || t('auth.passwordChangedTitle'),
+          message: customMessage || t('auth.passwordChangedMsg'),
+          buttonText: t('common.done'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -89,11 +89,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <Mail color={COLORS.primary} size={32} />,
           iconBg: COLORS.primaryGlow,
           borderColor: 'rgba(255, 122, 0, 0.4)',
-          title: customTitle || 'Check Your Email',
-          message:
-            customMessage ||
-            "If an account is associated with this email, you will receive password reset instructions.",
-          buttonText: 'OK',
+          title: customTitle || t('auth.resetEmailSentTitle'),
+          message: customMessage || t('auth.resetEmailSentMsg'),
+          buttonText: t('common.ok'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -102,11 +100,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <ShieldAlert color={COLORS.danger} size={32} />,
           iconBg: COLORS.dangerBg,
           borderColor: 'rgba(239, 68, 68, 0.4)',
-          title: customTitle || 'Account Suspended',
-          message:
-            customMessage ||
-            'Your account has been suspended. Please contact RiderHood support.',
-          buttonText: 'Contact Support',
+          title: customTitle || t('auth.accountSuspendedTitle'),
+          message: customMessage || t('auth.accountSuspendedMsg'),
+          buttonText: t('auth.contactSupport'),
           buttonColor: COLORS.danger,
           buttonTextColor: '#FFFFFF',
         };
@@ -115,11 +111,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <Clock color="#f59e0b" size={32} />,
           iconBg: '#3b2f10',
           borderColor: 'rgba(245, 158, 11, 0.4)',
-          title: customTitle || 'Application Pending',
-          message:
-            customMessage ||
-            'Your workshop account is still awaiting approval.',
-          buttonText: 'Understood',
+          title: customTitle || t('auth.accountPendingTitle'),
+          message: customMessage || t('auth.accountPendingMsg'),
+          buttonText: t('common.ok'),
           buttonColor: '#f59e0b',
           buttonTextColor: '#000000',
         };
@@ -128,11 +122,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <MailWarning color={COLORS.primary} size={32} />,
           iconBg: COLORS.primaryGlow,
           borderColor: 'rgba(255, 122, 0, 0.4)',
-          title: customTitle || 'Email Confirmation Required',
-          message:
-            customMessage ||
-            'Your email address has not been confirmed yet. Please check your inbox and click the verification link before logging in.',
-          buttonText: 'Understood',
+          title: customTitle || t('auth.emailNotConfirmedTitle'),
+          message: customMessage || t('auth.emailNotConfirmedMsg'),
+          buttonText: t('common.ok'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -141,9 +133,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <AlertCircle color={COLORS.warning} size={32} />,
           iconBg: COLORS.warningBg,
           borderColor: 'rgba(245, 158, 11, 0.4)',
-          title: customTitle || 'Invalid Email',
-          message: customMessage || 'Please enter a valid email address.',
-          buttonText: 'Try Again',
+          title: customTitle || t('auth.invalidEmailTitle'),
+          message: customMessage || t('auth.invalidEmailMsg'),
+          buttonText: t('common.retry'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -152,11 +144,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <Clock color={COLORS.warning} size={32} />,
           iconBg: COLORS.warningBg,
           borderColor: 'rgba(245, 158, 11, 0.4)',
-          title: customTitle || 'Too Many Attempts',
-          message:
-            customMessage ||
-            'Security rate limit reached. Please wait a few moments before trying again.',
-          buttonText: 'OK',
+          title: customTitle || t('auth.rateLimitTitle'),
+          message: customMessage || t('auth.rateLimitMsg'),
+          buttonText: t('common.ok'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };
@@ -165,11 +155,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <AlertTriangle color={COLORS.danger} size={32} />,
           iconBg: COLORS.dangerBg,
           borderColor: 'rgba(239, 68, 68, 0.4)',
-          title: customTitle || 'Authentication Error',
-          message:
-            customMessage ||
-            'An error occurred during authentication. Please try again.',
-          buttonText: 'Dismiss',
+          title: customTitle || t('auth.generalErrorTitle'),
+          message: customMessage || t('auth.generalErrorMsg'),
+          buttonText: t('common.close'),
           buttonColor: COLORS.danger,
           buttonTextColor: '#FFFFFF',
         };
@@ -178,9 +166,9 @@ export const PasswordSecurityModal: React.FC<PasswordSecurityModalProps> = ({
           icon: <AlertTriangle color={COLORS.warning} size={32} />,
           iconBg: COLORS.warningBg,
           borderColor: COLORS.border,
-          title: customTitle || 'Notice',
-          message: customMessage || 'Action completed.',
-          buttonText: 'OK',
+          title: customTitle || t('common.info'),
+          message: customMessage || t('common.done'),
+          buttonText: t('common.ok'),
           buttonColor: COLORS.primary,
           buttonTextColor: '#000000',
         };

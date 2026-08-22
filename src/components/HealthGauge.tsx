@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { Activity, ShieldCheck, Wrench } from 'lucide-react-native';
+import { useTranslation } from '../i18n';
 
 interface HealthGaugeProps {
   score: number;
@@ -10,6 +11,15 @@ interface HealthGaugeProps {
 }
 
 export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, status }) => {
+  const { t } = useTranslation();
+
+  const getStatusText = () => {
+    if (score >= 80) return t('motorcycle.healthExcellent').toUpperCase();
+    if (score >= 60) return t('motorcycle.healthGood').toUpperCase();
+    if (score >= 40) return t('motorcycle.healthFair').toUpperCase();
+    return t('motorcycle.healthPoor').toUpperCase();
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -17,12 +27,12 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, statu
           <Activity color={COLORS.primary} size={24} />
         </View>
         <View style={styles.titleColumn}>
-          <Text style={styles.label}>TELEMETRY HEALTH SCORE</Text>
+          <Text style={styles.label}>{t('motorcycle.healthScore').toUpperCase()}</Text>
           <Text style={styles.bikeTitle} numberOfLines={1}>{bikeName}</Text>
         </View>
         <View style={styles.badge}>
           <ShieldCheck color={COLORS.success} size={14} />
-          <Text style={styles.badgeText}>GOOD</Text>
+          <Text style={styles.badgeText}>{getStatusText()}</Text>
         </View>
       </View>
 
@@ -36,23 +46,23 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, statu
           <View style={styles.track}>
             <View style={[styles.fill, { width: `${score}%` }]} />
           </View>
-          <Text style={styles.statusDescription}>{status}</Text>
+          <Text style={styles.statusDescription}>{status || t('dashboard.goodCondition')}</Text>
         </View>
       </View>
 
       <View style={styles.metricGrid}>
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>FRONT TIRE</Text>
+          <Text style={styles.metricLabel}>{t('motorcycle.tyreFront').toUpperCase()}</Text>
           <Text style={styles.metricValue}>34 <Text style={styles.metricSub}>PSI</Text></Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>REAR TIRE</Text>
+          <Text style={styles.metricLabel}>{t('motorcycle.tyreRear').toUpperCase()}</Text>
           <Text style={styles.metricValue}>38 <Text style={styles.metricSub}>PSI</Text></Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>NEXT SERVICE</Text>
+          <Text style={styles.metricLabel}>{t('dashboard.nextService').toUpperCase()}</Text>
           <Text style={styles.metricValue}>1,200 <Text style={styles.metricSub}>KM</Text></Text>
         </View>
       </View>

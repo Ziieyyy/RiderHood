@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { COLORS } from '../../constants/theme';
 import { Search, Plus, Package, AlertTriangle } from 'lucide-react-native';
 import { getAllParts } from '../../services/adminService';
+import { useTranslation } from '../../i18n';
 
 export default function AdminPartsScreen() {
+  const { t } = useTranslation();
   const [parts, setParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -36,9 +38,9 @@ export default function AdminPartsScreen() {
   };
 
   const getStockLabel = (qty: number, min: number) => {
-    if (qty === 0) return 'OUT OF STOCK';
-    if (qty <= min) return 'LOW STOCK';
-    return 'IN STOCK';
+    if (qty === 0) return t('workshopAdmin.outOfStock').toUpperCase();
+    if (qty <= min) return t('workshopAdmin.lowStock').toUpperCase();
+    return t('workshopAdmin.inStock').toUpperCase();
   };
 
   return (
@@ -50,7 +52,7 @@ export default function AdminPartsScreen() {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search parts catalog..."
+            placeholder={t('common.search')}
             placeholderTextColor={COLORS.textMuted}
           />
         </View>
@@ -62,9 +64,9 @@ export default function AdminPartsScreen() {
         ) : filteredParts.length === 0 ? (
           <View style={styles.emptyState}>
             <Package color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyTitle}>No Parts Found</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noSpareParts')}</Text>
             <Text style={styles.emptyDesc}>
-              {search ? 'No parts match your search.' : 'No parts in inventory yet. Workshop admins can add parts from their dashboard.'}
+              {t('empty.noSparePartsSub')}
             </Text>
           </View>
         ) : (

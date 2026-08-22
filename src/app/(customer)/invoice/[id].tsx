@@ -25,8 +25,10 @@ import {
 } from 'lucide-react-native';
 import { getBooking } from '../../../services/bookingService';
 import type { Booking } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function CustomerInvoiceScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -50,17 +52,17 @@ export default function CustomerInvoiceScreen() {
   }, [loadBooking]);
 
   const handleDownload = () => {
-    Alert.alert('Download Invoice', `Invoice #RH-${id?.substring(0, 8).toUpperCase()} downloaded to your device.`);
+    Alert.alert(t('invoice.downloadInvoice'), `${t('invoice.invoiceNumber')} #${invoiceNo}`);
   };
 
   const handleShare = () => {
-    Alert.alert('Share Invoice', 'Opening system share menu...');
+    Alert.alert(t('common.share'), t('common.share'));
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Official Invoice" showBack />
+        <Header title={t('invoice.title')} showBack />
         <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
@@ -69,10 +71,10 @@ export default function CustomerInvoiceScreen() {
   if (!booking) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Official Invoice" showBack />
+        <Header title={t('invoice.title')} showBack />
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>INVOICE NOT FOUND</Text>
-          <CustomButton title="Back to Bookings" onPress={() => router.replace('/(customer)/history')} />
+          <Text style={styles.emptyTitle}>{t('errors.notFound').toUpperCase()}</Text>
+          <CustomButton title={t('navigation.bookings')} onPress={() => router.replace('/(customer)/history')} />
         </View>
       </SafeAreaView>
     );
@@ -86,8 +88,8 @@ export default function CustomerInvoiceScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Official Receipt"
-        subtitle={`Invoice #${invoiceNo}`}
+        title={t('invoice.title')}
+        subtitle={`${t('invoice.invoiceNumber')} #${invoiceNo}`}
         showBack
         rightElement={
           <TouchableOpacity style={styles.shareBtnHeader} onPress={handleShare}>
@@ -110,7 +112,7 @@ export default function CustomerInvoiceScreen() {
             <Text style={styles.brandTagline}>PREMIUM MOTO CARE</Text>
             <View style={styles.paidBadge}>
               <CheckCircle2 color={COLORS.success} size={12} />
-              <Text style={styles.paidText}>PAID & COMPLETED</Text>
+              <Text style={styles.paidText}>{t('invoice.paid').toUpperCase()}</Text>
             </View>
           </View>
 
@@ -119,11 +121,11 @@ export default function CustomerInvoiceScreen() {
           {/* Invoice Meta */}
           <View style={styles.metaGrid}>
             <View style={styles.metaCol}>
-              <Text style={styles.metaLabel}>INVOICE NO.</Text>
+              <Text style={styles.metaLabel}>{t('invoice.invoiceNumber').toUpperCase()}</Text>
               <Text style={styles.metaVal}>#{invoiceNo}</Text>
             </View>
             <View style={styles.metaCol}>
-              <Text style={styles.metaLabel}>DATE & TIME</Text>
+              <Text style={styles.metaLabel}>{`${t('common.date').toUpperCase()} & ${t('common.time').toUpperCase()}`}</Text>
               <Text style={styles.metaVal}>{booking.booking_date} {booking.booking_time}</Text>
             </View>
           </View>
@@ -131,7 +133,7 @@ export default function CustomerInvoiceScreen() {
           {/* Workshop & Customer info */}
           <View style={styles.partiesGrid}>
             <View style={styles.partyBox}>
-              <Text style={styles.partyLabel}>WORKSHOP</Text>
+              <Text style={styles.partyLabel}>{t('dashboard.workshop').toUpperCase()}</Text>
               <Text style={styles.partyVal}>
                 {((booking.workshop as unknown as Record<string, unknown>)?.name as string) || 'RiderHood Moto Lab'}
               </Text>
@@ -141,7 +143,7 @@ export default function CustomerInvoiceScreen() {
             </View>
 
             <View style={styles.partyBox}>
-              <Text style={styles.partyLabel}>CUSTOMER & BIKE</Text>
+              <Text style={styles.partyLabel}>{`${t('auth.customerLogin').toUpperCase()} & ${t('dashboard.myMotorcycle').toUpperCase()}`}</Text>
               <Text style={styles.partyVal}>
                 {((booking.customer as unknown as Record<string, unknown>)?.full_name as string) || 'Customer'}
               </Text>
@@ -155,7 +157,7 @@ export default function CustomerInvoiceScreen() {
           <View style={styles.dottedDivider} />
 
           {/* Items Table */}
-          <Text style={styles.sectionHeading}>ITEMIZED SERVICES</Text>
+          <Text style={styles.sectionHeading}>{t('invoice.itemDescription').toUpperCase()}</Text>
 
           <View style={styles.itemsTable}>
             {booking.booking_services && booking.booking_services.length > 0 ? (
@@ -163,7 +165,7 @@ export default function CustomerInvoiceScreen() {
                 <View key={svc.id} style={styles.itemRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName}>{svc.service_name_snapshot}</Text>
-                    <Text style={styles.itemQty}>Qty: {svc.quantity}</Text>
+                    <Text style={styles.itemQty}>{t('invoice.qty')}: {svc.quantity}</Text>
                   </View>
                   <Text style={styles.itemPrice}>RM {Number(svc.price_snapshot * svc.quantity).toFixed(2)}</Text>
                 </View>
@@ -181,19 +183,19 @@ export default function CustomerInvoiceScreen() {
           {/* Summary Breakdown */}
           <View style={styles.summaryGrid}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryLabel}>{t('invoice.subtotal')}</Text>
               <Text style={styles.summaryVal}>RM {subtotal.toFixed(2)}</Text>
             </View>
 
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Discount</Text>
-              <Text style={styles.summaryVal}>- RM {discount.toFixed(2)}</Text>
+              <Text style={styles.summaryLabel}>{t('common.price')}</Text>
+              <Text style={styles.summaryVal}>RM {totalAmount.toFixed(2)}</Text>
             </View>
 
             <View style={styles.dottedDivider} />
 
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>TOTAL PAID</Text>
+              <Text style={styles.totalLabel}>{t('invoice.grandTotal').toUpperCase()}</Text>
               <Text style={styles.totalVal}>RM {totalAmount.toFixed(2)}</Text>
             </View>
           </View>
@@ -201,14 +203,14 @@ export default function CustomerInvoiceScreen() {
           {/* Footer Note */}
           <View style={styles.receiptFooter}>
             <ShieldCheck color={COLORS.primary} size={16} />
-            <Text style={styles.footerText}>Verified digital receipt generated by RiderHood Platform.</Text>
+            <Text style={styles.footerText}>{t('reviews.verifiedReview')}</Text>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionRow}>
-          <CustomButton title="DOWNLOAD PDF" onPress={handleDownload} icon={<Download color="#000" size={16} />} style={{ flex: 1 }} />
-          <CustomButton title="SHARE" variant="secondary" onPress={handleShare} icon={<Share2 color={COLORS.primary} size={16} />} style={{ flex: 1 }} />
+          <CustomButton title={t('invoice.downloadInvoice').toUpperCase()} onPress={handleDownload} icon={<Download color="#000" size={16} />} style={{ flex: 1 }} />
+          <CustomButton title={t('common.share').toUpperCase()} variant="secondary" onPress={handleShare} icon={<Share2 color={COLORS.primary} size={16} />} style={{ flex: 1 }} />
         </View>
       </ScrollView>
     </SafeAreaView>

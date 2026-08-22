@@ -19,9 +19,11 @@ import {
   PasswordSecurityModal,
   PasswordModalMode,
 } from '../../components/PasswordSecurityModal';
+import { useTranslation } from '../../i18n';
 
 export default function WorkshopRegistrationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,24 +43,24 @@ export default function WorkshopRegistrationScreen() {
   const handleRegister = async () => {
     if (!fullName.trim() || !email.trim() || !password || !workshopName.trim()) {
       setModalMode('wrong_password');
-      setModalTitle('Missing Information');
-      setModalMessage('Please fill in all required workshop registration fields.');
+      setModalTitle(t('auth.fillAllFields'));
+      setModalMessage(t('auth.fillAllFields'));
       setModalVisible(true);
       return;
     }
 
     if (password !== confirmPassword) {
       setModalMode('wrong_password');
-      setModalTitle('Passwords Do Not Match');
-      setModalMessage('The passwords you entered do not match. Please try again.');
+      setModalTitle(t('auth.passwordsMustMatch'));
+      setModalMessage(t('auth.passwordsMustMatch'));
       setModalVisible(true);
       return;
     }
 
     if (password.length < 8) {
       setModalMode('wrong_password');
-      setModalTitle('Weak Password');
-      setModalMessage('Password must be at least 8 characters long.');
+      setModalTitle(t('auth.passwordTooShort'));
+      setModalMessage(t('auth.passwordTooShort'));
       setModalVisible(true);
       return;
     }
@@ -137,26 +139,26 @@ export default function WorkshopRegistrationScreen() {
         {/* Header */}
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft color={COLORS.textSecondary} size={20} />
-          <Text style={styles.backText}>Back to Sign In</Text>
+          <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
         </TouchableOpacity>
 
         <View style={styles.brandHeader}>
           <View style={styles.logoBadge}>
             <Wrench color="#f59e0b" size={32} />
           </View>
-          <Text style={styles.brandTitle}>WORKSHOP PARTNER APPLICATION</Text>
+          <Text style={styles.brandTitle}>{t('auth.workshopPartnerApp').toUpperCase()}</Text>
           <Text style={styles.brandSubtitle}>
-            Join the RiderHood certified service network
+            {t('auth.joinRiderHood')}
           </Text>
         </View>
 
         {/* Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.sectionHeading}>BUSINESS & ADMIN DETAILS</Text>
+          <Text style={styles.sectionHeading}>{t('auth.businessDetails').toUpperCase()}</Text>
 
           {/* Full Name */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>FULL NAME (OWNER / MANAGER)</Text>
+            <Text style={styles.inputLabel}>{t('auth.ownerManager').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <User color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
@@ -171,14 +173,14 @@ export default function WorkshopRegistrationScreen() {
 
           {/* Workshop Name */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>WORKSHOP NAME</Text>
+            <Text style={styles.inputLabel}>{t('auth.workshopName').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <Wrench color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={workshopName}
                 onChangeText={setWorkshopName}
-                placeholder="e.g. Apex Moto Performance"
+                placeholder={t('auth.workshopNamePlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
@@ -186,7 +188,7 @@ export default function WorkshopRegistrationScreen() {
 
           {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>WORKSHOP EMAIL</Text>
+            <Text style={styles.inputLabel}>{t('auth.workshopEmail').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <Mail color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
@@ -203,14 +205,14 @@ export default function WorkshopRegistrationScreen() {
 
           {/* Phone */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>CONTACT PHONE NUMBER</Text>
+            <Text style={styles.inputLabel}>{t('auth.workshopPhone').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <Phone color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="+60 12-345 6789"
+                placeholder={t('auth.phonePlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="phone-pad"
               />
@@ -219,14 +221,14 @@ export default function WorkshopRegistrationScreen() {
 
           {/* District / Location */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>DISTRICT / CITY</Text>
+            <Text style={styles.inputLabel}>{t('auth.workshopDistrict').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <MapPin color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={district}
                 onChangeText={setDistrict}
-                placeholder="e.g. Bangsar, Kuala Lumpur"
+                placeholder={t('auth.workshopDistrictPlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
@@ -234,19 +236,19 @@ export default function WorkshopRegistrationScreen() {
 
           {/* Password */}
           <PasswordInput
-            label="SECURE PASSWORD"
+            label={t('auth.adminPassword').toUpperCase()}
             value={password}
             onChangeText={setPassword}
-            placeholder="Create password (min 8 chars)"
+            placeholder={t('auth.passwordPlaceholder')}
             showStrength={true}
           />
 
           {/* Confirm Password */}
           <PasswordInput
-            label="CONFIRM PASSWORD"
+            label={t('auth.confirmPassword').toUpperCase()}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Re-enter password"
+            placeholder={t('auth.confirmPasswordPlaceholder')}
             showStrength={false}
           />
 
@@ -261,7 +263,7 @@ export default function WorkshopRegistrationScreen() {
               <ActivityIndicator color="#000" size="small" />
             ) : (
               <>
-                <Text style={styles.submitBtnText}>SUBMIT WORKSHOP APPLICATION</Text>
+                <Text style={styles.submitBtnText}>{t('auth.submitApplication')}</Text>
                 <CheckCircle2 color="#000" size={18} />
               </>
             )}

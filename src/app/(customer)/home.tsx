@@ -29,11 +29,13 @@ import {
   RefreshCw,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import type { Motorcycle, Booking, MaintenanceReminder } from '../../types/database';
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { t, formatDate } = useTranslation();
 
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [selectedBike, setSelectedBike] = useState<Motorcycle | null>(null);
@@ -108,10 +110,10 @@ export default function CustomerHomeScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="RiderHood" subtitle={`Welcome, ${user?.full_name || 'Rider'} 👋`} />
+        <Header title="RiderHood" subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name || 'Rider'} 👋`} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading your garage...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -121,13 +123,13 @@ export default function CustomerHomeScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="RiderHood" subtitle={`Welcome, ${user?.full_name || 'Rider'} 👋`} />
+        <Header title="RiderHood" subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name || 'Rider'} 👋`} />
         <View style={styles.centered}>
           <RefreshCw color={COLORS.danger} size={40} />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadData} accessibilityLabel="Retry loading data">
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -136,7 +138,7 @@ export default function CustomerHomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="RiderHood" subtitle={`Welcome, ${user?.full_name || 'Rider'} 👋`} />
+      <Header title="RiderHood" subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name || 'Rider'} 👋`} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -149,11 +151,11 @@ export default function CustomerHomeScreen() {
             <View style={styles.bikeHeaderRow}>
               <View style={styles.bikeBadgeRow}>
                 <Bike color={COLORS.primary} size={18} />
-                <Text style={styles.activeLabel}>ACTIVE MOTORCYCLE</Text>
+                <Text style={styles.activeLabel}>{t('motorcycle.primaryBadge').toUpperCase()}</Text>
               </View>
               {motorcycles.length > 1 && (
                 <TouchableOpacity style={styles.switchBtn} activeOpacity={0.7} onPress={handleSwitchBike} accessibilityLabel="Switch motorcycle">
-                  <Text style={styles.switchBtnText}>Switch 🔄</Text>
+                  <Text style={styles.switchBtnText}>{t('common.sort')} 🔄</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -175,11 +177,11 @@ export default function CustomerHomeScreen() {
         ) : (
           <View style={styles.emptyBikeCard}>
             <Bike color={COLORS.textMuted} size={44} />
-            <Text style={styles.emptyBikeTitle}>No Motorcycle Added</Text>
-            <Text style={styles.emptyBikeDesc}>Add your motorcycle to start tracking health, maintenance & bookings.</Text>
+            <Text style={styles.emptyBikeTitle}>{t('motorcycle.noBikesRegistered')}</Text>
+            <Text style={styles.emptyBikeDesc}>{t('motorcycle.noBikesDesc')}</Text>
             <TouchableOpacity style={styles.addBikeBtn} onPress={() => router.push('/(customer)/profile')} activeOpacity={0.8} accessibilityLabel="Add motorcycle">
               <Plus color="#000" size={16} />
-              <Text style={styles.addBikeBtnText}>Add Motorcycle</Text>
+              <Text style={styles.addBikeBtnText}>{t('motorcycle.addFirstBike')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -192,56 +194,56 @@ export default function CustomerHomeScreen() {
                 score={healthScore}
                 bikeName={selectedBike.nickname || `${selectedBike.brand} ${selectedBike.model}`}
                 status={
-                  healthScore >= 85 ? 'Optimal Condition' :
-                  healthScore >= 60 ? 'Service Recommended' : 'Attention Required'
+                  healthScore >= 85 ? t('motorcycle.healthExcellent') :
+                  healthScore >= 60 ? t('motorcycle.healthGood') : t('motorcycle.healthPoor')
                 }
               />
             ) : (
               <View style={styles.healthPlaceholder}>
                 <Wrench color={COLORS.textMuted} size={28} />
-                <Text style={styles.healthPlaceholderText}>Health Score</Text>
-                <Text style={styles.healthPlaceholderSub}>Not enough data — record your first service to begin tracking.</Text>
+                <Text style={styles.healthPlaceholderText}>{t('motorcycle.healthScore')}</Text>
+                <Text style={styles.healthPlaceholderSub}>{t('motorcycle.healthScoreDesc')}</Text>
               </View>
             )}
           </>
         )}
 
         {/* ─── Quick Actions ────────────────────────────────── */}
-        <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.recentActivity').toUpperCase()}</Text>
         <View style={styles.quickActionsGrid}>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8} onPress={() => router.push('/(customer)/workshops')} accessibilityLabel="Find workshop">
             <View style={[styles.actionIcon, { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primary }]}>
               <Wrench color={COLORS.primary} size={22} />
             </View>
-            <Text style={styles.actionText}>Find Workshop</Text>
+            <Text style={styles.actionText}>{t('navigation.workshops')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8} onPress={() => router.push('/(customer)/booking')} accessibilityLabel="Book service">
             <View style={[styles.actionIcon, { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primary }]}>
               <Calendar color={COLORS.primary} size={22} />
             </View>
-            <Text style={styles.actionText}>Book Service</Text>
+            <Text style={styles.actionText}>{t('common.bookNow')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8} onPress={() => router.push('/(customer)/history')} accessibilityLabel="View history">
             <View style={[styles.actionIcon, { backgroundColor: COLORS.surfaceContainer, borderColor: COLORS.border }]}>
               <Clock color={COLORS.textPrimary} size={22} />
             </View>
-            <Text style={styles.actionText}>History</Text>
+            <Text style={styles.actionText}>{t('navigation.history')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8} onPress={() => router.push('/(customer)/profile')} accessibilityLabel="Add motorcycle">
             <View style={[styles.actionIcon, { backgroundColor: COLORS.surfaceContainer, borderColor: COLORS.border }]}>
               <Plus color={COLORS.textPrimary} size={22} />
             </View>
-            <Text style={styles.actionText}>Add Motorcycle</Text>
+            <Text style={styles.actionText}>{t('motorcycle.register')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* ─── Service Reminders from DB ────────────────────── */}
         {reminders.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>SERVICE REMINDERS</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('maintenance.reminder').toUpperCase()}</Text>
             <View style={styles.reminderCardBox}>
               {upcomingReminders.length > 0 ? (
                 upcomingReminders.map(r => (
@@ -252,10 +254,10 @@ export default function CustomerHomeScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.reminderItemText}>{r.title}</Text>
                       {r.next_service_mileage && (
-                        <Text style={styles.reminderSubText}>Due at {r.next_service_mileage.toLocaleString()} km</Text>
+                        <Text style={styles.reminderSubText}>{t('maintenance.dueInKm')} {r.next_service_mileage.toLocaleString()} km</Text>
                       )}
                       {r.next_service_date && (
-                        <Text style={styles.reminderSubText}>Due: {new Date(r.next_service_date).toLocaleDateString()}</Text>
+                        <Text style={styles.reminderSubText}>{t('common.date')}: {formatDate(r.next_service_date)}</Text>
                       )}
                     </View>
                   </View>
@@ -263,7 +265,7 @@ export default function CustomerHomeScreen() {
               ) : (
                 <View style={styles.reminderItemRow}>
                   <CheckCircle2 color={COLORS.success} size={18} />
-                  <Text style={styles.reminderItemText}>All reminders are up to date!</Text>
+                  <Text style={styles.reminderItemText}>{t('maintenance.upToDate')}</Text>
                 </View>
               )}
             </View>
@@ -279,11 +281,11 @@ export default function CustomerHomeScreen() {
             accessibilityLabel="Book a service"
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.bookingBannerTitle}>Need a Service?</Text>
-              <Text style={styles.bookingBannerSub}>Book a service slot at a nearby certified workshop.</Text>
+              <Text style={styles.bookingBannerTitle}>{t('dashboard.serviceReminder')}</Text>
+              <Text style={styles.bookingBannerSub}>{t('dashboard.serviceReminderDesc')}</Text>
             </View>
             <View style={styles.bookingBannerBtn}>
-              <Text style={styles.bookingBannerBtnText}>BOOK NOW</Text>
+              <Text style={styles.bookingBannerBtnText}>{t('common.bookNow').toUpperCase()}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -291,17 +293,17 @@ export default function CustomerHomeScreen() {
         {/* ─── Due Reminders ────────────────────────────────── */}
         {dueReminders.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>⚠️ ATTENTION REQUIRED</Text>
+            <Text style={styles.sectionTitle}>⚠️ {t('common.warning').toUpperCase()}</Text>
             {dueReminders.slice(0, 3).map(r => (
               <View key={r.id} style={styles.reminderAlert}>
                 <AlertTriangle color={COLORS.danger} size={16} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reminderAlertTitle}>{r.title}</Text>
-                  <Text style={styles.reminderAlertSub}>{r.status === 'overdue' ? 'OVERDUE' : 'DUE NOW'}</Text>
+                  <Text style={styles.reminderAlertSub}>{r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon').toUpperCase()}</Text>
                 </View>
                 <View style={[styles.statusBadge, { borderColor: r.status === 'overdue' ? COLORS.danger : '#f59e0b' }]}>
                   <Text style={[styles.statusBadgeText, { color: r.status === 'overdue' ? COLORS.danger : '#f59e0b' }]}>
-                    {r.status.toUpperCase()}
+                    {(r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon')).toUpperCase()}
                   </Text>
                 </View>
               </View>
@@ -310,14 +312,14 @@ export default function CustomerHomeScreen() {
         )}
 
         {/* ─── Recent Bookings ──────────────────────────────── */}
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>RECENT BOOKINGS</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('navigation.bookings').toUpperCase()}</Text>
         {recentBookings.length === 0 ? (
           <View style={styles.emptyCard}>
             <Calendar color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyCardTitle}>No bookings yet</Text>
-            <Text style={styles.emptyCardDesc}>Find a certified workshop and book your first service.</Text>
+            <Text style={styles.emptyCardTitle}>{t('empty.noBookings')}</Text>
+            <Text style={styles.emptyCardDesc}>{t('empty.noBookingsSub')}</Text>
             <TouchableOpacity style={styles.emptyCardBtn} onPress={() => router.push('/(customer)/workshops')} activeOpacity={0.8} accessibilityLabel="Find a workshop">
-              <Text style={styles.emptyCardBtnText}>Find a Workshop</Text>
+              <Text style={styles.emptyCardBtnText}>{t('navigation.workshops')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -327,7 +329,7 @@ export default function CustomerHomeScreen() {
                 {bk.status === 'completed' ? (
                   <View style={styles.completedBadge}>
                     <CheckCircle2 color={COLORS.success} size={12} />
-                    <Text style={styles.completedText}>COMPLETED</Text>
+                    <Text style={styles.completedText}>{t('booking.bookingCompleted').toUpperCase()}</Text>
                   </View>
                 ) : (
                   <View style={styles.upcomingBadge}>
@@ -335,13 +337,13 @@ export default function CustomerHomeScreen() {
                     <Text style={styles.upcomingText}>{bk.status.toUpperCase()}</Text>
                   </View>
                 )}
-                <Text style={styles.activityTime}>{bk.booking_date}</Text>
+                <Text style={styles.activityTime}>{formatDate(bk.booking_date)}</Text>
               </View>
               <Text style={styles.activityTitle}>
-                {((bk.workshop as unknown as Record<string, unknown>)?.name as string) ?? 'Workshop Service'}
+                {((bk.workshop as unknown as Record<string, unknown>)?.name as string) ?? t('workshop.directoryTitle')}
               </Text>
               <Text style={styles.activityAmount}>
-                Total: RM {Number(bk.total_amount).toFixed(2)}
+                {t('common.total')}: RM {Number(bk.total_amount).toFixed(2)}
               </Text>
             </TouchableOpacity>
           ))
@@ -349,7 +351,7 @@ export default function CustomerHomeScreen() {
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} accessibilityLabel="Logout">
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.logoutBtnText}>Logout</Text>
+          <Text style={styles.logoutBtnText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

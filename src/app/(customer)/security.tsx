@@ -24,8 +24,10 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { updatePassword, resetPassword } from '../../services/authService';
+import { useTranslation } from '../../i18n';
 
 export default function SecurityScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, logout } = useAuth();
 
@@ -36,11 +38,11 @@ export default function SecurityScreen() {
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert('Weak Password', 'New password must be at least 6 characters.');
+      Alert.alert(t('auth.passwordTooShort'), t('auth.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'New password and confirmation do not match.');
+      Alert.alert(t('auth.passwordsMustMatch'), t('auth.passwordsMustMatch'));
       return;
     }
 
@@ -50,9 +52,9 @@ export default function SecurityScreen() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert('Success', 'Password changed successfully ✓');
+      Alert.alert(t('common.success'), t('settings.passwordChangedDesc'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to update password.');
+      Alert.alert(t('common.error'), err?.message || t('errors.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -62,17 +64,17 @@ export default function SecurityScreen() {
     if (!user?.email) return;
     try {
       await resetPassword(user.email);
-      Alert.alert('Check Your Email', `Password reset instructions sent to ${user.email}.`);
+      Alert.alert(t('auth.resetLinkSent'), t('auth.resetLinkSentDesc'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to send reset link.');
+      Alert.alert(t('common.error'), err?.message || t('errors.genericMessage'));
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Log Out?', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('dialogs.logoutTitle'), t('dialogs.logoutMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Log Out',
+        text: t('common.logout'),
         style: 'destructive',
         onPress: () => logout(),
       },
@@ -82,8 +84,8 @@ export default function SecurityScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Security & Account"
-        subtitle="Manage authentication, password & active sessions"
+        title={t('settings.security')}
+        subtitle={t('settings.security')}
         showBack
       />
 
@@ -92,12 +94,12 @@ export default function SecurityScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <ShieldCheck color={COLORS.success} size={20} />
-            <Text style={styles.cardTitle}>ACCOUNT STATUS</Text>
+            <Text style={styles.cardTitle}>{t('common.status').toUpperCase()}</Text>
           </View>
           <View style={styles.statusRow}>
             <Text style={styles.emailText}>{user?.email}</Text>
             <View style={styles.activeBadge}>
-              <Text style={styles.activeText}>● Active Rider</Text>
+              <Text style={styles.activeText}>● {t('common.active')}</Text>
             </View>
           </View>
         </View>
@@ -106,35 +108,35 @@ export default function SecurityScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <KeyRound color={COLORS.primary} size={20} />
-            <Text style={styles.cardTitle}>CHANGE PASSWORD</Text>
+            <Text style={styles.cardTitle}>{t('settings.changePassword').toUpperCase()}</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>NEW PASSWORD</Text>
+            <Text style={styles.inputLabel}>{t('settings.newPassword').toUpperCase()}</Text>
             <PasswordInput
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="Enter new password"
+              placeholder={t('settings.newPassword')}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>CONFIRM NEW PASSWORD</Text>
+            <Text style={styles.inputLabel}>{t('settings.confirmNewPassword').toUpperCase()}</Text>
             <PasswordInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Confirm new password"
+              placeholder={t('settings.confirmNewPassword')}
             />
           </View>
 
           <CustomButton
-            title={loading ? 'UPDATING...' : 'CHANGE PASSWORD'}
+            title={loading ? t('settings.updatingPassword').toUpperCase() : t('settings.updatePassword').toUpperCase()}
             onPress={handleChangePassword}
             disabled={loading}
           />
 
           <TouchableOpacity style={styles.forgotBtn} onPress={handleSendResetLink}>
-            <Text style={styles.forgotText}>Send password reset email to my inbox</Text>
+            <Text style={styles.forgotText}>{t('auth.sendResetLink')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -142,14 +144,14 @@ export default function SecurityScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Smartphone color={COLORS.primary} size={20} />
-            <Text style={styles.cardTitle}>ACTIVE SESSIONS</Text>
+            <Text style={styles.cardTitle}>{t('settings.activeSessions').toUpperCase()}</Text>
           </View>
 
           <View style={styles.sessionRow}>
             <Smartphone color={COLORS.textPrimary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.sessionTitle}>This Device (Mobile App)</Text>
-              <Text style={styles.sessionSub}>Active Now • Expo SDK 57 Client</Text>
+              <Text style={styles.sessionTitle}>{t('settings.sessionInfo')}</Text>
+              <Text style={styles.sessionSub}>{t('common.active')} • RiderHood Client</Text>
             </View>
             <CheckCircle2 color={COLORS.success} size={16} />
           </View>
@@ -158,7 +160,7 @@ export default function SecurityScreen() {
         {/* Log Out Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.logoutText}>LOG OUT OF RIDERHOOD</Text>
+          <Text style={styles.logoutText}>{t('common.logout').toUpperCase()}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

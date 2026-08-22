@@ -15,9 +15,11 @@ import { Mail, ArrowLeft, Send } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { PasswordSecurityModal, PasswordModalMode } from '../../components/PasswordSecurityModal';
 import { resetPassword } from '../../services/authService';
+import { useTranslation } from '../../i18n';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -29,7 +31,7 @@ export default function ForgotPasswordScreen() {
   const handleReset = async () => {
     setErrorText('');
     if (!email.trim()) {
-      setErrorText('Please enter your email address.');
+      setErrorText(t('auth.invalidEmail'));
       return;
     }
 
@@ -55,17 +57,17 @@ export default function ForgotPasswordScreen() {
           onPress={() => router.back()}
         >
           <ArrowLeft color={COLORS.textPrimary} size={20} />
-          <Text style={styles.backText}>Back to Login</Text>
+          <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.title}>Password Recovery</Text>
-          <Text style={styles.subtitle}>Enter your email to receive recovery instructions</Text>
+          <Text style={styles.title}>{t('auth.passwordRecovery')}</Text>
+          <Text style={styles.subtitle}>{t('auth.recoveryInstructions')}</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>REGISTERED EMAIL ADDRESS</Text>
+            <Text style={styles.inputLabel}>{t('auth.registeredEmail').toUpperCase()}</Text>
             <View style={[styles.inputBox, errorText ? styles.inputBoxError : null]}>
               <Mail color={COLORS.textSecondary} size={18} />
               <TextInput
@@ -86,7 +88,7 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <CustomButton
-            title={loading ? 'SENDING REQUEST...' : 'SEND RECOVERY INSTRUCTIONS'}
+            title={loading ? t('auth.sendingRequest') : t('auth.sendRecovery')}
             onPress={handleReset}
             icon={<Send color="#000" size={18} />}
             disabled={loading}

@@ -5,8 +5,10 @@ import { COLORS } from '../../../constants/theme';
 import { CheckCircle2, XCircle, MapPin } from 'lucide-react-native';
 import { getAllWorkshops, setWorkshopVerification } from '../../../services/workshopService';
 import type { Workshop } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function AdminWorkshopsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [workshops, setWorkshops] = useState<Partial<Workshop>[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,11 +33,11 @@ export default function AdminWorkshopsScreen() {
     try {
       await setWorkshopVerification(id, status);
       setWorkshops(prev => prev.map(w => w.id === id ? { ...w, verification_status: status } : w));
-      Alert.alert('Status Updated', `Workshop verification marked as ${status}.`);
+      Alert.alert(t('common.success'), t('workshopAdmin.statusUpdated'));
     } catch (err: any) {
       console.log('Failed to update verification:', err);
       setWorkshops(prev => prev.map(w => w.id === id ? { ...w, verification_status: status } : w));
-      Alert.alert('Status Updated', `Workshop verification marked as ${status}.`);
+      Alert.alert(t('common.success'), t('workshopAdmin.statusUpdated'));
     }
   };
 
@@ -45,12 +47,12 @@ export default function AdminWorkshopsScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.listContent}>
-        <Text style={styles.sectionTitle}>PENDING APPROVALS ({pendingShops.length})</Text>
+        <Text style={styles.sectionTitle}>{t('superAdmin.workshopApproval').toUpperCase()} ({pendingShops.length})</Text>
         
         {loading ? (
           <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
         ) : pendingShops.length === 0 ? (
-          <Text style={styles.emptyText}>No pending workshop applications.</Text>
+          <Text style={styles.emptyText}>{t('empty.noNotificationsSub')}</Text>
         ) : (
           pendingShops.map((shop) => (
             <TouchableOpacity 
@@ -61,7 +63,7 @@ export default function AdminWorkshopsScreen() {
             >
               <View style={styles.shopInfo}>
                 <Text style={styles.shopName}>{shop.name}</Text>
-                <Text style={styles.shopOwner}>Address: {shop.address || 'Location Unspecified'}</Text>
+                <Text style={styles.shopOwner}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
                 <View style={styles.locationRow}>
                   <MapPin color={COLORS.textSecondary} size={12} />
                   <Text style={styles.locationText}>{shop.district || shop.state || 'Malaysia'}</Text>
@@ -85,7 +87,7 @@ export default function AdminWorkshopsScreen() {
           ))
         )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>APPROVED WORKSHOPS ({approvedShops.length})</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('superAdmin.approved').toUpperCase()} ({approvedShops.length})</Text>
         {approvedShops.map((shop) => (
           <TouchableOpacity 
             key={shop.id} 
@@ -95,10 +97,10 @@ export default function AdminWorkshopsScreen() {
           >
             <View style={styles.shopInfo}>
               <Text style={styles.shopName}>{shop.name}</Text>
-              <Text style={styles.shopOwner}>Address: {shop.address || 'Location Unspecified'}</Text>
+              <Text style={styles.shopOwner}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
             </View>
             <View style={styles.badgeApproved}>
-              <Text style={styles.badgeTextApproved}>ACTIVE</Text>
+              <Text style={styles.badgeTextApproved}>{t('common.active').toUpperCase()}</Text>
             </View>
           </TouchableOpacity>
         ))}

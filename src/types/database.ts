@@ -106,6 +106,7 @@ export interface Workshop {
   is_open: boolean;
   is_partner: boolean;
   booking_enabled: boolean;
+  online_booking_enabled?: boolean;
   verification_status: WorkshopVerificationStatus;
   status: WorkshopStatus;
   operating_hours?: string | null;
@@ -133,13 +134,104 @@ export interface Service {
   updated_at: string;
 }
 
+// ─── PRODUCT CATALOGUE & INVENTORY TYPES ─────────────────────
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: string;
+  category_id: string;
+  name: string;
+  specification: string | null;
+  sku: string;
+  description: string | null;
+  unit: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // joined
+  category?: ProductCategory;
+  workshop_products?: WorkshopProduct[];
+}
+
+export interface WorkshopProduct {
+  id: string;
+  workshop_id: string;
+  product_id: string;
+  price: number;
+  stock_quantity: number;
+  minimum_stock: number;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+  // joined
+  product?: Product;
+  workshop?: Workshop;
+  // computed UI helper
+  stock_status?: StockStatus;
+}
+
+export type InventoryTransactionType =
+  | 'purchase'
+  | 'sale'
+  | 'adjustment'
+  | 'return'
+  | 'damage'
+  | 'correction'
+  | 'add'
+  | 'remove'
+  | 'set'
+  | 'service_used';
+
+export interface InventoryTransaction {
+  id: string;
+  workshop_id: string;
+  product_id?: string | null;
+  part_id?: string | null;
+  quantity_change?: number;
+  quantity?: number;
+  transaction_type: InventoryTransactionType;
+  type?: string;
+  previous_quantity: number;
+  new_quantity: number;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  // joined
+  product?: Product;
+  workshop?: Workshop;
+  user_profile?: Profile;
+}
+
+export interface ServiceProduct {
+  id: string;
+  service_id: string;
+  product_id: string;
+  quantity: number;
+  created_at: string;
+  // joined
+  service?: Service;
+  product?: Product;
+}
+
+// Legacy Part Interface for backwards compatibility
 export interface Part {
   id: string;
   workshop_id: string;
+  product_id?: string;
   name: string;
   brand: string | null;
   sku: string | null;
   category: string | null;
+  category_id?: string | null;
+  specification?: string | null;
   description: string | null;
   price: number;
   stock_quantity: number;
@@ -153,6 +245,8 @@ export interface Part {
   unit_price?: number;
   // computed
   stock_status?: StockStatus;
+  workshop?: Workshop;
+  product?: Product;
 }
 
 export interface Booking {

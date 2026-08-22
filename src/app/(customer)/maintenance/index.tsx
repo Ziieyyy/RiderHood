@@ -25,8 +25,10 @@ import { useAuth } from '../../../context/AuthContext';
 import { getMotorcycles } from '../../../services/motorcycleService';
 import { getReminders } from '../../../services/maintenanceService';
 import type { MaintenanceReminder, Motorcycle } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function MaintenanceDashboardScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -66,8 +68,8 @@ export default function MaintenanceDashboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Maintenance Schedule"
-        subtitle="Track oil changes, brake pads, tyres & filters"
+        title={t('maintenance.title')}
+        subtitle={t('maintenance.subtitle')}
         showBack
       />
 
@@ -92,17 +94,17 @@ export default function MaintenanceDashboardScreen() {
             <View style={styles.summaryBar}>
               <View style={[styles.summaryBox, { borderColor: COLORS.danger }]}>
                 <Text style={[styles.summaryVal, { color: COLORS.danger }]}>{overdueList.length}</Text>
-                <Text style={styles.summaryLabel}>OVERDUE 🔴</Text>
+                <Text style={styles.summaryLabel}>{t('dashboard.serviceDue').toUpperCase()} 🔴</Text>
               </View>
 
               <View style={[styles.summaryBox, { borderColor: '#f59e0b' }]}>
                 <Text style={[styles.summaryVal, { color: '#f59e0b' }]}>{dueSoonList.length}</Text>
-                <Text style={styles.summaryLabel}>DUE SOON 🟠</Text>
+                <Text style={styles.summaryLabel}>{t('dashboard.serviceDue').toUpperCase()} 🟠</Text>
               </View>
 
               <View style={[styles.summaryBox, { borderColor: COLORS.success }]}>
                 <Text style={[styles.summaryVal, { color: COLORS.success }]}>{upcomingList.length}</Text>
-                <Text style={styles.summaryLabel}>UPCOMING 🟢</Text>
+                <Text style={styles.summaryLabel}>{t('dashboard.goodCondition').toUpperCase()} 🟢</Text>
               </View>
             </View>
 
@@ -163,8 +165,8 @@ export default function MaintenanceDashboardScreen() {
               {upcomingList.length === 0 && overdueList.length === 0 && dueSoonList.length === 0 ? (
                 <View style={styles.emptyCard}>
                   <Wrench color={COLORS.textMuted} size={40} />
-                  <Text style={styles.emptyTitle}>ALL SYSTEMS HEALTHY</Text>
-                  <Text style={styles.emptySub}>No maintenance due. Ride safely!</Text>
+                  <Text style={styles.emptyTitle}>{t('dashboard.goodCondition').toUpperCase()}</Text>
+                  <Text style={styles.emptySub}>{t('empty.noMaintenanceLogsSub')}</Text>
                 </View>
               ) : (
                 upcomingList.map(item => (

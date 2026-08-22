@@ -12,6 +12,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { COLORS } from '../constants/theme';
 import { Bell, User, Settings, LogOut, Key, CheckCircle2, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n';
 import { getMyWorkshop, updateWorkshop } from '../services/workshopService';
 import { getUnreadCount } from '../services/notificationService';
 import type { Workshop } from '../types/database';
@@ -26,6 +27,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
   title,
   subtitle,
 }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const { profile, logout } = useAuth();
@@ -109,7 +111,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
                     { color: workshop.is_open ? COLORS.success : COLORS.danger },
                   ]}
                 >
-                  {workshop.is_open ? '● OPEN' : '● CLOSED'}
+                  {workshop.is_open ? `● ${t('workshop.openNow').toUpperCase()}` : `● ${t('workshop.closed').toUpperCase()}`}
                 </Text>
               </>
             )}
@@ -169,7 +171,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
               <Text style={styles.menuHeaderEmail}>{profile?.email || 'admin@riderhood.com'}</Text>
               <View style={styles.roleBadge}>
                 <ShieldCheck color={COLORS.primary} size={12} />
-                <Text style={styles.roleBadgeText}>WORKSHOP ADMIN</Text>
+                <Text style={styles.roleBadgeText}>{t('workshopAdmin.workshopRole').toUpperCase()}</Text>
               </View>
             </View>
 
@@ -183,7 +185,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
               }}
             >
               <User color={COLORS.textSecondary} size={16} />
-              <Text style={styles.menuItemText}>My Profile & Hours</Text>
+              <Text style={styles.menuItemText}>{t('workshopAdmin.manageProfile')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -194,31 +196,18 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
               }}
             >
               <Settings color={COLORS.textSecondary} size={16} />
-              <Text style={styles.menuItemText}>Account Settings</Text>
+              <Text style={styles.menuItemText}>{t('navigation.settings')}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setShowProfileMenu(false);
-                router.push('/(workshop)/settings');
-              }}
-            >
-              <Key color={COLORS.textSecondary} size={16} />
-              <Text style={styles.menuItemText}>Change Password</Text>
-            </TouchableOpacity>
-
-            <View style={styles.menuDivider} />
 
             <TouchableOpacity
               style={[styles.menuItem, { backgroundColor: COLORS.dangerBg }]}
-              onPress={() => {
+              onPress={async () => {
                 setShowProfileMenu(false);
-                logout();
+                await logout();
               }}
             >
               <LogOut color={COLORS.danger} size={16} />
-              <Text style={[styles.menuItemText, { color: COLORS.danger, fontWeight: '700' }]}>Logout</Text>
+              <Text style={[styles.menuItemText, { color: COLORS.danger, fontWeight: '700' }]}>{t('common.logout')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

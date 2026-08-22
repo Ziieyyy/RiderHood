@@ -4,8 +4,10 @@ import { COLORS } from '../../constants/theme';
 import { Clock, Calendar, ChevronRight, User, Wrench } from 'lucide-react-native';
 import { getAllBookings } from '../../services/bookingService';
 import type { Booking } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function AdminBookingsScreen() {
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,11 +35,11 @@ export default function AdminBookingsScreen() {
         ) : (
           bookings.map((booking) => {
             const displayId = booking.id ? (booking.id.length > 8 ? `B-${booking.id.substring(0, 6).toUpperCase()}` : booking.id) : 'B-1000';
-            const userName = booking.customer?.full_name || booking.user || 'Customer';
-            const shopName = booking.workshop?.name || booking.shop || 'Workshop';
-            const dateStr = booking.booking_date || booking.date || 'Today';
+            const userName = booking.customer?.full_name || booking.user || t('auth.customerLogin');
+            const shopName = booking.workshop?.name || booking.shop || t('dashboard.workshop');
+            const dateStr = booking.booking_date || booking.date || t('common.today');
             const statusStr = (booking.status || 'pending').toLowerCase();
-            const serviceStr = booking.service || 'Motorcycle Service';
+            const serviceStr = booking.service || t('services.servicePackage');
 
             return (
               <TouchableOpacity key={booking.id} style={styles.card} activeOpacity={0.7}>
@@ -45,7 +47,15 @@ export default function AdminBookingsScreen() {
                   <Text style={styles.bookingId}>{displayId}</Text>
                   <View style={[styles.badge, (styles as any)[`badge_${statusStr}`] || styles.badge_pending]}>
                     <Text style={[styles.badgeText, (styles as any)[`badgeText_${statusStr}`] || styles.badgeText_pending]}>
-                      {statusStr.toUpperCase()}
+                      {statusStr === 'pending'
+                        ? t('booking.pendingApproval').toUpperCase()
+                        : statusStr === 'confirmed'
+                        ? t('booking.bookingConfirmed').toUpperCase()
+                        : statusStr === 'completed'
+                        ? t('booking.bookingCompleted').toUpperCase()
+                        : statusStr === 'cancelled'
+                        ? t('booking.bookingCancelled').toUpperCase()
+                        : statusStr.toUpperCase()}
                     </Text>
                   </View>
                 </View>

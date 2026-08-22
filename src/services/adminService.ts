@@ -41,6 +41,38 @@ export async function getPlatformStats() {
 
 // ─── Admin: Get all parts across all workshops ────────────────
 export async function getAllParts() {
+  const { data: wpData } = await supabase
+    .from('workshop_products')
+    .select(`
+      *,
+      product:products(
+        *,
+        category:product_categories(*)
+      ),
+      workshop:workshops(id, name)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (wpData && wpData.length > 0) {
+    return wpData.map((wp) => ({
+      id: wp.id,
+      workshop_id: wp.workshop_id,
+      product_id: wp.product_id,
+      name: wp.product?.name || 'Product',
+      brand: wp.product?.category?.name || 'Spare Part',
+      sku: wp.product?.sku || null,
+      category: wp.product?.category?.name || null,
+      specification: wp.product?.specification || null,
+      price: Number(wp.price ?? 0),
+      stock_quantity: Number(wp.stock_quantity ?? 0),
+      minimum_stock: Number(wp.minimum_stock ?? 3),
+      unit: wp.product?.unit || 'pcs',
+      is_available: Boolean(wp.is_available ?? true),
+      workshop: wp.workshop,
+      product: wp.product,
+    }));
+  }
+
   const { data, error } = await supabase
     .from('parts')
     .select('*, workshop:workshops(id, name)')

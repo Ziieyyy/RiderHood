@@ -24,8 +24,10 @@ import {
 import { updateReminderStatus } from '../../../services/maintenanceService';
 import { supabase } from '../../../lib/supabase';
 import type { MaintenanceReminder } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function MaintenanceDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -58,9 +60,9 @@ export default function MaintenanceDetailScreen() {
     try {
       await updateReminderStatus(reminder.id, 'completed');
       setReminder((prev: MaintenanceReminder | null) => (prev ? { ...prev, status: 'completed' } : null));
-      Alert.alert('Completed', `${reminder.title} has been marked as completed.`);
+      Alert.alert(t('common.success'), t('maintenance.completed'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to update reminder.');
+      Alert.alert(t('common.error'), err?.message || t('errors.updateFailed'));
     }
   };
 
@@ -80,10 +82,10 @@ export default function MaintenanceDetailScreen() {
   if (!reminder) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Maintenance Item" showBack />
+        <Header title={t('maintenance.title')} showBack />
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>REMINDER NOT FOUND</Text>
-          <CustomButton title="Back to Schedule" onPress={() => router.replace('/(customer)/maintenance' as any)} />
+          <Text style={styles.emptyTitle}>{t('errors.notFound').toUpperCase()}</Text>
+          <CustomButton title={t('navigation.maintenance')} onPress={() => router.replace('/(customer)/maintenance' as any)} />
         </View>
       </SafeAreaView>
     );
@@ -97,7 +99,7 @@ export default function MaintenanceDetailScreen() {
     <SafeAreaView style={styles.container}>
       <Header
         title={reminder.title}
-        subtitle="Maintenance requirement details"
+        subtitle={t('maintenance.subtitle')}
         showBack
       />
 
@@ -108,7 +110,7 @@ export default function MaintenanceDetailScreen() {
             <Wrench color={COLORS.primary} size={24} />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemTitle}>{reminder.title}</Text>
-              <Text style={styles.itemCat}>General Maintenance</Text>
+              <Text style={styles.itemCat}>{t('maintenance.title')}</Text>
             </View>
             <View
               style={[
@@ -135,10 +137,10 @@ export default function MaintenanceDetailScreen() {
 
         {/* Milestone Breakdown */}
         <View style={styles.detailCard}>
-          <Text style={styles.detailCardTitle}>SERVICE METRICS & MILESTONES</Text>
+          <Text style={styles.detailCardTitle}>{t('motorcycle.specs').toUpperCase()}</Text>
 
           <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>TARGET NEXT SERVICE</Text>
+            <Text style={styles.metricLabel}>{t('maintenance.dueInKm').toUpperCase()}</Text>
             <Text style={[styles.metricVal, { color: COLORS.primary }]}>
               {reminder.next_service_mileage ? `${reminder.next_service_mileage.toLocaleString()} km` : 'Scheduled'}
             </Text>
@@ -146,7 +148,7 @@ export default function MaintenanceDetailScreen() {
 
           {reminder.next_service_date ? (
             <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>TARGET NEXT DATE</Text>
+              <Text style={styles.metricLabel}>{t('common.date').toUpperCase()}</Text>
               <Text style={styles.metricVal}>{reminder.next_service_date}</Text>
             </View>
           ) : null}
@@ -156,14 +158,14 @@ export default function MaintenanceDetailScreen() {
         <View style={styles.actionColumn}>
           {!isCompleted && (
             <CustomButton
-              title="✓ MARK AS COMPLETED"
+              title={`✓ ${t('workshopAdmin.complete').toUpperCase()}`}
               onPress={handleMarkCompleted}
               style={{ backgroundColor: COLORS.success }}
             />
           )}
 
           <CustomButton
-            title="📅 BOOK WORKSHOP APPOINTMENT"
+            title={`📅 ${t('booking.bookAppointment').toUpperCase()}`}
             onPress={handleBookService}
             variant="secondary"
           />

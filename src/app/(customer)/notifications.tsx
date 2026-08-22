@@ -29,8 +29,10 @@ import {
   markAllAsRead,
 } from '../../services/notificationService';
 import type { Notification } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -61,9 +63,9 @@ export default function NotificationsScreen() {
     try {
       await markAllAsRead(user.id);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      Alert.alert('Notifications', 'All notifications marked as read.');
+      Alert.alert(t('notifications.title'), t('notifications.markAllRead'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to mark all as read.');
+      Alert.alert(t('common.error'), err?.message || t('errors.updateFailed'));
     }
   };
 
@@ -111,13 +113,13 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Notifications"
-        subtitle="Stay updated on booking status & service reminders"
+        title={t('notifications.title')}
+        subtitle={t('notifications.subtitle')}
         showBack
         rightElement={
           <TouchableOpacity style={styles.markReadBtn} onPress={handleMarkAllRead} activeOpacity={0.8}>
             <CheckCheck color={COLORS.primary} size={16} />
-            <Text style={styles.markReadText}>Mark All Read</Text>
+            <Text style={styles.markReadText}>{t('notifications.markAllRead')}</Text>
           </TouchableOpacity>
         }
       />
@@ -153,8 +155,8 @@ export default function NotificationsScreen() {
         ) : filteredNotifications.length === 0 ? (
           <View style={styles.emptyCard}>
             <Bell color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>NO NOTIFICATIONS</Text>
-            <Text style={styles.emptySub}>You have no unread updates or reminders in this category.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noNotifications').toUpperCase()}</Text>
+            <Text style={styles.emptySub}>{t('empty.noNotificationsSub')}</Text>
           </View>
         ) : (
           filteredNotifications.map(item => (

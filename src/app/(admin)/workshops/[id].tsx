@@ -5,8 +5,10 @@ import { COLORS } from '../../../constants/theme';
 import { ChevronLeft, Save, MapPin, Phone, User, Clock } from 'lucide-react-native';
 import { getWorkshop, updateWorkshop, setWorkshopStatus } from '../../../services/workshopService';
 import type { Workshop } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function WorkshopDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   
@@ -20,6 +22,7 @@ export default function WorkshopDetailScreen() {
     description: '',
     district: '',
     state: '',
+    cover_image_url: '',
   });
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export default function WorkshopDetailScreen() {
             description: data.description || '',
             district: data.district || '',
             state: data.state || '',
+            cover_image_url: data.cover_image_url || '',
           });
         }
       } catch (err) {
@@ -62,11 +66,12 @@ export default function WorkshopDetailScreen() {
         description: formData.description,
         district: formData.district,
         state: formData.state,
+        cover_image_url: formData.cover_image_url || undefined,
       });
-      Alert.alert('Saved', 'Workshop details updated successfully.');
+      Alert.alert(t('common.success'), t('workshopAdmin.statusUpdated'));
     } catch (err: any) {
       console.log('Save error:', err);
-      Alert.alert('Error', 'Failed to save workshop details.');
+      Alert.alert(t('common.error'), t('errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -104,7 +109,7 @@ export default function WorkshopDetailScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft color={COLORS.textPrimary} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Workshop</Text>
+        <Text style={styles.headerTitle}>{`${t('common.edit')} ${t('dashboard.workshop')}`}</Text>
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -117,7 +122,7 @@ export default function WorkshopDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Workshop Name</Text>
+          <Text style={styles.label}>{t('workshopAdmin.workshopName')}</Text>
           <View style={styles.inputBox}>
             <TextInput 
               style={styles.input}
@@ -129,7 +134,7 @@ export default function WorkshopDetailScreen() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('common.description')}</Text>
           <View style={[styles.inputBox, { height: 80 }]}>
             <TextInput 
               style={[styles.input, { textAlignVertical: 'top', paddingTop: 12 }]}
@@ -143,7 +148,21 @@ export default function WorkshopDetailScreen() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Address</Text>
+          <Text style={styles.label}>Shop Photo / Cover Image URL</Text>
+          <View style={styles.inputBox}>
+            <TextInput 
+              style={styles.input}
+              value={formData.cover_image_url}
+              onChangeText={(text) => updateField('cover_image_url', text)}
+              placeholder="https://example.com/shop-photo.jpg"
+              placeholderTextColor={COLORS.textMuted}
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>{t('common.address')}</Text>
           <View style={styles.inputBox}>
             <MapPin color={COLORS.textSecondary} size={18} />
             <TextInput 
@@ -157,7 +176,7 @@ export default function WorkshopDetailScreen() {
 
         <View style={styles.row}>
           <View style={[styles.formGroup, { flex: 1 }]}>
-            <Text style={styles.label}>District</Text>
+            <Text style={styles.label}>{t('workshopAdmin.districtCity')}</Text>
             <View style={styles.inputBox}>
               <TextInput 
                 style={styles.input}
@@ -169,7 +188,7 @@ export default function WorkshopDetailScreen() {
           </View>
 
           <View style={[styles.formGroup, { flex: 1 }]}>
-            <Text style={styles.label}>State</Text>
+            <Text style={styles.label}>{t('common.state')}</Text>
             <View style={styles.inputBox}>
               <TextInput 
                 style={styles.input}
@@ -182,7 +201,7 @@ export default function WorkshopDetailScreen() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>{t('workshopAdmin.workshopPhone')}</Text>
           <View style={styles.inputBox}>
             <Phone color={COLORS.textSecondary} size={18} />
             <TextInput 
@@ -197,16 +216,16 @@ export default function WorkshopDetailScreen() {
 
         {workshop && (
           <View style={styles.statusInfo}>
-            <Text style={styles.statusLabel}>Verification: <Text style={{ color: workshop.verification_status === 'approved' ? COLORS.success : '#f59e0b' }}>{(workshop.verification_status || 'pending').toUpperCase()}</Text></Text>
-            <Text style={styles.statusLabel}>Status: <Text style={{ color: workshop.status === 'active' ? COLORS.success : COLORS.danger }}>{(workshop.status || 'active').toUpperCase()}</Text></Text>
-            <Text style={styles.statusLabel}>Rating: ⭐ {workshop.rating || '0.0'} ({workshop.review_count || 0} reviews)</Text>
+            <Text style={styles.statusLabel}>{t('superAdmin.workshopApproval')}: <Text style={{ color: workshop.verification_status === 'approved' ? COLORS.success : '#f59e0b' }}>{(workshop.verification_status || 'pending').toUpperCase()}</Text></Text>
+            <Text style={styles.statusLabel}>{t('common.status')}: <Text style={{ color: workshop.status === 'active' ? COLORS.success : COLORS.danger }}>{(workshop.status || 'active').toUpperCase()}</Text></Text>
+            <Text style={styles.statusLabel}>{t('workshopAdmin.workshopRating')}: ⭐ {workshop.rating || '0.0'} ({workshop.review_count || 0} {t('workshopAdmin.reviews')})</Text>
           </View>
         )}
 
         <View style={styles.dangerZone}>
-          <Text style={styles.dangerTitle}>DANGER ZONE</Text>
+          <Text style={styles.dangerTitle}>{t('common.dangerZone').toUpperCase()}</Text>
           <TouchableOpacity style={styles.deleteBtn} onPress={handleSuspend}>
-            <Text style={styles.deleteBtnText}>Suspend Workshop Account</Text>
+            <Text style={styles.deleteBtnText}>{t('superAdmin.suspendWorkshop')}</Text>
           </TouchableOpacity>
         </View>
         

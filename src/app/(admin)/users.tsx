@@ -4,8 +4,10 @@ import { COLORS } from '../../constants/theme';
 import { Search, MoreVertical, Shield, UserX, UserCheck } from 'lucide-react-native';
 import { getAllUsers, setUserStatus } from '../../services/adminService';
 import type { Profile } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function AdminUsersScreen() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<Partial<Profile>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,12 +34,12 @@ export default function AdminUsersScreen() {
     try {
       await setUserStatus(user.id, newStatus);
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-      Alert.alert('Status Updated', `User ${user.full_name || user.email} is now ${newStatus}.`);
+      Alert.alert(t('common.success'), t('workshopAdmin.statusUpdated'));
     } catch (err: any) {
       console.log('Failed to update status:', err);
       // Fallback local state update
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-      Alert.alert('Updated', `User status updated to ${newStatus}.`);
+      Alert.alert(t('common.success'), t('workshopAdmin.statusUpdated'));
     }
   };
 
@@ -55,7 +57,7 @@ export default function AdminUsersScreen() {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search users by name or email..."
+            placeholder={t('common.search')}
             placeholderTextColor={COLORS.textMuted}
           />
         </View>
@@ -81,14 +83,14 @@ export default function AdminUsersScreen() {
                   <View style={styles.badges}>
                     <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeSuspended]}>
                       <Text style={[styles.badgeText, isActive ? styles.badgeTextActive : styles.badgeTextSuspended]}>
-                        {(user.status || 'ACTIVE').toUpperCase()}
+                        {isActive ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
                       </Text>
                     </View>
                     {isAdmin && (
                       <View style={[styles.badge, styles.badgeAdmin]}>
                         <Shield color={COLORS.primaryDark} size={10} style={{marginRight: 4}} />
                         <Text style={[styles.badgeText, {color: COLORS.primaryDark}]}>
-                          {user.role === 'super_admin' ? 'SUPER ADMIN' : 'WORKSHOP ADMIN'}
+                          {user.role === 'super_admin' ? t('superAdmin.superAdminRole').toUpperCase() : t('workshopAdmin.workshopRole').toUpperCase()}
                         </Text>
                       </View>
                     )}

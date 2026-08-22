@@ -9,6 +9,8 @@ import {
   Modal,
   TextInput,
   Alert,
+  Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -25,16 +27,31 @@ import {
   FileCheck,
   Calendar,
   X,
+  Upload,
 } from 'lucide-react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
 import {
   getCustomerDocuments,
   createDocument,
   deleteDocument,
+  deleteDocumentWithStorage,
+  uploadAndCreateDocument,
+  replaceDocumentFile,
+  getPublicDocumentUrl,
+  getSignedDocumentUrl,
+  openDocumentFile,
+  validateDocumentFile,
 } from '../../services/documentService';
+import {
+  openDocument,
+  getDocumentFileType,
+} from '../../services/documentViewerService';
 import type { Document as RiderDoc, DocumentType } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function DocumentsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -47,7 +64,102 @@ export default function DocumentsScreen() {
   const [docTitle, setDocTitle] = useState('');
   const [docCategory, setDocCategory] = useState<DocumentType>('Insurance');
   const [expiryDate, setExpiryDate] = useState('');
+  const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Document Preview Modal State
+  const [previewDoc, setPreviewDoc] = useState<RiderDoc | null>(null);
+  const [docPreviewVisible, setDocPreviewVisible] = useState(false);
+  const [previewSignedUrl, setPreviewSignedUrl] = useState<string | null>(null);
+  const [loadingPreviewUrl, setLoadingPreviewUrl] = useState(false);
+  const [previewUrlError, setPreviewUrlError] = useState<string | null>(null);
+
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+
+  const fetchSignedUrlForDoc = async (doc: RiderDoc) => {
+    setLoadingPreviewUrl(true);
+    setPreviewUrlError(null);
+    setPreviewSignedUrl(null);
+    try {
+      const path = doc.file_path || doc.file_url || '';
+      const { signedUrl, error, objectExists } = await getSignedDocumentUrl(path);
+      if (signedUrl && objectExists !== false) {
+        setPreviewSignedUrl(signedUrl);
+      } else {
+        setPreviewUrlError(error || 'This document file is missing from cloud storage.');
+      }
+    } catch (err: any) {
+      setPreviewUrlError('Unable to access document storage.');
+    } finally {
+      setLoadingPreviewUrl(false);
+    }
+  };
+
+  const handleViewDocument = async (doc: RiderDoc) => {
+    try {
+      setOpeningDocId(doc.id);
+      const path = doc.file_path || doc.file_url || '';
+      const fileType = getDocumentFileType(path, doc.type);
+
+      const { signedUrl, error, objectExists } = await getSignedDocumentUrl(path);
+
+      if (!signedUrl || objectExists === false) {
+        setPreviewDoc(doc);
+        setPreviewUrlError(error || 'This document file is missing from cloud storage.');
+        setDocPreviewVisible(true);
+        return;
+      }
+
+      if (fileType === 'image') {
+        setPreviewDoc(doc);
+        setPreviewSignedUrl(signedUrl);
+        setPreviewUrlError(null);
+        setDocPreviewVisible(true);
+      } else {
+        await openDocument(signedUrl, fileType);
+      }
+    } catch (err: any) {
+      console.error('DOCUMENT VAULT VIEW ERROR:', err);
+      Alert.alert(
+        t('errors.documentLoadError'),
+        err?.message || t('errors.documentLoadError')
+      );
+    } finally {
+      setOpeningDocId(null);
+    }
+  };
+
+  const handleReplacePreviewDocFile = async () => {
+    if (!previewDoc || !user?.id) return;
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const selectedFile = res.assets[0];
+        setLoadingPreviewUrl(true);
+
+        const newPath = await replaceDocumentFile(
+          previewDoc.id,
+          previewDoc.file_path,
+          selectedFile,
+          user.id
+        );
+
+        const updatedDoc = { ...previewDoc, file_path: newPath };
+        setPreviewDoc(updatedDoc);
+        setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+
+        Alert.alert(t('common.success'), t('motorcycle.uploadDocument'));
+        await fetchSignedUrlForDoc(updatedDoc);
+      }
+    } catch (err: any) {
+      Alert.alert(t('errors.uploadFailed'), err?.message || t('errors.uploadFailed'));
+    } finally {
+      setLoadingPreviewUrl(false);
+    }
+  };
 
   const fetchDocs = useCallback(async () => {
     if (!user?.id) return;
@@ -65,45 +177,74 @@ export default function DocumentsScreen() {
     fetchDocs();
   }, [fetchDocs]);
 
+  const handlePickFile = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        setSelectedFile(res.assets[0]);
+        if (!docTitle.trim()) {
+          setDocTitle(res.assets[0].name.replace(/\.[^/.]+$/, ''));
+        }
+      }
+    } catch (err: any) {
+      console.log('Document pick error:', err);
+    }
+  };
+
   const handleAddDocument = async () => {
     if (!user?.id || !docTitle.trim()) {
-      Alert.alert('Required', 'Please enter a document title.');
+      Alert.alert(t('common.required'), t('errors.requiredField'));
       return;
     }
+    if (!selectedFile || !selectedFile.uri) {
+      Alert.alert(t('common.required'), t('motorcycle.tapToUpload'));
+      return;
+    }
+
+    const valRes = validateDocumentFile(selectedFile);
+    if (!valRes.valid) {
+      Alert.alert('Invalid File', valRes.error || 'Please attach a valid file.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await createDocument({
+      await uploadAndCreateDocument({
         customer_id: user.id,
         title: docTitle.trim(),
         type: docCategory,
-        file_path: 'documents/placeholder.pdf',
+        file: selectedFile,
         expiry_date: expiryDate.trim() || undefined,
       });
 
-      Alert.alert('Success', 'Document uploaded successfully to your vault.');
+      Alert.alert(t('common.success'), t('common.success'));
       setModalVisible(false);
       setDocTitle('');
       setExpiryDate('');
+      setSelectedFile(null);
       fetchDocs();
     } catch (err: any) {
-      Alert.alert('Upload Error', err?.message || 'Failed to create document entry.');
+      Alert.alert(t('errors.uploadFailed'), err?.message || t('errors.uploadFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = (docId: string, title: string) => {
-    Alert.alert('Delete Document', `Are you sure you want to remove ${title}?`, [
-      { text: 'Cancel', style: 'cancel' },
+  const handleDelete = (doc: RiderDoc) => {
+    Alert.alert(t('dialogs.deleteDocumentTitle'), t('dialogs.deleteDocumentMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteDocument(docId);
-            setDocuments(prev => prev.filter(d => d.id !== docId));
+            await deleteDocumentWithStorage(doc.id, doc.file_path);
+            setDocuments(prev => prev.filter(d => d.id !== doc.id));
           } catch (err: any) {
-            Alert.alert('Error', err?.message || 'Failed to delete document.');
+            Alert.alert(t('common.error'), err?.message || t('errors.deleteFailed'));
           }
         },
       },
@@ -118,13 +259,13 @@ export default function DocumentsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Documents Vault"
-        subtitle="Digital copies of your road tax, insurance & receipts"
+        title={t('motorcycle.documents')}
+        subtitle={t('empty.noDocumentsSub')}
         showBack
         rightElement={
           <TouchableOpacity style={styles.addBtnHeader} onPress={() => setModalVisible(true)} activeOpacity={0.8}>
             <Plus color="#FFFFFF" size={16} />
-            <Text style={styles.addBtnText}>UPLOAD</Text>
+            <Text style={styles.addBtnText}>{t('common.upload').toUpperCase()}</Text>
           </TouchableOpacity>
         }
       />
@@ -148,9 +289,9 @@ export default function DocumentsScreen() {
         ) : filteredDocs.length === 0 ? (
           <View style={styles.emptyCard}>
             <FileText color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>NO DOCUMENTS</Text>
-            <Text style={styles.emptySub}>Keep digital copies of your motorcycle papers handy anywhere.</Text>
-            <CustomButton title="+ Upload Document" onPress={() => setModalVisible(true)} style={{ marginTop: 12 }} />
+            <Text style={styles.emptyTitle}>{t('empty.noDocuments').toUpperCase()}</Text>
+            <Text style={styles.emptySub}>{t('empty.noDocumentsSub')}</Text>
+            <CustomButton title={`+ ${t('motorcycle.uploadDocument')}`} onPress={() => setModalVisible(true)} style={{ marginTop: 12 }} />
           </View>
         ) : (
           filteredDocs.map(doc => (
@@ -159,15 +300,19 @@ export default function DocumentsScreen() {
                 <FileCheck color={COLORS.primary} size={22} />
               </View>
 
-              <View style={{ flex: 1 }}>
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => handleViewDocument(doc)}>
                 <Text style={styles.docTitle}>{doc.title}</Text>
                 <Text style={styles.docMeta}>
                   {doc.type} {doc.expiry_date ? `• Expires: ${doc.expiry_date}` : ''}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.cardActions}>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(doc.id, doc.title)}>
+                <TouchableOpacity style={styles.viewDocBtn} onPress={() => handleViewDocument(doc)}>
+                  <Eye color={COLORS.primary} size={14} />
+                  <Text style={styles.viewDocBtnText}>{t('common.view')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(doc)}>
                   <Trash2 color={COLORS.danger} size={16} />
                 </TouchableOpacity>
               </View>
@@ -181,13 +326,21 @@ export default function DocumentsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Upload Document</Text>
+              <Text style={styles.modalTitle}>{t('motorcycle.uploadDocument')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X color={COLORS.textMuted} size={20} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>DOCUMENT TITLE</Text>
+            <Text style={styles.label}>{t('motorcycle.uploadDocument').toUpperCase()}</Text>
+            <TouchableOpacity style={styles.filePickerBox} onPress={handlePickFile}>
+              <FileText color={COLORS.primary} size={18} />
+              <Text style={styles.filePickerText}>
+                {selectedFile ? selectedFile.name : `+ ${t('motorcycle.tapToUpload')}`}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>{t('motorcycle.documents').toUpperCase()}</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Etiqa Motorcycle Insurance 2026"
@@ -196,7 +349,7 @@ export default function DocumentsScreen() {
               onChangeText={setDocTitle}
             />
 
-            <Text style={styles.label}>CATEGORY</Text>
+            <Text style={styles.label}>{t('services.categoryLabel').toUpperCase()}</Text>
             <View style={styles.catRow}>
               {(['Insurance', 'Road Tax', 'Warranty', 'Service Receipt', 'Other'] as const).map(cat => (
                 <TouchableOpacity
@@ -209,7 +362,7 @@ export default function DocumentsScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>EXPIRY DATE (OPTIONAL)</Text>
+            <Text style={styles.label}>{t('motorcycle.expiryDate').toUpperCase()} ({t('common.optional').toUpperCase()})</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
@@ -219,11 +372,122 @@ export default function DocumentsScreen() {
             />
 
             <CustomButton
-              title={submitting ? 'UPLOADING...' : 'SAVE TO VAULT'}
+              title={submitting ? t('common.uploading') : t('common.save').toUpperCase()}
               onPress={handleAddDocument}
               disabled={submitting}
               style={{ marginTop: 12 }}
             />
+          </View>
+        </View>
+      </Modal>
+      {/* Document Viewer Modal */}
+      <Modal visible={docPreviewVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { borderTopLeftRadius: 24, borderTopRightRadius: 24 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📄 {t('motorcycle.viewDocument')}</Text>
+              <TouchableOpacity onPress={() => setDocPreviewVisible(false)}>
+                <X color={COLORS.textMuted} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 380 }}>
+              {previewDoc && (
+                <View style={{ gap: 12 }}>
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' }}>{previewDoc.title}</Text>
+                    <Text style={{ color: COLORS.textSecondary, fontSize: 11 }}>{t('services.categoryLabel')}: {previewDoc.type}</Text>
+                    <Text style={{ color: COLORS.textSecondary, fontSize: 11 }}>
+                      {t('common.upload')}: {new Date(previewDoc.created_at).toLocaleDateString()}
+                    </Text>
+                    {previewDoc.expiry_date && (
+                      <Text style={{ color: COLORS.primary, fontSize: 11, fontWeight: '700' }}>
+                        {t('motorcycle.expiryDate')}: {previewDoc.expiry_date}
+                      </Text>
+                    )}
+                  </View>
+
+                  <View style={{ height: 240, backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: 16 }}>
+                    {(() => {
+                      if (loadingPreviewUrl) {
+                        return (
+                          <View style={{ alignItems: 'center', gap: 10 }}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
+                            <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>{t('common.loading')}</Text>
+                          </View>
+                        );
+                      }
+
+                      if (previewUrlError) {
+                        return (
+                          <View style={{ alignItems: 'center', gap: 10, padding: 12 }}>
+                            <FileText color={COLORS.danger} size={40} />
+                            <Text style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: '700', textAlign: 'center' }}>
+                              {t('motorcycle.docNotFound')}
+                            </Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 11, textAlign: 'center' }}>
+                              {t('motorcycle.docNotFoundDesc')}
+                            </Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                              <TouchableOpacity
+                                style={{ backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                onPress={handleReplacePreviewDocFile}
+                              >
+                                <Upload color="#FFFFFF" size={14} />
+                                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>+ {t('motorcycle.uploadDocument')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{ backgroundColor: COLORS.surface, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border }}
+                                onPress={() => previewDoc && fetchSignedUrlForDoc(previewDoc)}
+                              >
+                                <Text style={{ color: COLORS.textSecondary, fontWeight: '700', fontSize: 12 }}>{t('common.retry')}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      }
+
+                      const activeUrl = previewSignedUrl || '';
+                      if (!activeUrl) {
+                        return (
+                          <View style={{ alignItems: 'center', padding: 20, gap: 10 }}>
+                            <FileText color={COLORS.primary} size={44} />
+                            <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center' }}>{previewDoc.title}</Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 10, textAlign: 'center' }}>Storage Path: {previewDoc.file_path || 'Attached File'}</Text>
+                          </View>
+                        );
+                      }
+
+                      // Modal only shows for images (PDFs are routed to browser by handleViewDocument)
+                      return <Image source={{ uri: activeUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />;
+                    })()}
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+              <CustomButton
+                title="OPEN FULL FILE"
+                onPress={async () => {
+                  if (previewSignedUrl) {
+                    try {
+                      await openDocument(previewSignedUrl);
+                    } catch (err: any) {
+                      Alert.alert('Error', err?.message || 'Unable to open document.');
+                    }
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <TouchableOpacity
+                style={{ paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' }}
+                onPress={() => setDocPreviewVisible(false)}
+              >
+                <Text style={{ color: COLORS.textSecondary, fontSize: 13, fontWeight: '800' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -380,6 +644,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  filePickerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surface,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  filePickerText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
   catRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -404,5 +685,21 @@ const styles = StyleSheet.create({
   },
   catChipTextActive: {
     color: COLORS.primary,
+  },
+  viewDocBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: COLORS.primaryDark,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  viewDocBtnText: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

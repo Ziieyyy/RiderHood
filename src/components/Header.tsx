@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../constants/theme';
 import { ChevronLeft, Cpu, Bell } from 'lucide-react-native';
+import { useTranslation } from '../i18n';
 
 interface HeaderProps {
   title?: string;
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   rightElement,
 }) => {
   const router = useRouter();
+  const { t } = useTranslation();
   const handleBackPress = onBack || (() => router.back());
 
   return (
@@ -45,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
             showTelemetryBadge && (
               <View style={styles.telemetryTag}>
                 <View style={styles.liveDot} />
-                <Text style={styles.telemetryText}>TELEMETRY LIVE</Text>
+                <Text style={styles.telemetryText}>{t('common.telemetryLive')}</Text>
               </View>
             )
           )}

@@ -10,28 +10,41 @@ import { getCustomerBookings } from '../../services/bookingService';
 import { Header } from '../../components/Header';
 import { Calendar, Clock, CheckCircle2, XCircle, RefreshCw, Search } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import type { Booking, BookingStatus } from '../../types/database';
-
-const STATUS_CONFIG: Record<BookingStatus, { label: string; color: string; bg: string }> = {
-  pending:     { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  confirmed:   { label: 'Confirmed',   color: COLORS.primary, bg: COLORS.primaryDark },
-  in_progress: { label: 'In Progress', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)' },
-  completed:   { label: 'Completed',   color: COLORS.success, bg: COLORS.successBg },
-  cancelled:   { label: 'Cancelled',   color: COLORS.danger, bg: COLORS.dangerBg },
-  rejected:    { label: 'Rejected',    color: COLORS.danger, bg: COLORS.dangerBg },
-  no_show:     { label: 'No Show',     color: COLORS.textMuted, bg: COLORS.surface },
-};
-
-const FILTERS: Array<BookingStatus | 'all'> = ['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
 
 export default function CustomerHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t, formatDate, formatCurrency } = useTranslation();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeFilter, setActiveFilter] = useState<BookingStatus | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getStatusLabel = (status: BookingStatus) => {
+    switch (status) {
+      case 'pending': return t('booking.bookingPending');
+      case 'confirmed': return t('booking.bookingConfirmed');
+      case 'in_progress': return t('workshopAdmin.inProgressBookings');
+      case 'completed': return t('booking.bookingCompleted');
+      case 'cancelled': return t('booking.bookingCancelled');
+      default: return status;
+    }
+  };
+
+  const STATUS_CONFIG: Record<BookingStatus, { color: string; bg: string }> = {
+    pending:     { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+    confirmed:   { color: COLORS.primary, bg: COLORS.primaryDark },
+    in_progress: { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)' },
+    completed:   { color: COLORS.success, bg: COLORS.successBg },
+    cancelled:   { color: COLORS.danger, bg: COLORS.dangerBg },
+    rejected:    { color: COLORS.danger, bg: COLORS.dangerBg },
+    no_show:     { color: COLORS.textMuted, bg: COLORS.surface },
+  };
+
+  const FILTERS: Array<BookingStatus | 'all'> = ['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
 
   const loadBookings = useCallback(async () => {
     if (!user?.id) return;
@@ -40,12 +53,12 @@ export default function CustomerHistoryScreen() {
       const data = await getCustomerBookings(user.id);
       setBookings(data);
     } catch {
-      setError('Failed to load your bookings. Please try again.');
+      setError(t('errors.genericMessage'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [user?.id, t]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
@@ -53,19 +66,13 @@ export default function CustomerHistoryScreen() {
     ? bookings
     : bookings.filter(b => b.status === activeFilter);
 
-  const formatDate = (d: string) => {
-    try {
-      return new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch { return d; }
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Booking History" subtitle="Your service appointments" />
+        <Header title={t('navigation.history')} subtitle={t('booking.subtitle')} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading your bookings...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -74,13 +81,13 @@ export default function CustomerHistoryScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Booking History" subtitle="Your service appointments" />
+        <Header title={t('navigation.history')} subtitle={t('booking.subtitle')} />
         <View style={styles.centered}>
           <RefreshCw color={COLORS.danger} size={40} />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
           <Text style={styles.errorDesc}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadBookings}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -89,7 +96,7 @@ export default function CustomerHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Booking History" subtitle="Your service appointments" />
+      <Header title={t('navigation.history')} subtitle={t('booking.subtitle')} />
 
       {/* Filter Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
@@ -99,7 +106,7 @@ export default function CustomerHistoryScreen() {
           return (
             <TouchableOpacity key={f} style={[styles.filterPill, isActive && styles.activePill, isActive && cfg && { borderColor: cfg.color }]} onPress={() => setActiveFilter(f)} activeOpacity={0.8}>
               <Text style={[styles.filterText, isActive && { color: cfg?.color ?? COLORS.primary }]}>
-                {f === 'all' ? 'All' : STATUS_CONFIG[f].label}
+                {f === 'all' ? t('common.all') : getStatusLabel(f)}
               </Text>
             </TouchableOpacity>
           );
@@ -114,24 +121,18 @@ export default function CustomerHistoryScreen() {
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Calendar color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>
-              {activeFilter === 'all' ? 'No bookings yet' : `No ${STATUS_CONFIG[activeFilter]?.label} bookings`}
-            </Text>
-            <Text style={styles.emptyDesc}>
-              {activeFilter === 'all'
-                ? 'Find a certified workshop and book your first service.'
-                : 'Try a different filter to see your other bookings.'}
-            </Text>
+            <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
+            <Text style={styles.emptyDesc}>{t('empty.noBookingsSub')}</Text>
             {activeFilter === 'all' && (
               <TouchableOpacity style={styles.findBtn} onPress={() => router.push('/(customer)/workshops')} activeOpacity={0.8}>
                 <Search color="#000" size={14} />
-                <Text style={styles.findBtnText}>Find a Workshop</Text>
+                <Text style={styles.findBtnText}>{t('navigation.workshops')}</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
           filtered.map(bk => {
-            const cfg = STATUS_CONFIG[bk.status];
+            const cfg = STATUS_CONFIG[bk.status] || { color: COLORS.textMuted, bg: COLORS.surface };
             const workshopName = (bk.workshop as any)?.name ?? 'Workshop';
             const bikeName = (bk.motorcycle as any)
               ? `${(bk.motorcycle as any).brand} ${(bk.motorcycle as any).model}`
@@ -144,7 +145,7 @@ export default function CustomerHistoryScreen() {
                     <Text style={styles.bikeName}>{bikeName}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color }]}>
-                    <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+                    <Text style={[styles.statusText, { color: cfg.color }]}>{getStatusLabel(bk.status)}</Text>
                   </View>
                 </View>
 
@@ -161,7 +162,7 @@ export default function CustomerHistoryScreen() {
 
                 {(bk.booking_services ?? []).length > 0 && (
                   <View style={styles.servicesRow}>
-                    {(bk.booking_services ?? []).slice(0, 2).map((s, i) => (
+                    {(bk.booking_services ?? []).slice(0, 2).map((s) => (
                       <View key={s.id} style={styles.serviceChip}>
                         <Text style={styles.serviceChipText}>{s.service_name_snapshot}</Text>
                       </View>
@@ -175,8 +176,8 @@ export default function CustomerHistoryScreen() {
                 )}
 
                 <View style={styles.cardFooter}>
-                  <Text style={styles.totalLabel}>Total</Text>
-                  <Text style={styles.totalAmount}>RM {Number(bk.total_amount || 0).toFixed(2)}</Text>
+                  <Text style={styles.totalLabel}>{t('common.total')}</Text>
+                  <Text style={styles.totalAmount}>{formatCurrency(bk.total_amount || 0)}</Text>
                 </View>
               </View>
             );

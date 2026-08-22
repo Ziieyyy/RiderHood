@@ -27,13 +27,16 @@ import {
 } from 'lucide-react-native';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { CustomButton } from '../../components/CustomButton';
+import { LanguageSelector } from '../../components/LanguageSelector';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import { getMyWorkshop, updateWorkshopStatus } from '../../services/workshopService';
 import { supabase } from '../../lib/supabase';
 import type { Workshop } from '../../types/database';
 
 export default function WorkshopSettingsScreen() {
   const { profile, logout } = useAuth();
+  const { t } = useTranslation();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,11 +80,11 @@ export default function WorkshopSettingsScreen() {
         setIsOpen(ws.is_open ?? true);
       }
     } catch {
-      Alert.alert('Error', 'Failed to load workshop details.');
+      Alert.alert(t('common.error'), t('errors.genericMessage'));
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, t]);
 
   useEffect(() => {
     loadWorkshopData();
@@ -94,17 +97,17 @@ export default function WorkshopSettingsScreen() {
     try {
       await updateWorkshopStatus(workshop.id, nextStatus);
       setWorkshop((prev) => (prev ? { ...prev, is_open: nextStatus } : prev));
-      Alert.alert('Status Updated', `Workshop is now marked as ${nextStatus ? 'OPEN' : 'CLOSED'}.`);
+      Alert.alert(t('common.status'), `${t('workshop.hours')}: ${nextStatus ? t('workshopAdmin.workshopOnline') : t('workshopAdmin.workshopOffline')}`);
     } catch (err: any) {
       setIsOpen(!nextStatus);
-      Alert.alert('Error', err?.message || 'Failed to update workshop status.');
+      Alert.alert(t('common.error'), err?.message || t('errors.genericMessage'));
     }
   };
 
   const handleSaveProfile = async () => {
     if (!workshop?.id) return;
     if (!name.trim()) {
-      Alert.alert('Validation Error', 'Workshop name cannot be empty.');
+      Alert.alert(t('common.error'), t('auth.fillAllFields'));
       return;
     }
 
@@ -131,9 +134,9 @@ export default function WorkshopSettingsScreen() {
       if (error) throw error;
 
       setWorkshop(data);
-      Alert.alert('Saved Successfully', 'Your workshop profile and operating information have been updated.');
+      Alert.alert(t('common.success'), t('settings.saveChanges'));
     } catch (err: any) {
-      Alert.alert('Save Failed', err?.message || 'Failed to update workshop information.');
+      Alert.alert(t('common.error'), err?.message || t('errors.genericMessage'));
     } finally {
       setSaving(false);
     }
@@ -143,7 +146,7 @@ export default function WorkshopSettingsScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Workshop Preferences...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -151,19 +154,22 @@ export default function WorkshopSettingsScreen() {
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Workshop Settings"
-        subtitle="Manage Operating Info, Hours & System Preferences"
+        title={t('workshopAdmin.settings')}
+        subtitle={t('settings.subtitle')}
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Language Selection Card */}
+        <LanguageSelector variant="card" />
+
         {/* Real-time Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusLeft}>
             <View style={[styles.statusDot, { backgroundColor: isOpen ? COLORS.success : COLORS.danger }]} />
             <View>
-              <Text style={styles.statusTitle}>WORKSHOP STATUS</Text>
+              <Text style={styles.statusTitle}>{`${t('dashboard.workshop').toUpperCase()} ${t('common.status').toUpperCase()}`}</Text>
               <Text style={styles.statusSub}>
-                {isOpen ? 'Accepting Customer Bookings' : 'Closed for Operations'}
+                {isOpen ? t('workshopAdmin.workshopOnline') : t('workshopAdmin.workshopOffline')}
               </Text>
             </View>
           </View>
@@ -176,11 +182,11 @@ export default function WorkshopSettingsScreen() {
         </View>
 
         {/* Workshop Profile Form */}
-        <Text style={styles.sectionTitle}>WORKSHOP PROFILE & OPERATING DETAILS</Text>
+        <Text style={styles.sectionTitle}>{t('workshopAdmin.workshopProfile').toUpperCase()}</Text>
 
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>WORKSHOP NAME *</Text>
+            <Text style={styles.inputLabel}>{t('workshopAdmin.workshopName').toUpperCase()} *</Text>
             <TextInput
               style={styles.input}
               value={name}
@@ -191,7 +197,7 @@ export default function WorkshopSettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>FULL ADDRESS</Text>
+            <Text style={styles.inputLabel}>{t('workshopAdmin.workshopAddress').toUpperCase()}</Text>
             <TextInput
               style={[styles.input, { height: 60, textAlignVertical: 'top', paddingTop: 10 }]}
               value={address}
@@ -203,7 +209,7 @@ export default function WorkshopSettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>CONTACT PHONE</Text>
+            <Text style={styles.inputLabel}>{t('workshopAdmin.workshopPhone').toUpperCase()}</Text>
             <TextInput
               style={styles.input}
               value={phone}
@@ -215,7 +221,7 @@ export default function WorkshopSettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>CONTACT EMAIL</Text>
+            <Text style={styles.inputLabel}>{t('auth.email').toUpperCase()}</Text>
             <TextInput
               style={styles.input}
               value={email}
@@ -227,7 +233,7 @@ export default function WorkshopSettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>OPERATING HOURS</Text>
+            <Text style={styles.inputLabel}>{t('workshopAdmin.operatingHours').toUpperCase()}</Text>
             <TextInput
               style={styles.input}
               value={operatingHours}
@@ -238,7 +244,7 @@ export default function WorkshopSettingsScreen() {
           </View>
 
           <CustomButton
-            title={saving ? 'SAVING CHANGES...' : 'SAVE WORKSHOP PROFILE'}
+            title={saving ? t('common.saving').toUpperCase() : t('workshopAdmin.saveProfile').toUpperCase()}
             onPress={handleSaveProfile}
             disabled={saving}
             style={{ marginTop: 6 }}
@@ -246,14 +252,14 @@ export default function WorkshopSettingsScreen() {
         </View>
 
         {/* Notifications & Automation */}
-        <Text style={styles.sectionTitle}>WORKSHOP NOTIFICATIONS & AUTOMATION</Text>
+        <Text style={styles.sectionTitle}>{t('settings.notifications').toUpperCase()}</Text>
 
         <View style={styles.card}>
           <View style={styles.row}>
             <Bell color={COLORS.primary} size={20} />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Instant Booking SMS & Push Alerts</Text>
-              <Text style={styles.rowSub}>Notify mechanics when a new customer booking arrives</Text>
+              <Text style={styles.rowTitle}>{t('settings.bookingUpdates')}</Text>
+              <Text style={styles.rowSub}>{t('settings.bookingUpdatesDesc')}</Text>
             </View>
             <Switch
               value={smsAlerts}
@@ -268,8 +274,8 @@ export default function WorkshopSettingsScreen() {
           <View style={styles.row}>
             <Shield color={COLORS.primary} size={20} />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Auto-Confirm Booking Requests</Text>
-              <Text style={styles.rowSub}>Automatically confirm bookings when service bay capacity is open</Text>
+              <Text style={styles.rowTitle}>{t('settings.serviceReminders')}</Text>
+              <Text style={styles.rowSub}>{t('settings.serviceRemindersDesc')}</Text>
             </View>
             <Switch
               value={autoAccept}
@@ -283,7 +289,7 @@ export default function WorkshopSettingsScreen() {
         {/* Admin Session Control */}
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.logoutBtnText}>Logout Workshop Admin Session</Text>
+          <Text style={styles.logoutBtnText}>{`${t('common.logout')} (${t('workshopAdmin.title')})`}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

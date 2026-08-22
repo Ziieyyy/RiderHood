@@ -4,12 +4,15 @@ import { COLORS } from '../constants/theme';
 import { Workshop } from '../types/database';
 import { Star, MapPin, Wrench, ChevronRight } from 'lucide-react-native';
 
+import { useTranslation } from '../i18n';
+
 interface WorkshopCardProps {
   workshop: Workshop;
   onBookPress: (workshop: Workshop) => void;
 }
 
 export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPress }) => {
+  const { t } = useTranslation();
   const rating = workshop.rating || 5.0;
   const reviewsCount = workshop.review_count || 0;
   const distance = workshop.district ? `${workshop.district}, ${workshop.state || ''}` : 'Nearby';
@@ -41,7 +44,7 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPres
           activeOpacity={0.8}
           onPress={() => onBookPress(workshop)}
         >
-          <Text style={styles.bookButtonText}>BOOK</Text>
+          <Text style={styles.bookButtonText}>{t('booking.title').toUpperCase()}</Text>
           <ChevronRight color={COLORS.primaryDark} size={16} />
         </TouchableOpacity>
       </View>
@@ -58,8 +61,8 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop, onBookPres
       </View>
 
       <View style={styles.footerRow}>
-        <Text style={styles.statusText}>{workshop.is_open ? 'Open Now' : 'Closed'}</Text>
-        <Text style={styles.priceRange}>Verified Partner</Text>
+        <Text style={styles.statusText}>{workshop.is_open ? t('workshop.openNow') : t('workshop.closed')}</Text>
+        <Text style={styles.priceRange}>{t('workshop.verified')}</Text>
       </View>
     </View>
   );

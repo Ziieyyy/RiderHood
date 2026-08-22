@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { LanguageProvider } from '../i18n';
 
 function RouteGuard() {
   const { user, isLoading, isInitialized } = useAuth();
@@ -37,23 +38,25 @@ function RouteGuard() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-        <RouteGuard />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: COLORS.background },
-            animation: 'fade',
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-          <Stack.Screen name="(workshop)" options={{ headerShown: false }} />
-          <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-        </Stack>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+          <RouteGuard />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: COLORS.background },
+              animation: 'fade',
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(customer)" options={{ headerShown: false }} />
+            <Stack.Screen name="(workshop)" options={{ headerShown: false }} />
+            <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+          </Stack>
+        </AuthProvider>
+      </LanguageProvider>
     </GestureHandlerRootView>
   );
 }

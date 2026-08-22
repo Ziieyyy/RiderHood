@@ -4,8 +4,10 @@ import { useRouter } from 'expo-router';
 import { COLORS } from '../constants/theme';
 import { Cpu, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n';
 
 export default function SplashScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, isInitialized } = useAuth();
 

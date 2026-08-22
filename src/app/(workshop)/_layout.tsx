@@ -27,6 +27,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import { getMyWorkshop } from '../../services/workshopService';
 import type { Workshop } from '../../types/database';
 
@@ -34,6 +35,7 @@ function CustomWorkshopDrawerContent(props: any) {
   const router = useRouter();
   const pathname = usePathname();
   const { logout, profile } = useAuth();
+  const { t } = useTranslation();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
 
   useEffect(() => {
@@ -43,16 +45,15 @@ function CustomWorkshopDrawerContent(props: any) {
   }, [profile?.id]);
 
   const navItems = [
-    { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/(workshop)/dashboard' },
-    { name: 'bookings', label: 'Bookings Queue', icon: CalendarDays, route: '/(workshop)/bookings' },
-    { name: 'services', label: 'Service Catalog', icon: Wrench, route: '/(workshop)/services' },
-    { name: 'parts', label: 'Parts Inventory', icon: Package, route: '/(workshop)/parts' },
-    { name: 'customers', label: 'Customer Directory', icon: Users, route: '/(workshop)/customers' },
-    { name: 'reviews', label: 'Customer Reviews', icon: Star, route: '/(workshop)/reviews' },
-    { name: 'notifications', label: 'Notifications', icon: Bell, route: '/(workshop)/notifications' },
-    { name: 'profile', label: 'Workshop Profile', icon: Building2, route: '/(workshop)/profile' },
-    { name: 'reports', label: 'Reports & Revenue', icon: BarChart3, route: '/(workshop)/reports' },
-    { name: 'settings', label: 'Settings', icon: Settings, route: '/(workshop)/settings' },
+    { name: 'dashboard', label: t('workshopAdmin.dashboard'), icon: LayoutDashboard, route: '/(workshop)/dashboard' },
+    { name: 'bookings', label: t('workshopAdmin.bookingsQueue'), icon: CalendarDays, route: '/(workshop)/bookings' },
+    { name: 'services', label: t('workshopAdmin.serviceCatalog'), icon: Wrench, route: '/(workshop)/services' },
+    { name: 'customers', label: t('workshopAdmin.customers'), icon: Users, route: '/(workshop)/customers' },
+    { name: 'reviews', label: t('workshopAdmin.reviews'), icon: Star, route: '/(workshop)/reviews' },
+    { name: 'notifications', label: t('navigation.notifications'), icon: Bell, route: '/(workshop)/notifications' },
+    { name: 'profile', label: t('workshopAdmin.workshopProfile'), icon: Building2, route: '/(workshop)/profile' },
+    { name: 'reports', label: t('workshopAdmin.reports'), icon: BarChart3, route: '/(workshop)/reports' },
+    { name: 'settings', label: t('workshopAdmin.settings'), icon: Settings, route: '/(workshop)/settings' },
   ];
 
   return (
@@ -71,12 +72,12 @@ function CustomWorkshopDrawerContent(props: any) {
 
         <View style={sidebarStyles.workshopInfoCard}>
           <Text style={sidebarStyles.wsName} numberOfLines={1}>
-            {workshop?.name || 'Loading workshop...'}
+            {workshop?.name || t('common.loading')}
           </Text>
           <View style={sidebarStyles.statusRow}>
             <View style={[sidebarStyles.statusDot, { backgroundColor: workshop?.is_open ? COLORS.success : COLORS.danger }]} />
             <Text style={sidebarStyles.statusText}>
-              {workshop?.is_open ? 'WORKSHOP ONLINE' : 'WORKSHOP OFFLINE'}
+              {workshop?.is_open ? t('workshopAdmin.workshopOnline') : t('workshopAdmin.workshopOffline')}
             </Text>
           </View>
         </View>
@@ -84,7 +85,7 @@ function CustomWorkshopDrawerContent(props: any) {
 
       {/* Navigation List */}
       <ScrollView style={sidebarStyles.navScroll} showsVerticalScrollIndicator={false}>
-        <Text style={sidebarStyles.navSectionTitle}>CORE MANAGEMENT</Text>
+        <Text style={sidebarStyles.navSectionTitle}>{t('workshopAdmin.dashboard').toUpperCase()}</Text>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname.includes(item.name);
@@ -139,10 +140,10 @@ function CustomWorkshopDrawerContent(props: any) {
             logout();
           }}
           activeOpacity={0.8}
-          accessibilityLabel="Logout"
+          accessibilityLabel={t('common.logout')}
         >
           <LogOut color={COLORS.danger} size={16} />
-          <Text style={sidebarStyles.logoutText}>Logout</Text>
+          <Text style={sidebarStyles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -188,7 +189,7 @@ export default function WorkshopDrawerLayout() {
       <Drawer.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       <Drawer.Screen name="bookings" options={{ title: 'Bookings Management' }} />
       <Drawer.Screen name="services" options={{ title: 'Service Catalog' }} />
-      <Drawer.Screen name="parts" options={{ title: 'Parts Inventory' }} />
+      <Drawer.Screen name="parts" options={{ title: 'Parts Inventory', drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="customers" options={{ title: 'Customer Directory' }} />
       <Drawer.Screen name="reviews" options={{ title: 'Customer Reviews' }} />
       <Drawer.Screen name="notifications" options={{ title: 'Notifications' }} />

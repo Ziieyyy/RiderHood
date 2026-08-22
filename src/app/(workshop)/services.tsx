@@ -20,6 +20,7 @@ import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { getWorkshopServices, createService, getMyWorkshop } from '../../services/workshopService';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 
 const CATEGORIES = ['All', 'Engine', 'Brake', 'Oil & Fluid', 'Suspension', 'Electrical', 'General', 'Custom'];
 
@@ -35,6 +36,7 @@ const DURATION_OPTIONS = [
 ];
 
 export default function WorkshopServicesScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ export default function WorkshopServicesScreen() {
 
   const handleSaveService = async () => {
     if (!title.trim()) {
-      Alert.alert('Validation Error', 'Please enter a valid service title.');
+      Alert.alert(t('common.required'), t('errors.requiredField'));
       return;
     }
 
@@ -150,7 +152,7 @@ export default function WorkshopServicesScreen() {
 
         if (error) throw error;
         setServices((prev) => prev.map((s) => (s.id === data.id ? data : s)));
-        Alert.alert('Service Updated', `Successfully updated "${data.name}".`);
+        Alert.alert(t('common.success'), t('common.update'));
       } else {
         const newSrv = await createService({
           workshop_id: ws.id,
@@ -162,12 +164,12 @@ export default function WorkshopServicesScreen() {
           is_available: isActive,
         });
         setServices((prev) => [newSrv, ...prev]);
-        Alert.alert('Service Published', `Successfully added "${newSrv.name}" to catalog.`);
+        Alert.alert(t('common.success'), t('workshopAdmin.addService'));
       }
 
       setShowAddModal(false);
     } catch (err: any) {
-      Alert.alert('Save Failed', err?.message || 'Unable to save service package.');
+      Alert.alert(t('common.error'), err?.message || t('errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -175,21 +177,21 @@ export default function WorkshopServicesScreen() {
 
   const handleDelete = async (srv: Service) => {
     Alert.alert(
-      'Remove Service Package',
-      `Are you sure you want to delete "${srv.name}" from your catalog?`,
+      t('dialogs.deleteServiceTitle'),
+      t('dialogs.deleteServiceMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const { error } = await supabase.from('services').delete().eq('id', srv.id);
               if (error) throw error;
               setServices((prev) => prev.filter((s) => s.id !== srv.id));
-              Alert.alert('Deleted', `Service "${srv.name}" has been removed.`);
+              Alert.alert(t('common.success'), t('common.delete'));
             } catch (err: any) {
-              Alert.alert('Error', err?.message || 'Failed to delete service.');
+              Alert.alert(t('common.error'), err?.message || t('errors.deleteFailed'));
             }
           },
         },
@@ -225,8 +227,8 @@ export default function WorkshopServicesScreen() {
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Service Catalog"
-        subtitle={`${services.length} Total Service Packages`}
+        title={t('workshopAdmin.manageServices')}
+        subtitle={`${services.length} ${t('workshopAdmin.services')}`}
       />
 
       {/* Top Header Actions & Search */}
@@ -235,7 +237,7 @@ export default function WorkshopServicesScreen() {
           <Search color={COLORS.textMuted} size={18} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search service name or description..."
+            placeholder={t('common.search')}
             placeholderTextColor={COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -249,7 +251,7 @@ export default function WorkshopServicesScreen() {
 
         <TouchableOpacity style={styles.addBtn} onPress={handleOpenAddModal} activeOpacity={0.8}>
           <Plus color="#FFFFFF" size={16} />
-          <Text style={styles.addBtnText}>Add Service</Text>
+          <Text style={styles.addBtnText}>{t('workshopAdmin.addService')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -290,9 +292,9 @@ export default function WorkshopServicesScreen() {
         {filteredServices.length === 0 ? (
           <View style={styles.emptyState}>
             <Wrench color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>No services found</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noServices')}</Text>
             <Text style={styles.emptyDesc}>
-              Try adjusting your search query or add a new service package to your workshop catalog.
+              {t('empty.noServicesSub')}
             </Text>
           </View>
         ) : (
@@ -306,7 +308,7 @@ export default function WorkshopServicesScreen() {
                       <Text style={styles.srvTitle}>{srv.name}</Text>
                       <View style={[styles.activeStatusChip, { backgroundColor: isAct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(113, 113, 122, 0.15)' }]}>
                         <Text style={[styles.activeStatusText, { color: isAct ? COLORS.success : COLORS.textMuted }]}>
-                          {isAct ? 'ACTIVE' : 'INACTIVE'}
+                          {isAct ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
                         </Text>
                       </View>
                     </View>
@@ -326,11 +328,11 @@ export default function WorkshopServicesScreen() {
                   <Text style={styles.srvPrice}>RM {Number(srv.price || 0).toFixed(2)}</Text>
                 </View>
 
-                <Text style={styles.srvDesc}>{srv.description || 'Standard service package'}</Text>
+                <Text style={styles.srvDesc}>{srv.description || t('services.title')}</Text>
 
                 <View style={styles.cardActions}>
                   <View style={styles.toggleActiveContainer}>
-                    <Text style={styles.toggleLabel}>Status:</Text>
+                    <Text style={styles.toggleLabel}>{t('common.status')}:</Text>
                     <Switch
                       value={isAct}
                       onValueChange={() => handleToggleActiveStatus(srv)}
@@ -342,12 +344,12 @@ export default function WorkshopServicesScreen() {
                   <View style={styles.rightActionBtns}>
                     <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenEditModal(srv)}>
                       <Edit2 color={COLORS.textSecondary} size={14} />
-                      <Text style={styles.actionText}>Edit</Text>
+                      <Text style={styles.actionText}>{t('common.edit')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(srv)}>
                       <Trash2 color={COLORS.danger} size={14} />
-                      <Text style={[styles.actionText, { color: COLORS.danger }]}>Delete</Text>
+                      <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -363,7 +365,7 @@ export default function WorkshopServicesScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingService ? 'Edit Service Package' : 'Add New Service Package'}
+                {editingService ? t('services.editService') : t('services.addService')}
               </Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <X color={COLORS.textMuted} size={20} />
@@ -372,7 +374,7 @@ export default function WorkshopServicesScreen() {
 
             <ScrollView contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>SERVICE TITLE *</Text>
+                <Text style={styles.inputLabel}>{t('services.serviceName').toUpperCase()} *</Text>
                 <TextInput
                   style={styles.input}
                   value={title}
@@ -383,7 +385,7 @@ export default function WorkshopServicesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>CATEGORY</Text>
+                <Text style={styles.inputLabel}>{t('services.categoryLabel').toUpperCase()}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                   {CATEGORIES.filter((c) => c !== 'All').map((cat) => (
                     <TouchableOpacity
@@ -400,7 +402,7 @@ export default function WorkshopServicesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>PRICE (RM) *</Text>
+                <Text style={styles.inputLabel}>{t('common.price').toUpperCase()} (RM) *</Text>
                 <TextInput
                   style={styles.input}
                   value={price}
@@ -413,7 +415,7 @@ export default function WorkshopServicesScreen() {
 
               {/* ESTIMATED DURATION DROPDOWN */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>ESTIMATED DURATION</Text>
+                <Text style={styles.inputLabel}>{t('services.estDuration').toUpperCase()}</Text>
                 <TouchableOpacity
                   style={styles.dropdownTrigger}
                   onPress={() => setShowDurationPicker(!showDurationPicker)}

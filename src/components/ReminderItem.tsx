@@ -4,11 +4,15 @@ import { COLORS } from '../constants/theme';
 import { MaintenanceReminder } from '../types/database';
 import { Droplet, Disc, Link2, ShieldAlert, CheckCircle2 } from 'lucide-react-native';
 
+import { useTranslation } from '../i18n';
+
 interface ReminderItemProps {
   item: MaintenanceReminder;
 }
 
 export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
+  const { t } = useTranslation();
+
   const getIcon = () => {
     switch ((item.type || '').toLowerCase()) {
       case 'oil':
@@ -30,14 +34,14 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
       return (
         <View style={[styles.badge, { backgroundColor: COLORS.warningBg, borderColor: COLORS.warning }]}>
           <ShieldAlert color={COLORS.warning} size={12} />
-          <Text style={[styles.badgeText, { color: COLORS.warning }]}>CHECK SOON</Text>
+          <Text style={[styles.badgeText, { color: COLORS.warning }]}>{t('maintenance.dueSoon').toUpperCase()}</Text>
         </View>
       );
     }
     return (
       <View style={[styles.badge, { backgroundColor: COLORS.successBg, borderColor: COLORS.success }]}>
         <CheckCircle2 color={COLORS.success} size={12} />
-        <Text style={[styles.badgeText, { color: COLORS.success }]}>OK</Text>
+        <Text style={[styles.badgeText, { color: COLORS.success }]}>{t('maintenance.upToDate').toUpperCase()}</Text>
       </View>
     );
   };
@@ -52,7 +56,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
           <View style={styles.textContainer}>
             <Text style={styles.nameText}>{item.title}</Text>
             <Text style={styles.categoryText}>
-              {item.type} • Next: {item.next_service_mileage ? `${item.next_service_mileage} KM` : 'Due soon'}
+              {item.type} • {t('maintenance.nextService')}: {item.next_service_mileage ? `${item.next_service_mileage} KM` : t('maintenance.dueSoon')}
             </Text>
           </View>
         </View>

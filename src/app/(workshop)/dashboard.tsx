@@ -31,6 +31,7 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { getMyWorkshop } from '../../services/workshopService';
 import { getWorkshopBookings, updateBookingStatus } from '../../services/bookingService';
@@ -41,6 +42,7 @@ import type { Workshop, Booking, Review, Part, BookingStatus } from '../../types
 export default function WorkshopDashboardScreen() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { t, formatCurrency, formatDate } = useTranslation();
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -59,14 +61,34 @@ export default function WorkshopDashboardScreen() {
       setWorkshop(ws);
 
       if (ws) {
-        const [bks, revs, pts] = await Promise.all([
+        const [bksRes, revsRes, partsRes] = await Promise.allSettled([
           getWorkshopBookings(ws.id),
           getWorkshopReviews(ws.id),
-          getWorkshopParts(ws.id, { onlyAvailable: false }),
+          getWorkshopParts(ws.id),
         ]);
-        setBookings(bks);
-        setReviews(revs);
-        setParts(pts);
+
+        if (bksRes.status === 'fulfilled') {
+          setBookings(bksRes.value);
+        } else {
+          console.error('Failed to load bookings:', bksRes.reason);
+        }
+
+        if (revsRes.status === 'fulfilled') {
+          setReviews(revsRes.value);
+        } else {
+          console.error('Failed to load reviews:', revsRes.reason);
+          setReviews([]);
+        }
+
+        if (partsRes.status === 'fulfilled') {
+          setParts(partsRes.value);
+        } else {
+          setParts([]);
+        }
+
+        if (bksRes.status === 'rejected') {
+          throw bksRes.reason;
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to load workshop dashboard data.');
@@ -118,7 +140,7 @@ export default function WorkshopDashboardScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Workshop Dashboard...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -127,10 +149,10 @@ export default function WorkshopDashboardScreen() {
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Unable to load dashboard</Text>
+        <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <Text style={styles.errorDesc}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-          <Text style={styles.retryText}>Try Again</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -139,7 +161,7 @@ export default function WorkshopDashboardScreen() {
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Dashboard"
+        title={t('workshopAdmin.dashboard')}
         subtitle={workshop ? workshop.name : 'Workshop Operations'}
       />
 
@@ -162,7 +184,7 @@ export default function WorkshopDashboardScreen() {
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeTextGroup}>
             <Text style={styles.greetingTitle}>
-              Good Morning, {profile?.full_name?.split(' ')[0] || 'Admin'} 👋
+              {t('common.welcome')}, {profile?.full_name?.split(' ')[0] || 'Admin'} 👋
             </Text>
             <Text style={styles.greetingSub}>
               {workshop?.name || 'RiderHood Workshop'} • {workshop?.district || 'Main Hub'}
@@ -174,22 +196,21 @@ export default function WorkshopDashboardScreen() {
               onPress={() => router.push('/(workshop)/profile')}
             >
               <Eye color={COLORS.textPrimary} size={14} />
-              <Text style={styles.welcomeSecBtnText}>View Workshop</Text>
+              <Text style={styles.welcomeSecBtnText}>{t('workshop.viewWorkshop')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.welcomePrimaryBtn}
               onPress={() => router.push('/(workshop)/profile')}
             >
               <Wrench color="#FFFFFF" size={14} />
-              <Text style={styles.welcomePriBtnText}>Edit Workshop</Text>
+              <Text style={styles.welcomePriBtnText}>{t('workshopAdmin.editWorkshopProfile')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Dynamic KPI Cards */}
-        <Text style={styles.sectionHeaderTitle}>REAL-TIME OPERATIONAL METRICS</Text>
+        {/* KPI Summary Grid */}
         <View style={styles.kpiGrid}>
-          {/* Today's Bookings */}
+          {/* Today Bookings */}
           <TouchableOpacity
             style={styles.kpiCard}
             onPress={() => router.push('/(workshop)/bookings?filter=today')}
@@ -202,14 +223,11 @@ export default function WorkshopDashboardScreen() {
               <ChevronRight color={COLORS.textMuted} size={16} />
             </View>
             <Text style={styles.kpiValue}>{todaysBookings.length}</Text>
-            <Text style={styles.kpiLabel}>TODAY'S BOOKINGS</Text>
-            <Text style={styles.kpiSubText}>
-              {todaysBookings.filter((b) => b.status === 'confirmed').length} Confirmed •{' '}
-              {inProgressBookings.length} In Progress
-            </Text>
+            <Text style={styles.kpiLabel}>{t('workshopAdmin.todaysBookings').toUpperCase()}</Text>
+            <Text style={styles.kpiSubText}>{t('workshopAdmin.todaysBookings')}</Text>
           </TouchableOpacity>
 
-          {/* Pending Bookings */}
+          {/* Pending Confirmations */}
           <TouchableOpacity
             style={styles.kpiCard}
             onPress={() => router.push('/(workshop)/bookings?status=pending')}
@@ -217,15 +235,13 @@ export default function WorkshopDashboardScreen() {
           >
             <View style={styles.kpiHeader}>
               <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Clock color={COLORS.secondaryOrange} size={18} />
+                <Clock color={COLORS.warning} size={18} />
               </View>
               <ChevronRight color={COLORS.textMuted} size={16} />
             </View>
             <Text style={styles.kpiValue}>{pendingBookings.length}</Text>
-            <Text style={styles.kpiLabel}>PENDING</Text>
-            <Text style={styles.kpiSubText}>
-              {pendingBookings.length > 0 ? '⚠️ Action Required' : 'All clear'}
-            </Text>
+            <Text style={styles.kpiLabel}>{t('workshopAdmin.pendingBookings').toUpperCase()}</Text>
+            <Text style={styles.kpiSubText}>{t('booking.pendingApproval')}</Text>
           </TouchableOpacity>
 
           {/* In Progress */}
@@ -241,8 +257,8 @@ export default function WorkshopDashboardScreen() {
               <ChevronRight color={COLORS.textMuted} size={16} />
             </View>
             <Text style={styles.kpiValue}>{inProgressBookings.length}</Text>
-            <Text style={styles.kpiLabel}>IN PROGRESS</Text>
-            <Text style={styles.kpiSubText}>Currently in service bays</Text>
+            <Text style={styles.kpiLabel}>{t('booking.inProgress').toUpperCase()}</Text>
+            <Text style={styles.kpiSubText}>{t('booking.inProgress')}</Text>
           </TouchableOpacity>
 
           {/* Completed Today */}
@@ -258,8 +274,8 @@ export default function WorkshopDashboardScreen() {
               <ChevronRight color={COLORS.textMuted} size={16} />
             </View>
             <Text style={styles.kpiValue}>{completedTodayBookings.length}</Text>
-            <Text style={styles.kpiLabel}>COMPLETED TODAY</Text>
-            <Text style={styles.kpiSubText}>Finished and handed over</Text>
+            <Text style={styles.kpiLabel}>{t('workshopAdmin.completedServices').toUpperCase()}</Text>
+            <Text style={styles.kpiSubText}>{t('booking.bookingCompleted')}</Text>
           </TouchableOpacity>
 
           {/* Monthly Revenue */}
@@ -274,10 +290,10 @@ export default function WorkshopDashboardScreen() {
               </View>
               <ChevronRight color={COLORS.textMuted} size={16} />
             </View>
-            <Text style={styles.kpiValue}>RM {monthlyRevenue.toLocaleString()}</Text>
-            <Text style={styles.kpiLabel}>MONTHLY REVENUE</Text>
+            <Text style={styles.kpiValue}>{formatCurrency(monthlyRevenue)}</Text>
+            <Text style={styles.kpiLabel}>{t('workshopAdmin.monthlyRevenue').toUpperCase()}</Text>
             <Text style={styles.kpiSubText}>
-              From {bookings.filter((b) => b.status === 'completed' && b.booking_date.startsWith(thisMonthStr)).length} bookings this month
+              {bookings.filter((b) => b.status === 'completed' && b.booking_date.startsWith(thisMonthStr)).length} {t('navigation.bookings')}
             </Text>
           </TouchableOpacity>
 
@@ -296,22 +312,22 @@ export default function WorkshopDashboardScreen() {
             <Text style={styles.kpiValue}>
               {workshop ? Number(workshop.rating).toFixed(1) : '0.0'} ★
             </Text>
-            <Text style={styles.kpiLabel}>WORKSHOP RATING</Text>
+            <Text style={styles.kpiLabel}>{t('workshopAdmin.workshopRating').toUpperCase()}</Text>
             <Text style={styles.kpiSubText}>
-              Based on {workshop?.review_count || reviews.length} reviews
+              {workshop?.review_count || reviews.length} {t('workshopAdmin.reviews')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Quick Actions Bar */}
-        <Text style={styles.sectionHeaderTitle}>QUICK ACTIONS</Text>
+        <Text style={styles.sectionHeaderTitle}>{t('dashboard.recentActivity').toUpperCase()}</Text>
         <View style={styles.quickActionsRow}>
           <TouchableOpacity
             style={styles.quickBtn}
             onPress={() => router.push('/(workshop)/bookings')}
           >
             <CalendarDays color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>View Bookings</Text>
+            <Text style={styles.quickBtnText}>{t('workshopAdmin.viewBookings')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -319,15 +335,15 @@ export default function WorkshopDashboardScreen() {
             onPress={() => router.push('/(workshop)/services')}
           >
             <Plus color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>Add Service</Text>
+            <Text style={styles.quickBtnText}>{t('workshopAdmin.addService')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/parts')}
+            onPress={() => router.push('/(workshop)/services')}
           >
-            <Package color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>Add Inventory</Text>
+            <Wrench color={COLORS.primary} size={18} />
+            <Text style={styles.quickBtnText}>{t('workshopAdmin.serviceCatalog')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -335,7 +351,7 @@ export default function WorkshopDashboardScreen() {
             onPress={() => router.push('/(workshop)/customers')}
           >
             <Users color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>View Customers</Text>
+            <Text style={styles.quickBtnText}>{t('workshopAdmin.customerDirectory')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -343,7 +359,7 @@ export default function WorkshopDashboardScreen() {
             onPress={() => router.push('/(workshop)/reports')}
           >
             <TrendingUp color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>View Reports</Text>
+            <Text style={styles.quickBtnText}>{t('workshopAdmin.reports')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -356,30 +372,30 @@ export default function WorkshopDashboardScreen() {
             <AlertTriangle color={COLORS.warning} size={20} />
             <View style={{ flex: 1 }}>
               <Text style={styles.alertBannerTitle}>
-                {lowStockParts.length} Inventory Items Require Restocking
+                {lowStockParts.length} {t('workshopAdmin.lowStockItems')}
               </Text>
               <Text style={styles.alertBannerSub}>
-                {lowStockParts.slice(0, 3).map((p) => p.name).join(', ')}
+                {lowStockParts.slice(0, 3).map((p: Part) => p.name).join(', ')}
               </Text>
             </View>
-            <Text style={styles.alertActionText}>Open Inventory &gt;</Text>
+            <Text style={styles.alertActionText}>{t('navigation.spareParts')} &gt;</Text>
           </TouchableOpacity>
         )}
 
         {/* Today's Booking Queue Section */}
         <View style={styles.queueHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>TODAY'S BOOKING QUEUE ({todaysBookings.length})</Text>
+          <Text style={styles.sectionHeaderTitle}>{t('workshopAdmin.todaysBookings').toUpperCase()} ({todaysBookings.length})</Text>
           <TouchableOpacity onPress={() => router.push('/(workshop)/bookings')}>
-            <Text style={styles.viewAllQueueText}>Manage All Bookings &gt;</Text>
+            <Text style={styles.viewAllQueueText}>{t('workshopAdmin.viewBookings')} &gt;</Text>
           </TouchableOpacity>
         </View>
 
         {todaysBookings.length === 0 ? (
           <View style={styles.emptyCard}>
             <CalendarDays color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyTitle}>No bookings scheduled for today</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
             <Text style={styles.emptyDesc}>
-              New customer appointments for today will automatically appear in this queue.
+              {t('empty.noBookingsSub')}
             </Text>
           </View>
         ) : (
@@ -414,7 +430,7 @@ export default function WorkshopDashboardScreen() {
                     </Text>
                     <Text style={styles.serviceText}>🛠️ {servicesList}</Text>
                     <Text style={styles.metaText}>
-                      ⏰ {bk.booking_time} • Total: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>RM {Number(bk.total_amount).toFixed(2)}</Text>
+                      ⏰ {bk.booking_time} • {t('common.total')}: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{formatCurrency(bk.total_amount || 0)}</Text>
                     </Text>
                   </View>
                 </View>
@@ -431,7 +447,7 @@ export default function WorkshopDashboardScreen() {
                         {actionLoading === bk.id + '_confirmed' ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
-                          <Text style={styles.acceptBtnText}>Accept</Text>
+                          <Text style={styles.acceptBtnText}>{t('workshopAdmin.confirmBooking')}</Text>
                         )}
                       </TouchableOpacity>
 
@@ -443,7 +459,7 @@ export default function WorkshopDashboardScreen() {
                         {actionLoading === bk.id + '_rejected' ? (
                           <ActivityIndicator size="small" color={COLORS.danger} />
                         ) : (
-                          <Text style={styles.rejectBtnText}>Reject</Text>
+                          <Text style={styles.rejectBtnText}>{t('workshopAdmin.rejectBooking')}</Text>
                         )}
                       </TouchableOpacity>
                     </>
@@ -459,7 +475,7 @@ export default function WorkshopDashboardScreen() {
                         {actionLoading === bk.id + '_in_progress' ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
-                          <><Play color="#FFFFFF" size={12} /><Text style={styles.startBtnText}>Start Service</Text></>
+                          <><Play color="#FFFFFF" size={12} /><Text style={styles.startBtnText}>{t('workshopAdmin.startService')}</Text></>
                         )}
                       </TouchableOpacity>
 
@@ -467,7 +483,7 @@ export default function WorkshopDashboardScreen() {
                         style={[styles.actionBtn, styles.secondaryActionBtn]}
                         onPress={() => router.push(`/(workshop)/bookings?id=${bk.id}`)}
                       >
-                        <Text style={styles.secondaryActionText}>Reschedule</Text>
+                        <Text style={styles.secondaryActionText}>{t('booking.rescheduleBooking')}</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -481,7 +497,7 @@ export default function WorkshopDashboardScreen() {
                       {actionLoading === bk.id + '_completed' ? (
                         <ActivityIndicator size="small" color="#FFFFFF" />
                       ) : (
-                        <><CheckCircle2 color="#FFFFFF" size={12} /><Text style={styles.completeBtnText}>Complete Service</Text></>
+                        <><CheckCircle2 color="#FFFFFF" size={12} /><Text style={styles.completeBtnText}>{t('workshopAdmin.completeService')}</Text></>
                       )}
                     </TouchableOpacity>
                   )}
@@ -491,7 +507,7 @@ export default function WorkshopDashboardScreen() {
                     onPress={() => router.push(`/(workshop)/bookings?id=${bk.id}`)}
                   >
                     <Eye color={COLORS.textSecondary} size={14} />
-                    <Text style={styles.viewBtnText}>View</Text>
+                    <Text style={styles.viewBtnText}>{t('common.view')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -28,8 +28,10 @@ import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { useAuth } from '../../context/AuthContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import { getWorkshopCustomers, WorkshopCustomerSummary } from '../../services/customerService';
+import { useTranslation } from '../../i18n';
 
 export default function WorkshopCustomersScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<WorkshopCustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function WorkshopCustomersScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Workshop Customers...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -93,10 +95,10 @@ export default function WorkshopCustomersScreen() {
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Failed to load customers</Text>
+        <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <Text style={styles.errorDesc}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -105,8 +107,8 @@ export default function WorkshopCustomersScreen() {
   return (
     <View style={styles.screenContainer}>
       <WorkshopAdminHeader
-        title="Customer Directory"
-        subtitle={`${customers.length} Associated Clients`}
+        title={t('workshopAdmin.customerDirectory')}
+        subtitle={`${customers.length} ${t('workshopAdmin.customers')}`}
       />
 
       {/* Top Search Bar */}
@@ -115,7 +117,7 @@ export default function WorkshopCustomersScreen() {
           <Search color={COLORS.textMuted} size={18} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search name, phone, plate number, or motorcycle model..."
+            placeholder={t('common.search')}
             placeholderTextColor={COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -146,9 +148,9 @@ export default function WorkshopCustomersScreen() {
         {filteredCustomers.length === 0 ? (
           <View style={styles.emptyState}>
             <Users color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>No matching customers found</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noCustomers')}</Text>
             <Text style={styles.emptyDesc}>
-              Customers who have booked services at your workshop will automatically appear in this directory.
+              {t('empty.noCustomersSub')}
             </Text>
           </View>
         ) : (
@@ -178,7 +180,7 @@ export default function WorkshopCustomersScreen() {
                         🏍️ {motorcycles.map((m) => `${m.brand} ${m.model} (${m.plate_number})`).join(', ')}
                       </Text>
                     ) : (
-                      <Text style={styles.noBikeText}>No motorcycle profile details</Text>
+                      <Text style={styles.noBikeText}>{t('motorcycle.noBikesRegistered')}</Text>
                     )}
                   </View>
 
@@ -188,19 +190,19 @@ export default function WorkshopCustomersScreen() {
                 <View style={styles.statsBar}>
                   <View style={styles.statItem}>
                     <Text style={styles.statVal}>{totalBookings}</Text>
-                    <Text style={styles.statLbl}>BOOKINGS</Text>
+                    <Text style={styles.statLbl}>{t('navigation.bookings').toUpperCase()}</Text>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <Text style={styles.statVal}>{completedServices}</Text>
-                    <Text style={styles.statLbl}>COMPLETED</Text>
+                    <Text style={styles.statLbl}>{t('booking.bookingCompleted').toUpperCase()}</Text>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <Text style={[styles.statVal, { color: COLORS.primary }]}>
                       RM {totalSpent.toFixed(0)}
                     </Text>
-                    <Text style={styles.statLbl}>TOTAL SPENT</Text>
+                    <Text style={styles.statLbl}>{t('common.total').toUpperCase()}</Text>
                   </View>
                 </View>
 
@@ -219,7 +221,7 @@ export default function WorkshopCustomersScreen() {
                   ) : null}
                   <View style={styles.infoRow}>
                     <Calendar color={COLORS.textMuted} size={13} />
-                    <Text style={styles.infoText}>Last Visit: {lastVisit || 'N/A'}</Text>
+                    <Text style={styles.infoText}>{t('workshopAdmin.lastVisit')}: {lastVisit || 'N/A'}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -238,7 +240,7 @@ export default function WorkshopCustomersScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>CUSTOMER PROFILE & HISTORY</Text>
+              <Text style={styles.modalTitle}>{t('workshopAdmin.customerInfo').toUpperCase()}</Text>
               <TouchableOpacity onPress={() => setShowDetailModal(false)}>
                 <X color={COLORS.textMuted} size={22} />
               </TouchableOpacity>
@@ -255,16 +257,16 @@ export default function WorkshopCustomersScreen() {
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={styles.detailName}>{selectedCustomer.customer.full_name || 'Customer'}</Text>
-                    <Text style={styles.detailSub}>{selectedCustomer.customer.email || 'No email registered'}</Text>
-                    <Text style={styles.detailSub}>{selectedCustomer.customer.phone || 'No phone registered'}</Text>
+                    <Text style={styles.detailSub}>{selectedCustomer.customer.email || '-'}</Text>
+                    <Text style={styles.detailSub}>{selectedCustomer.customer.phone || '-'}</Text>
                   </View>
                 </View>
 
                 {/* Registered Vehicles */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>REGISTERED MOTORCYCLES ({selectedCustomer.motorcycles.length})</Text>
+                  <Text style={styles.detailSectionLabel}>{t('motorcycle.garage').toUpperCase()} ({selectedCustomer.motorcycles.length})</Text>
                   {selectedCustomer.motorcycles.length === 0 ? (
-                    <Text style={styles.noneText}>No motorcycles registered.</Text>
+                    <Text style={styles.noneText}>{t('motorcycle.noBikesRegistered')}</Text>
                   ) : (
                     selectedCustomer.motorcycles.map((m) => (
                       <View key={m.id} style={styles.bikeDetailRow}>
@@ -272,7 +274,7 @@ export default function WorkshopCustomersScreen() {
                           🏍️ {m.brand} {m.model} ({m.year})
                         </Text>
                         <Text style={styles.bikeDetailSub}>
-                          Plate: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{m.plate_number}</Text> • Mileage: {m.current_mileage || 0} km
+                          {t('motorcycle.plateNumber')}: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{m.plate_number}</Text> • {t('motorcycle.currentOdometer')}: {m.current_mileage || 0} km
                         </Text>
                       </View>
                     ))
@@ -281,9 +283,9 @@ export default function WorkshopCustomersScreen() {
 
                 {/* Service History at this workshop */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>WORKSHOP BOOKING HISTORY ({selectedCustomer.bookings.length})</Text>
+                  <Text style={styles.detailSectionLabel}>{t('workshopAdmin.bookingsQueue').toUpperCase()} ({selectedCustomer.bookings.length})</Text>
                   {selectedCustomer.bookings.length === 0 ? (
-                    <Text style={styles.noneText}>No booking records found.</Text>
+                    <Text style={styles.noneText}>{t('empty.noBookings')}</Text>
                   ) : (
                     selectedCustomer.bookings.map((bk) => (
                       <View key={bk.id} style={styles.bkHistoryCard}>
@@ -294,7 +296,7 @@ export default function WorkshopCustomersScreen() {
                           </View>
                         </View>
 
-                        <Text style={styles.bkDateText}>📅 Date: {bk.booking_date} @ {bk.booking_time}</Text>
+                        <Text style={styles.bkDateText}>📅 {t('common.date')}: {bk.booking_date} @ {bk.booking_time}</Text>
 
                         {(bk.booking_services ?? []).map((s) => (
                           <Text key={s.id} style={styles.bkSvcItem}>
@@ -303,7 +305,7 @@ export default function WorkshopCustomersScreen() {
                         ))}
 
                         <View style={styles.bkHistFooter}>
-                          <Text style={styles.bkHistAmount}>Total: RM {Number(bk.total_amount).toFixed(2)}</Text>
+                          <Text style={styles.bkHistAmount}>{t('common.total')}: RM {Number(bk.total_amount).toFixed(2)}</Text>
                         </View>
                       </View>
                     ))

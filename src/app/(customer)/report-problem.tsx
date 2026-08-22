@@ -19,8 +19,10 @@ import {
   CheckCircle2,
   Image as ImageIcon,
 } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
 
 export default function ReportProblemScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [category, setCategory] = useState<string>('App Bug');
@@ -40,7 +42,7 @@ export default function ReportProblemScreen() {
 
   const handleSubmitReport = () => {
     if (!description.trim()) {
-      Alert.alert('Missing Description', 'Please tell us what happened so our team can investigate.');
+      Alert.alert(t('common.required'), t('errors.requiredField'));
       return;
     }
 
@@ -54,17 +56,17 @@ export default function ReportProblemScreen() {
   if (submitted) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Report Problem" showBack />
+        <Header title={t('settings.reportProblem')} showBack />
         <View style={styles.successBox}>
           <View style={styles.successCircle}>
             <CheckCircle2 color={COLORS.success} size={48} />
           </View>
-          <Text style={styles.successTitle}>Report Submitted ✓</Text>
+          <Text style={styles.successTitle}>{t('settings.reportSubmitted')}</Text>
           <Text style={styles.successSub}>
-            Thank you. Our technical support team will review your report and follow up via email within 24 hours.
+            {t('settings.reportSubmittedDesc')}
           </Text>
           <CustomButton
-            title="BACK TO HOME"
+            title={t('navigation.home').toUpperCase()}
             onPress={() => router.replace('/(customer)/home')}
             style={{ marginTop: 12 }}
           />
@@ -76,15 +78,15 @@ export default function ReportProblemScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Report a Problem"
-        subtitle="Submit technical issues or feedback to RiderHood team"
+        title={t('settings.reportProblem')}
+        subtitle={t('settings.reportProblemDesc')}
         showBack
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Category Picker */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>PROBLEM CATEGORY</Text>
+          <Text style={styles.cardTitle}>{t('settings.problemCategory').toUpperCase()}</Text>
           <View style={styles.catGrid}>
             {categories.map(cat => (
               <TouchableOpacity
@@ -102,7 +104,7 @@ export default function ReportProblemScreen() {
 
         {/* Description Textarea */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>TELL US WHAT HAPPENED</Text>
+          <Text style={styles.cardTitle}>{t('settings.problemDescription').toUpperCase()}</Text>
           <TextInput
             style={styles.textArea}
             value={description}
@@ -136,7 +138,7 @@ export default function ReportProblemScreen() {
         </View>
 
         <CustomButton
-          title={submitting ? 'SUBMITTING REPORT...' : 'SUBMIT REPORT'}
+          title={submitting ? t('settings.submittingReport').toUpperCase() : t('settings.submitReport').toUpperCase()}
           onPress={handleSubmitReport}
           disabled={submitting}
           style={{ marginTop: 8 }}

@@ -10,13 +10,15 @@ import {
   Alert,
   RefreshControl,
   Switch,
+  Image,
 } from 'react-native';
 import { COLORS } from '../../constants/theme';
-import { Building2, CheckCircle2, RefreshCw, Clock, MapPin, Phone, Mail } from 'lucide-react-native';
+import { Building2, CheckCircle2, RefreshCw, Clock, MapPin, Phone, Mail, Image as ImageIcon } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { useAuth } from '../../context/AuthContext';
 import { getMyWorkshop, updateWorkshop } from '../../services/workshopService';
 import type { Workshop } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 interface DaySchedule {
   day: string;
@@ -36,6 +38,7 @@ const DEFAULT_WEEKLY_SCHEDULE: DaySchedule[] = [
 ];
 
 export default function WorkshopProfileScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,7 @@ export default function WorkshopProfileScreen() {
   const [email, setEmail] = useState('');
   const [district, setDistrict] = useState('');
   const [description, setDescription] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
 
   // Structured Operating Hours
   const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>(DEFAULT_WEEKLY_SCHEDULE);
@@ -67,6 +71,7 @@ export default function WorkshopProfileScreen() {
         setEmail(ws.email || '');
         setDistrict(ws.district || '');
         setDescription(ws.description || '');
+        setCoverImageUrl(ws.cover_image_url || '');
 
         if (ws.operating_hours) {
           try {
@@ -113,6 +118,7 @@ export default function WorkshopProfileScreen() {
         email: email.trim() || undefined,
         district: district.trim() || undefined,
         description: description.trim() || undefined,
+        cover_image_url: coverImageUrl.trim() || undefined,
         operating_hours: JSON.stringify(weeklySchedule),
       });
       setSaved(true);
@@ -128,7 +134,7 @@ export default function WorkshopProfileScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#f59e0b" />
-        <Text style={styles.loadingText}>Loading workshop profile...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -137,10 +143,10 @@ export default function WorkshopProfileScreen() {
     return (
       <View style={styles.centered}>
         <RefreshCw color={COLORS.danger} size={40} />
-        <Text style={styles.errorTitle}>Could not load profile</Text>
+        <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <Text style={styles.errorDesc}>{error || 'Workshop not found.'}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -166,52 +172,78 @@ export default function WorkshopProfileScreen() {
       {saved && (
         <View style={styles.savedAlert}>
           <CheckCircle2 color={COLORS.success} size={16} />
-          <Text style={styles.savedText}>Workshop details & hours saved successfully!</Text>
+          <Text style={styles.savedText}>{t('workshopAdmin.workshopSaved')}</Text>
         </View>
       )}
 
       {/* General Info */}
-      <Text style={styles.sectionTitle}>WORKSHOP DETAILS & CONTACT</Text>
+      <Text style={styles.sectionTitle}>{`${t('workshopAdmin.workshopProfile').toUpperCase()} & ${t('settings.contactSupport').toUpperCase()}`}</Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>WORKSHOP NAME</Text>
+        <Text style={styles.inputLabel}>{t('workshopAdmin.workshopName').toUpperCase()}</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>ABOUT / DESCRIPTION</Text>
+        <Text style={styles.inputLabel}>{t('workshop.description').toUpperCase()}</Text>
         <TextInput
           style={[styles.input, { height: 60 }]}
           value={description}
           onChangeText={setDescription}
           multiline
-          placeholder="Brief description of specialized services..."
+          placeholder={t('workshop.description')}
           placeholderTextColor={COLORS.textMuted}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>PHYSICAL ADDRESS</Text>
+        <Text style={styles.inputLabel}>{t('workshopAdmin.workshopAddress').toUpperCase()}</Text>
         <TextInput style={[styles.input, { height: 50 }]} value={address} onChangeText={setAddress} multiline />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>DISTRICT / CITY</Text>
+        <Text style={styles.inputLabel}>{t('workshopAdmin.districtCity').toUpperCase()}</Text>
         <TextInput style={styles.input} value={district} onChangeText={setDistrict} />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>PHONE NUMBER</Text>
+        <Text style={styles.inputLabel}>{t('workshopAdmin.workshopPhone').toUpperCase()}</Text>
         <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>WORKSHOP EMAIL</Text>
+        <Text style={styles.inputLabel}>{t('auth.email').toUpperCase()}</Text>
         <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       </View>
 
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>SHOP PHOTO / BANNER IMAGE URL</Text>
+        <TextInput
+          style={styles.input}
+          value={coverImageUrl}
+          onChangeText={setCoverImageUrl}
+          autoCapitalize="none"
+          placeholder="https://example.com/shop-photo.jpg"
+          placeholderTextColor={COLORS.textMuted}
+        />
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+          <TouchableOpacity
+            style={styles.presetPhotoBtn}
+            onPress={() => setCoverImageUrl('https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80')}
+          >
+            <ImageIcon color={COLORS.primary} size={14} />
+            <Text style={styles.presetPhotoBtnText}>Use Sample Shop Banner</Text>
+          </TouchableOpacity>
+        </View>
+        {coverImageUrl ? (
+          <View style={styles.coverPreviewBox}>
+            <Image source={{ uri: coverImageUrl }} style={styles.coverPreviewImage} resizeMode="cover" />
+          </View>
+        ) : null}
+      </View>
+
       {/* Weekly Operating Hours Schedule */}
-      <Text style={[styles.sectionTitle, { marginTop: 12 }]}>WEEKLY OPERATING HOURS</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 12 }]}>{t('workshopAdmin.operatingHours').toUpperCase()}</Text>
 
       <View style={styles.scheduleCard}>
         {weeklySchedule.map((item, idx) => (
@@ -241,14 +273,14 @@ export default function WorkshopProfileScreen() {
                 />
               </View>
             ) : (
-              <Text style={styles.closedTag}>CLOSED</Text>
+              <Text style={styles.closedTag}>{t('common.closed').toUpperCase()}</Text>
             )}
           </View>
         ))}
       </View>
 
       <CustomButton
-        title={saving ? 'SAVING...' : 'SAVE WORKSHOP PROFILE'}
+        title={saving ? t('common.saving').toUpperCase() : t('workshopAdmin.saveProfile').toUpperCase()}
         onPress={handleSave}
         disabled={saving}
         style={{ marginTop: 12 }}
@@ -282,4 +314,8 @@ const styles = StyleSheet.create({
   timeInputsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   timeInput: { backgroundColor: COLORS.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, color: COLORS.textPrimary, fontSize: 11, fontWeight: '700', borderWidth: 1, borderColor: COLORS.border, width: 75, textAlign: 'center' },
   closedTag: { color: COLORS.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  presetPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
+  presetPhotoBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
+  coverPreviewBox: { marginTop: 8, height: 120, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  coverPreviewImage: { width: '100%', height: '100%' },
 });

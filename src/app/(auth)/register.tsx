@@ -20,10 +20,12 @@ import { PasswordInput } from '../../components/PasswordInput';
 import { PasswordSecurityModal, PasswordModalMode } from '../../components/PasswordSecurityModal';
 import { signUp } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,29 +51,29 @@ export default function RegisterScreen() {
 
     if (!name.trim()) {
       setModalMode('general_error');
-      setModalTitle('Missing Information');
-      setModalMessage('Please enter your full name.');
+      setModalTitle(t('auth.fillAllFields'));
+      setModalMessage(t('auth.fillAllFields'));
       setModalVisible(true);
       return;
     }
     if (!email.trim() || !emailRegex.test(email.trim())) {
       setModalMode('invalid_email');
-      setModalTitle('Invalid Email');
-      setModalMessage('Please enter a valid email address.');
+      setModalTitle(t('auth.invalidEmail'));
+      setModalMessage(t('auth.invalidEmail'));
       setModalVisible(true);
       return;
     }
     if (!password || password.length < 6) {
       setModalMode('wrong_password');
-      setModalTitle('Weak Password');
-      setModalMessage('Password must be at least 6 characters long.');
+      setModalTitle(t('auth.passwordTooShort'));
+      setModalMessage(t('auth.passwordTooShort'));
       setModalVisible(true);
       return;
     }
     if (password !== confirmPassword) {
       setModalMode('wrong_password');
-      setModalTitle('Passwords Do Not Match');
-      setModalMessage('The passwords you entered do not match. Please verify and try again.');
+      setModalTitle(t('auth.passwordsMustMatch'));
+      setModalMessage(t('auth.passwordsMustMatch'));
       setModalVisible(true);
       return;
     }
@@ -90,13 +92,13 @@ export default function RegisterScreen() {
       if (!result.success) {
         if (result.errorType === 'email_not_confirmed') {
           setModalMode('email_not_confirmed');
-          setModalTitle('Verification Email Sent');
-          setModalMessage('Account registered successfully! Please check your email inbox to verify your account before logging in.');
+          setModalTitle(t('auth.accountCreatedTitle'));
+          setModalMessage(t('auth.accountCreatedDesc'));
           setModalVisible(true);
         } else {
           setModalMode('reset_email_sent');
-          setModalTitle('Account Created');
-          setModalMessage('Your account has been registered successfully! You can now sign in.');
+          setModalTitle(t('auth.accountCreatedTitle'));
+          setModalMessage(t('auth.accountCreatedDesc'));
           setModalVisible(true);
         }
       }
@@ -120,8 +122,8 @@ export default function RegisterScreen() {
         setModalMessage('Supabase default email rate limit reached.\n\nWorkaround:\n1. Disable "Confirm email" in Supabase Auth settings.\n2. Or wait ~1 hour before attempting registration again.');
       } else {
         setModalMode('general_error');
-        setModalTitle('Registration Failed');
-        setModalMessage(err?.message || 'Unable to complete account registration. Please try again.');
+        setModalTitle(t('errors.registrationFailed'));
+        setModalMessage(err?.message || t('errors.registrationFailed'));
       }
       setModalVisible(true);
     } finally {
@@ -144,27 +146,27 @@ export default function RegisterScreen() {
             onPress={() => router.back()}
           >
             <ArrowLeft color={COLORS.textPrimary} size={20} />
-            <Text style={styles.backText}>Back to Login</Text>
+            <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.brandHeader}>
-            <Text style={styles.brandTitle}>Create Rider Account</Text>
-            <Text style={styles.brandSubtitle}>Join the RiderHood Telemetry & Service Network</Text>
+            <Text style={styles.brandTitle}>{t('auth.createRiderAccount')}</Text>
+            <Text style={styles.brandSubtitle}>{t('auth.joinRiderHood')}</Text>
           </View>
 
           {/* Form Card */}
           <View style={styles.card}>
             {/* Full Name */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>FULL NAME</Text>
+              <Text style={styles.inputLabel}>{t('auth.fullName').toUpperCase()}</Text>
               <View style={styles.inputBox}>
                 <User color={COLORS.textSecondary} size={18} />
                 <TextInput
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="e.g. Alex Rivera"
+                  placeholder={t('auth.fullNamePlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   editable={!loading}
                 />
@@ -173,14 +175,14 @@ export default function RegisterScreen() {
 
             {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+              <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
               <View style={styles.inputBox}>
                 <Mail color={COLORS.textSecondary} size={18} />
                 <TextInput
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="alex@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -191,14 +193,14 @@ export default function RegisterScreen() {
 
             {/* Phone */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>PHONE NUMBER (OPTIONAL)</Text>
+              <Text style={styles.inputLabel}>{`${t('auth.phone').toUpperCase()} (${t('common.optional').toUpperCase()})`}</Text>
               <View style={styles.inputBox}>
                 <Phone color={COLORS.textSecondary} size={18} />
                 <TextInput
                   style={styles.input}
                   value={phone}
                   onChangeText={setPhone}
-                  placeholder="+60 12-345 6789"
+                  placeholder={t('auth.phonePlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="phone-pad"
                   editable={!loading}
@@ -208,10 +210,10 @@ export default function RegisterScreen() {
 
             {/* Password input with strength indicator */}
             <PasswordInput
-              label="PASSWORD"
+              label={t('auth.password').toUpperCase()}
               value={password}
               onChangeText={setPassword}
-              placeholder="create password"
+              placeholder={t('auth.passwordPlaceholder')}
               showStrength
               errorText={errorText}
               disabled={loading}
@@ -219,16 +221,16 @@ export default function RegisterScreen() {
 
             {/* Confirm Password input */}
             <PasswordInput
-              label="CONFIRM PASSWORD"
+              label={t('auth.confirmPassword').toUpperCase()}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="re-enter password"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
               errorText={confirmError}
               disabled={loading}
             />
 
             <CustomButton
-              title={loading ? 'CREATING ACCOUNT...' : 'CREATE & ENTER DASHBOARD'}
+              title={loading ? t('auth.creatingAccount') : t('auth.createAndEnter')}
               onPress={handleRegister}
               icon={<ArrowRight color="#000" size={18} />}
               disabled={loading}
@@ -237,9 +239,9 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.bottomActions}>
-            <Text style={styles.existingText}>Already registered?</Text>
+            <Text style={styles.existingText}>{t('auth.alreadyRegistered')}</Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/welcome')}>
-              <Text style={styles.loginText}>Sign In</Text>
+              <Text style={styles.loginText}>{t('auth.signIn')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

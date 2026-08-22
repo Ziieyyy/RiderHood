@@ -37,8 +37,10 @@ import { getWorkshop, getWorkshopServices } from '../../../services/workshopServ
 import { getWorkshopReviews, getReviewStats, canCustomerReview, getCompletedBookingsWithoutReview, createReviewWithPhotos, type ReviewStats } from '../../../services/reviewService';
 import { useAuth } from '../../../context/AuthContext';
 import type { Workshop, Service, Review } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function CustomerWorkshopDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -57,16 +59,17 @@ export default function CustomerWorkshopDetailScreen() {
   const loadWorkshopData = useCallback(async () => {
     if (!id) return;
     try {
-      const [w, svcs, revs, stats] = await Promise.all([
+      const [wRes, svcsRes, revsRes, statsRes] = await Promise.allSettled([
         getWorkshop(id),
         getWorkshopServices(id),
         getWorkshopReviews(id),
         getReviewStats(id),
       ]);
-      setWorkshop(w);
-      setServices(svcs);
-      setReviews(revs);
-      setReviewStats(stats);
+
+      if (wRes.status === 'fulfilled') setWorkshop(wRes.value);
+      if (svcsRes.status === 'fulfilled') setServices(svcsRes.value);
+      if (revsRes.status === 'fulfilled') setReviews(revsRes.value);
+      if (statsRes.status === 'fulfilled') setReviewStats(statsRes.value);
 
       // Check if current user can write a review
       if (user?.id) {
@@ -241,8 +244,12 @@ export default function CustomerWorkshopDetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Cover & Info Header */}
         <View style={styles.headerCard}>
-          <View style={styles.coverPlaceholder}>
-            <Wrench color={COLORS.primary} size={48} />
+          <View style={styles.coverImageContainer}>
+            <Image
+              source={{ uri: workshop.cover_image_url || 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80' }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
           </View>
 
           <View style={styles.workshopMetaBox}>
@@ -293,14 +300,14 @@ export default function CustomerWorkshopDetailScreen() {
 
         {/* Services List */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>AVAILABLE SERVICES ({services.length})</Text>
-          <Text style={styles.sectionSub}>Select services to proceed with booking</Text>
+          <Text style={styles.sectionTitle}>{t('workshopAdmin.manageServices').toUpperCase()} ({services.length})</Text>
+          <Text style={styles.sectionSub}>{t('booking.selectServices')}</Text>
         </View>
 
         {services.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>NO SERVICES LISTED</Text>
-            <Text style={styles.emptySub}>Contact the workshop directly for available packages.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noServices').toUpperCase()}</Text>
+            <Text style={styles.emptySub}>{t('empty.noServicesSub')}</Text>
           </View>
         ) : (
           services.map(svc => {
@@ -325,12 +332,12 @@ export default function CustomerWorkshopDetailScreen() {
                   {isSelected ? (
                     <>
                       <Check color="#000" size={14} />
-                      <Text style={styles.addSvcTextActive}>ADDED</Text>
+                      <Text style={styles.addSvcTextActive}>{t('common.done').toUpperCase()}</Text>
                     </>
                   ) : (
                     <>
                       <Plus color={COLORS.primary} size={14} />
-                      <Text style={styles.addSvcText}>ADD</Text>
+                      <Text style={styles.addSvcText}>{t('common.add').toUpperCase()}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -344,7 +351,7 @@ export default function CustomerWorkshopDetailScreen() {
         {/* ═══════════════════════════════════════════════════════════ */}
 
         <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-          <Text style={styles.sectionTitle}>CUSTOMER REVIEWS</Text>
+          <Text style={styles.sectionTitle}>{t('reviews.title').toUpperCase()}</Text>
         </View>
 
         {/* Rating Summary Card */}
@@ -376,7 +383,7 @@ export default function CustomerWorkshopDetailScreen() {
         {canReview && (
           <TouchableOpacity style={styles.writeReviewBtn} onPress={handleWriteReview}>
             <Edit2 color="#000" size={16} />
-            <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+            <Text style={styles.writeReviewBtnText}>{t('reviews.writeReview')}</Text>
           </TouchableOpacity>
         )}
 
@@ -384,8 +391,8 @@ export default function CustomerWorkshopDetailScreen() {
         {reviews.length === 0 ? (
           <View style={styles.emptyCard}>
             <Star color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyTitle}>NO REVIEWS YET</Text>
-            <Text style={styles.emptySub}>Be the first rider to leave a review after your service appointment.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noReviews').toUpperCase()}</Text>
+            <Text style={styles.emptySub}>{t('empty.noReviewsSub')}</Text>
           </View>
         ) : (
           <>
@@ -528,13 +535,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  coverPlaceholder: {
-    height: 140,
+  coverImageContainer: {
+    height: 180,
     backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
   },
   workshopMetaBox: {
     padding: 16,

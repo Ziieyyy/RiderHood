@@ -10,9 +10,11 @@ import { getAllWorkshops, setWorkshopVerification, setWorkshopStatus } from '../
 import { Header } from '../../components/Header';
 import { Users, Building2, Calendar, TrendingUp, RefreshCw, Shield, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats] = useState<{ totalUsers: number; totalWorkshops: number; totalBookings: number } | null>(null);
   const [pendingWorkshops, setPendingWorkshops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,12 +32,12 @@ export default function AdminDashboardScreen() {
       setStats(platformStats);
       setPendingWorkshops(workshops.filter((w: any) => w.verification_status === 'pending'));
     } catch {
-      setError('Failed to load dashboard data. Please try again.');
+      setError(t('errors.genericMessage'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -62,10 +64,10 @@ export default function AdminDashboardScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Command Center" subtitle="Super Admin Dashboard" />
+        <Header title={t('superAdmin.commandCenter')} subtitle={t('superAdmin.superAdminRole')} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading platform data...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -74,13 +76,13 @@ export default function AdminDashboardScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Command Center" subtitle="Super Admin Dashboard" />
+        <Header title={t('superAdmin.commandCenter')} subtitle={t('superAdmin.superAdminRole')} />
         <View style={styles.centered}>
           <RefreshCw color={COLORS.danger} size={40} />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
           <Text style={styles.errorDesc}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -89,44 +91,44 @@ export default function AdminDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Command Center" subtitle={`Welcome, ${user?.full_name}`} />
+      <Header title={t('superAdmin.commandCenter')} subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name}`} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={COLORS.primary} />}
       >
         {/* Platform Stats */}
-        <Text style={styles.sectionTitle}>PLATFORM OVERVIEW</Text>
+        <Text style={styles.sectionTitle}>{t('superAdmin.platformStatistics').toUpperCase()}</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Users color={COLORS.primary} size={24} />
             <Text style={styles.statValue}>{stats?.totalUsers ?? 0}</Text>
-            <Text style={styles.statLabel}>Total Users</Text>
+            <Text style={styles.statLabel}>{t('superAdmin.totalUsers')}</Text>
           </View>
           <View style={styles.statCard}>
             <Building2 color="#f59e0b" size={24} />
             <Text style={styles.statValue}>{stats?.totalWorkshops ?? 0}</Text>
-            <Text style={styles.statLabel}>Workshops</Text>
+            <Text style={styles.statLabel}>{t('superAdmin.totalWorkshops')}</Text>
           </View>
           <View style={styles.statCard}>
             <Calendar color={COLORS.success} size={24} />
             <Text style={styles.statValue}>{stats?.totalBookings ?? 0}</Text>
-            <Text style={styles.statLabel}>Bookings</Text>
+            <Text style={styles.statLabel}>{t('navigation.bookings')}</Text>
           </View>
           <View style={styles.statCard}>
             <AlertTriangle color={COLORS.danger} size={24} />
             <Text style={styles.statValue}>{pendingWorkshops.length}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>{t('workshopAdmin.pendingBookings')}</Text>
           </View>
         </View>
 
         {/* Pending Workshop Approvals */}
-        <Text style={styles.sectionTitle}>PENDING WORKSHOP APPROVALS</Text>
+        <Text style={styles.sectionTitle}>{t('superAdmin.workshopApproval').toUpperCase()}</Text>
         {pendingWorkshops.length === 0 ? (
           <View style={styles.emptyCard}>
             <CheckCircle2 color={COLORS.success} size={32} />
-            <Text style={styles.emptyTitle}>All applications reviewed</Text>
-            <Text style={styles.emptyDesc}>No workshop applications are pending approval.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noNotificationsSub')}</Text>
+            <Text style={styles.emptyDesc}>{t('workshop.directoryListingDesc')}</Text>
           </View>
         ) : (
           pendingWorkshops.map(ws => (
@@ -138,7 +140,7 @@ export default function AdminDashboardScreen() {
                   <Text style={styles.workshopAddr}>{ws.address ?? ws.district ?? 'No address'}</Text>
                 </View>
                 <View style={styles.pendingBadge}>
-                  <Text style={styles.pendingText}>PENDING</Text>
+                  <Text style={styles.pendingText}>{t('superAdmin.pending').toUpperCase()}</Text>
                 </View>
               </View>
               {ws.phone && <Text style={styles.workshopMeta}>📞 {ws.phone}</Text>}
@@ -152,7 +154,7 @@ export default function AdminDashboardScreen() {
                 >
                   {actionLoading === ws.id + '_approve'
                     ? <ActivityIndicator size="small" color="#000" />
-                    : <><CheckCircle2 color="#000" size={14} /><Text style={styles.approveBtnText}>Approve</Text></>
+                    : <><CheckCircle2 color="#000" size={14} /><Text style={styles.approveBtnText}>{t('superAdmin.approve')}</Text></>
                   }
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -163,7 +165,7 @@ export default function AdminDashboardScreen() {
                 >
                   {actionLoading === ws.id + '_reject'
                     ? <ActivityIndicator size="small" color={COLORS.danger} />
-                    : <><XCircle color={COLORS.danger} size={14} /><Text style={styles.rejectBtnText}>Reject</Text></>
+                    : <><XCircle color={COLORS.danger} size={14} /><Text style={styles.rejectBtnText}>{t('superAdmin.reject')}</Text></>
                   }
                 </TouchableOpacity>
               </View>
@@ -173,7 +175,7 @@ export default function AdminDashboardScreen() {
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
           <Shield color={COLORS.danger} size={16} />
-          <Text style={styles.logoutText}>Logout Admin Session</Text>
+          <Text style={styles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

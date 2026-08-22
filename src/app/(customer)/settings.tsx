@@ -15,12 +15,15 @@ import { CustomButton } from '../../components/CustomButton';
 import { PasswordInput } from '../../components/PasswordInput';
 import { PasswordSecurityModal, PasswordModalMode } from '../../components/PasswordSecurityModal';
 import { updatePassword } from '../../services/authService';
-import { Bell, Lock, Shield, Moon, ArrowLeft, LogOut } from 'lucide-react-native';
+import { Bell, Lock, Shield, Moon, ArrowLeft, LogOut, Globe } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
+import { LanguageSelector } from '../../components/LanguageSelector';
 
 export default function CustomerSettingsScreen() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [telemetrySync, setTelemetrySync] = useState(true);
@@ -66,42 +69,45 @@ export default function CustomerSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Rider Settings" subtitle="Preferences & Security Controls" />
+      <Header title={t('settings.title')} subtitle={t('settings.subtitle')} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft color={COLORS.textPrimary} size={18} />
-          <Text style={styles.backText}>Back to Profile</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
+
+        {/* Language Selection Card */}
+        <LanguageSelector variant="card" />
 
         {/* Change Password Card */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <Lock color={COLORS.primary} size={18} />
-            <Text style={styles.cardSectionTitle}>CHANGE SECURITY PASSWORD</Text>
+            <Text style={styles.cardSectionTitle}>{t('settings.security').toUpperCase()}</Text>
           </View>
 
           <PasswordInput
-            label="NEW PASSWORD"
+            label={t('auth.password').toUpperCase()}
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="enter new password"
+            placeholder={t('auth.passwordPlaceholder')}
             showStrength
             errorText={passwordError}
             disabled={updating}
           />
 
           <PasswordInput
-            label="CONFIRM NEW PASSWORD"
+            label={t('auth.confirmPassword').toUpperCase()}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="confirm new password"
+            placeholder={t('auth.confirmPassword')}
             errorText={confirmError}
             disabled={updating}
           />
 
           <CustomButton
-            title={updating ? 'UPDATING...' : 'CHANGE PASSWORD'}
+            title={updating ? t('common.submitting') : t('settings.saveChanges')}
             onPress={handleChangePassword}
             disabled={updating || !newPassword}
             style={{ marginTop: 6 }}
@@ -110,12 +116,12 @@ export default function CustomerSettingsScreen() {
 
         {/* Preferences */}
         <View style={styles.card}>
-          <Text style={styles.cardSectionTitle}>NOTIFICATION PREFERENCES</Text>
+          <Text style={styles.cardSectionTitle}>{t('settings.notifications').toUpperCase()}</Text>
           <View style={styles.row}>
             <Bell color={COLORS.primary} size={20} />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Service Reminders & Alerts</Text>
-              <Text style={styles.rowSub}>Push alerts for upcoming oil changes & inspections</Text>
+              <Text style={styles.rowTitle}>{t('dashboard.serviceReminder')}</Text>
+              <Text style={styles.rowSub}>{t('dashboard.serviceReminderDesc')}</Text>
             </View>
             <Switch
               value={notifications}
@@ -126,42 +132,9 @@ export default function CustomerSettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardSectionTitle}>TELEMETRY & DISPLAY</Text>
-          <View style={styles.row}>
-            <Moon color={COLORS.primary} size={20} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>High-Contrast Cyber Dark Theme</Text>
-              <Text style={styles.rowSub}>Optimized for OLED displays & night riding</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#374151', true: COLORS.primaryDark }}
-              thumbColor={darkMode ? COLORS.primary : '#9ca3af'}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Shield color={COLORS.primary} size={20} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Live ECU Telemetry Sync</Text>
-              <Text style={styles.rowSub}>Automatic background telemetry upload</Text>
-            </View>
-            <Switch
-              value={telemetrySync}
-              onValueChange={setTelemetrySync}
-              trackColor={{ false: '#374151', true: COLORS.primaryDark }}
-              thumbColor={telemetrySync ? COLORS.primary : '#9ca3af'}
-            />
-          </View>
-        </View>
-
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.logoutBtnText}>Logout Customer Session</Text>
+          <Text style={styles.logoutBtnText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
 

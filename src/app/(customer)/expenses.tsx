@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getCustomerExpenses, createExpense as createDbExpense } from '../../services/expenseService';
 import { getMotorcycles } from '../../services/motorcycleService';
 import type { ExpenseCategory, Motorcycle } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export interface RiderExpense {
   id: string;
@@ -43,6 +44,7 @@ export interface RiderExpense {
 }
 
 export default function CustomerExpensesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -83,11 +85,11 @@ export default function CustomerExpensesScreen() {
     if (!user?.id) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid expense amount.');
+      Alert.alert(t('errors.invalidAmount'), t('errors.invalidAmount'));
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Missing Description', 'Please enter a description for this expense.');
+      Alert.alert(t('common.required'), t('errors.requiredField'));
       return;
     }
 
@@ -106,10 +108,10 @@ export default function CustomerExpensesScreen() {
       setShowAddModal(false);
       setDescription('');
       setAmount('');
-      Alert.alert('Saved', 'Expense record saved to database successfully.');
+      Alert.alert(t('common.success'), t('common.save'));
     } catch (err: any) {
       console.error('Expense save error:', err);
-      Alert.alert('Error', 'Unable to save expense. Please try again.');
+      Alert.alert(t('common.error'), t('errors.saveFailed'));
     } finally {
       setSavingExpense(false);
     }
@@ -122,8 +124,8 @@ export default function CustomerExpensesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Motorcycle Expenses"
-        subtitle="Track total expenditure on service, parts & fuel"
+        title={t('expenses.title')}
+        subtitle={t('expenses.subtitle')}
         showBack
         rightElement={
           <TouchableOpacity
@@ -132,7 +134,7 @@ export default function CustomerExpensesScreen() {
             activeOpacity={0.8}
           >
             <Plus color={COLORS.primary} size={16} />
-            <Text style={styles.addBtnText}>+ Add Expense</Text>
+            <Text style={styles.addBtnText}>+ {t('expenses.addExpense')}</Text>
           </TouchableOpacity>
         }
       />
@@ -140,32 +142,32 @@ export default function CustomerExpensesScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Monthly Summary Banner */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>TOTAL SPENT THIS MONTH</Text>
+          <Text style={styles.summaryTitle}>{t('expenses.monthlyExpenses').toUpperCase()}</Text>
           <Text style={styles.summaryTotalText}>RM {totalThisMonth.toFixed(2)}</Text>
 
           <View style={styles.breakdownRow}>
             <View style={styles.breakdownBox}>
-              <Text style={styles.breakdownLabel}>MAINTENANCE</Text>
+              <Text style={styles.breakdownLabel}>{t('expenses.maintenance').toUpperCase()}</Text>
               <Text style={styles.breakdownVal}>RM {maintenanceTotal.toFixed(2)}</Text>
             </View>
 
             <View style={styles.breakdownBox}>
-              <Text style={styles.breakdownLabel}>PARTS & ACCESSORIES</Text>
+              <Text style={styles.breakdownLabel}>{t('expenses.accessories').toUpperCase()}</Text>
               <Text style={styles.breakdownVal}>RM {partsTotal.toFixed(2)}</Text>
             </View>
           </View>
         </View>
 
         {/* Expense History List */}
-        <Text style={styles.sectionTitle}>EXPENSE HISTORY ({expenses.length})</Text>
+        <Text style={styles.sectionTitle}>{t('maintenance.serviceHistory').toUpperCase()} ({expenses.length})</Text>
 
         {loading ? (
           <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
         ) : expenses.length === 0 ? (
           <View style={styles.emptyCard}>
             <DollarSign color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>NO EXPENSES LOGGED</Text>
-            <Text style={styles.emptySub}>Add your service receipts and part purchases to track cost of ownership.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noExpenses').toUpperCase()}</Text>
+            <Text style={styles.emptySub}>{t('empty.noExpensesSub')}</Text>
           </View>
         ) : (
           expenses.map(exp => (
@@ -195,10 +197,10 @@ export default function CustomerExpensesScreen() {
       <Modal visible={showAddModal} transparent animationType="fade" onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Motorcycle Expense</Text>
+            <Text style={styles.modalTitle}>{t('expenses.addExpense')}</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CATEGORY</Text>
+              <Text style={styles.inputLabel}>{t('expenses.expenseCategory').toUpperCase()}</Text>
               <View style={styles.catChipsRow}>
                 {(['Maintenance', 'Parts', 'Fuel', 'Insurance', 'Other'] as const).map(c => (
                   <TouchableOpacity
@@ -213,18 +215,18 @@ export default function CustomerExpensesScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>DESCRIPTION</Text>
+              <Text style={styles.inputLabel}>{t('common.description').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="e.g. Engine Oil, Front Tyre, Brake Fluid"
+                placeholder={t('common.description')}
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>AMOUNT (RM)</Text>
+              <Text style={styles.inputLabel}>{t('expenses.expenseAmount').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={amount}
@@ -236,11 +238,11 @@ export default function CustomerExpensesScreen() {
             </View>
 
             <CustomButton
-              title={savingExpense ? 'SAVING...' : 'SAVE EXPENSE'}
+              title={savingExpense ? t('common.saving') : t('common.save').toUpperCase()}
               onPress={handleSaveExpense}
               disabled={savingExpense}
             />
-            <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowAddModal(false)} />
+            <CustomButton title={t('common.cancel').toUpperCase()} variant="secondary" onPress={() => setShowAddModal(false)} />
           </View>
         </View>
       </Modal>

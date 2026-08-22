@@ -14,8 +14,10 @@ import { COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import { Bell, Calendar, Wrench, Tag } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
 
 export default function NotificationSettingsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [bookingConfirmation, setBookingConfirmation] = useState(true);
@@ -28,14 +30,14 @@ export default function NotificationSettingsScreen() {
   const [workshopPromotions, setWorkshopPromotions] = useState(false);
 
   const handleSave = () => {
-    Alert.alert('Settings Saved', 'Your notification preferences have been saved ✓');
+    Alert.alert(t('common.success'), t('settings.saveChanges'));
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Notification Settings"
-        subtitle="Manage push alerts for bookings, maintenance & deals"
+        title={t('settings.notifications')}
+        subtitle={t('notifications.subtitle')}
         showBack
       />
 
@@ -44,13 +46,13 @@ export default function NotificationSettingsScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Calendar color={COLORS.primary} size={18} />
-            <Text style={styles.cardTitle}>BOOKINGS & APPOINTMENTS</Text>
+            <Text style={styles.cardTitle}>{t('navigation.bookings').toUpperCase()}</Text>
           </View>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Booking Confirmations</Text>
-              <Text style={styles.switchSub}>Alert when a workshop confirms your slot</Text>
+              <Text style={styles.switchLabel}>{t('notifications.bookingConfirmed')}</Text>
+              <Text style={styles.switchSub}>{t('booking.bookingConfirmed')}</Text>
             </View>
             <Switch
               value={bookingConfirmation}
@@ -62,8 +64,8 @@ export default function NotificationSettingsScreen() {
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Status Updates</Text>
-              <Text style={styles.switchSub}>Alert when service moves to In Progress or Done</Text>
+              <Text style={styles.switchLabel}>{t('notifications.systemUpdate')}</Text>
+              <Text style={styles.switchSub}>{t('workshopAdmin.updateStatus')}</Text>
             </View>
             <Switch
               value={bookingUpdates}
@@ -75,8 +77,8 @@ export default function NotificationSettingsScreen() {
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Cancellation Alerts</Text>
-              <Text style={styles.switchSub}>Alert if an appointment is rescheduled or cancelled</Text>
+              <Text style={styles.switchLabel}>{t('notifications.bookingCancelled')}</Text>
+              <Text style={styles.switchSub}>{t('booking.bookingCancelled')}</Text>
             </View>
             <Switch
               value={bookingCancellation}
@@ -91,13 +93,13 @@ export default function NotificationSettingsScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Wrench color={COLORS.primary} size={18} />
-            <Text style={styles.cardTitle}>MAINTENANCE & CARE</Text>
+            <Text style={styles.cardTitle}>{t('navigation.maintenance').toUpperCase()}</Text>
           </View>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Maintenance Reminders</Text>
-              <Text style={styles.switchSub}>Upcoming oil change and filter alerts</Text>
+              <Text style={styles.switchLabel}>{t('settings.bookingReminders')}</Text>
+              <Text style={styles.switchSub}>{t('dashboard.serviceReminderDesc')}</Text>
             </View>
             <Switch
               value={maintenanceReminders}
@@ -109,8 +111,8 @@ export default function NotificationSettingsScreen() {
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Service Due Alerts</Text>
-              <Text style={styles.switchSub}>High-priority alerts for overdue items</Text>
+              <Text style={styles.switchLabel}>{t('settings.serviceAlerts')}</Text>
+              <Text style={styles.switchSub}>{t('dashboard.serviceDue')}</Text>
             </View>
             <Switch
               value={serviceDue}
@@ -125,13 +127,13 @@ export default function NotificationSettingsScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Tag color={COLORS.primary} size={18} />
-            <Text style={styles.cardTitle}>PROMOTIONS & DEALS</Text>
+            <Text style={styles.cardTitle}>{t('settings.promotionalMessages').toUpperCase()}</Text>
           </View>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Workshop Promotions</Text>
-              <Text style={styles.switchSub}>Discounts, service packages & local offers</Text>
+              <Text style={styles.switchLabel}>{t('settings.promotionalMessages')}</Text>
+              <Text style={styles.switchSub}>{t('settings.promotionalMessages')}</Text>
             </View>
             <Switch
               value={workshopPromotions}
@@ -142,7 +144,7 @@ export default function NotificationSettingsScreen() {
           </View>
         </View>
 
-        <CustomButton title="SAVE PREFERENCES" onPress={handleSave} style={{ marginTop: 8 }} />
+        <CustomButton title={t('settings.saveChanges').toUpperCase()} onPress={handleSave} style={{ marginTop: 8 }} />
       </ScrollView>
     </SafeAreaView>
   );

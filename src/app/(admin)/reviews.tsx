@@ -15,8 +15,10 @@ import { COLORS } from '../../constants/theme';
 import { Star, AlertTriangle, Trash2, MessageCircle, Send, X, RefreshCw } from 'lucide-react-native';
 import { getAllReviews, syncAllWorkshopsGoogleMetadata } from '../../services/adminService';
 import { moderateReview, replyToReview, subscribeToRealtimeReviews } from '../../services/reviewService';
+import { useTranslation } from '../../i18n';
 
 export default function AdminReviewsScreen() {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingGoogle, setSyncingGoogle] = useState(false);
@@ -173,7 +175,7 @@ export default function AdminReviewsScreen() {
         {/* Workshop Reply */}
         {review.reply ? (
           <View style={styles.replyBox}>
-            <Text style={styles.replyHeader}>Workshop Reply:</Text>
+            <Text style={styles.replyHeader}>{t('reviews.reply')}:</Text>
             <Text style={styles.replyContent}>{review.reply}</Text>
           </View>
         ) : null}
@@ -182,7 +184,7 @@ export default function AdminReviewsScreen() {
           {flagged && (
             <View style={styles.reportBadge}>
               <AlertTriangle color={COLORS.danger} size={12} />
-              <Text style={styles.reportText}>LOW RATING — REVIEW</Text>
+              <Text style={styles.reportText}>{t('reviews.title').toUpperCase()}</Text>
             </View>
           )}
           {!flagged && (
@@ -212,8 +214,8 @@ export default function AdminReviewsScreen() {
         ) : reviews.length === 0 ? (
           <View style={styles.emptyState}>
             <MessageCircle color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyTitle}>No Reviews Yet</Text>
-            <Text style={styles.emptyDesc}>Reviews from customers will appear here once submitted.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noReviews')}</Text>
+            <Text style={styles.emptyDesc}>{t('empty.noReviewsSub')}</Text>
             <TouchableOpacity
               style={[styles.syncBtn, syncingGoogle && { opacity: 0.7 }, { marginTop: 12 }]}
               onPress={handleSyncGoogle}
@@ -224,7 +226,7 @@ export default function AdminReviewsScreen() {
               ) : (
                 <RefreshCw color="#000" size={14} />
               )}
-              <Text style={styles.syncBtnText}>{syncingGoogle ? 'SYNCING...' : 'SYNC GOOGLE REVIEWS'}</Text>
+              <Text style={styles.syncBtnText}>{syncingGoogle ? t('common.loading').toUpperCase() : 'SYNC GOOGLE REVIEWS'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -236,7 +238,7 @@ export default function AdminReviewsScreen() {
                   <Star color="#f59e0b" fill="#f59e0b" size={20} />
                   <Text style={styles.statsAvg}>{avgRating}</Text>
                 </View>
-                <Text style={styles.statsCount}>{totalCount} total review{totalCount !== 1 ? 's' : ''}</Text>
+                <Text style={styles.statsCount}>{totalCount} {t('workshopAdmin.reviews')}</Text>
               </View>
 
               <TouchableOpacity
@@ -249,7 +251,7 @@ export default function AdminReviewsScreen() {
                 ) : (
                   <RefreshCw color="#000" size={14} />
                 )}
-                <Text style={styles.syncBtnText}>{syncingGoogle ? 'SYNCING...' : 'SYNC GOOGLE'}</Text>
+                <Text style={styles.syncBtnText}>{syncingGoogle ? t('common.loading').toUpperCase() : 'SYNC GOOGLE'}</Text>
               </TouchableOpacity>
             </View>
 
@@ -273,20 +275,20 @@ export default function AdminReviewsScreen() {
             {/* Flagged Reviews (only when showing All) */}
             {!starFilter && lowRatedReviews.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>FLAGGED REVIEWS ({lowRatedReviews.length})</Text>
+                <Text style={styles.sectionTitle}>{t('reviews.title').toUpperCase()} ({lowRatedReviews.length})</Text>
                 {lowRatedReviews.map(r => renderReviewCard(r, true))}
               </>
             )}
 
             {/* Filtered Reviews */}
             <Text style={[styles.sectionTitle, !starFilter && lowRatedReviews.length > 0 && { marginTop: 16 }]}>
-              {starFilter ? `${starFilter} STAR REVIEWS (${filteredReviews.length})` : `ALL REVIEWS (${filteredReviews.filter(r => r.rating > 2).length})`}
+              {starFilter ? `${starFilter} ${t('reviews.ratingStars').toUpperCase()} (${filteredReviews.length})` : `${t('reviews.allReviews').toUpperCase()} (${filteredReviews.filter(r => r.rating > 2).length})`}
             </Text>
             {(starFilter ? filteredReviews : filteredReviews.filter(r => r.rating > 2)).map(r => renderReviewCard(r, false))}
 
             {filteredReviews.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyDesc}>No reviews match this filter.</Text>
+                <Text style={styles.emptyDesc}>{t('empty.noReviewsSub')}</Text>
               </View>
             )}
           </>

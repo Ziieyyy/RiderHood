@@ -9,6 +9,16 @@ export interface WorkshopFilters {
   serviceCategory?: string;
   partnerOnly?: boolean;
   district?: string;
+  sortByRating?: boolean;
+}
+
+/**
+ * Universal helper to determine if a workshop is authorized for online service bookings.
+ * Wan Legacy Motor = true, All directory-only workshops = false.
+ */
+export function canBookWorkshop(workshop?: Partial<Workshop> | null): boolean {
+  if (!workshop) return false;
+  return Boolean(workshop.booking_enabled ?? (workshop as any).online_booking_enabled ?? false);
 }
 
 // ─── Get approved, active workshops (customer-facing) ─────────
@@ -143,6 +153,7 @@ export async function getWorkshopServices(
   options?: { onlyAvailable?: boolean }
 ): Promise<Service[]> {
   try {
+    // 1. Query dedicated public.services table
     let query = supabase.from('services').select('*');
     if (options?.onlyAvailable ?? true) {
       query = query.eq('is_available', true);
@@ -151,13 +162,64 @@ export async function getWorkshopServices(
       query = query.eq('workshop_id', workshopId);
     }
     const { data, error } = await query.order('name');
-    if (error) {
-      console.error('Failed to query services table:', error);
-      return [];
+    if (!error && data && data.length > 0) {
+      return data;
     }
-    return data ?? [];
+
+    // 2. Dual-source fallback: Query workshop_products and format service packages
+    let wpQuery = supabase
+      .from('workshop_products')
+      .select(`
+        *,
+        product:products(
+          id,
+          name,
+          specification,
+          sku,
+          description,
+          category:product_categories(id, name)
+        )
+      `)
+      .order('price', { ascending: false });
+
+    if (options?.onlyAvailable ?? true) {
+      wpQuery = wpQuery.eq('is_available', true);
+    }
+    if (workshopId) {
+      wpQuery = wpQuery.eq('workshop_id', workshopId);
+    }
+
+    const { data: wpData, error: wpErr } = await wpQuery;
+    if (!wpErr && wpData && wpData.length > 0) {
+      return wpData.map((wp: any) => {
+        const catName = wp.product?.category?.name || 'General Service';
+        let duration = 30;
+        if (catName.includes('Full Service')) duration = 60;
+        else if (catName.includes('CVT')) duration = 45;
+        else if (catName.includes('Throttle Body')) duration = 40;
+        else if (catName.includes('Chain')) duration = 35;
+        else if (catName.includes('Tayar')) duration = 25;
+
+        return {
+          id: wp.id,
+          workshop_id: wp.workshop_id,
+          name: wp.product?.name || 'Service Package',
+          description: wp.product?.specification
+            ? `Specification: ${wp.product.specification} • Genuine Workshop Service`
+            : (wp.product?.description || 'Motorcycle diagnostic and maintenance service'),
+          category: catName,
+          price: Number(wp.price ?? 0),
+          estimated_duration_minutes: duration,
+          is_available: Boolean(wp.is_available ?? true),
+          created_at: wp.created_at,
+          updated_at: wp.updated_at,
+        };
+      });
+    }
+
+    return [];
   } catch (err) {
-    console.error('Failed to query services table:', err);
+    console.error('Failed to query services:', err);
     return [];
   }
 }

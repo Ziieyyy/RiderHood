@@ -36,8 +36,10 @@ import { getBooking, cancelBooking } from '../../../services/bookingService';
 import { createReview } from '../../../services/reviewService';
 import { useAuth } from '../../../context/AuthContext';
 import type { Booking, BookingService } from '../../../types/database';
+import { useTranslation } from '../../../i18n';
 
 export default function CustomerBookingDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -70,22 +72,22 @@ export default function CustomerBookingDetailScreen() {
   const handleCancelBooking = () => {
     if (!booking) return;
     Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this appointment?',
+      t('dialogs.cancelBookingTitle'),
+      t('dialogs.cancelBookingMessage'),
       [
-        { text: 'No, Keep Booking', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Yes, Cancel',
+          text: t('booking.cancelBooking'),
           style: 'destructive',
           onPress: async () => {
             try {
               if (user?.id) {
                 await cancelBooking(booking.id, user.id);
                 setBooking((prev: Booking | null) => (prev ? { ...prev, status: 'cancelled' } : null));
-                Alert.alert('Cancelled', 'Booking has been cancelled.');
+                Alert.alert(t('common.success'), t('booking.bookingCancelled'));
               }
             } catch (err: any) {
-              Alert.alert('Error', err?.message || 'Failed to cancel booking.');
+              Alert.alert(t('common.error'), err?.message || t('errors.genericMessage'));
             }
           },
         },
@@ -105,9 +107,9 @@ export default function CustomerBookingDetailScreen() {
         comment: reviewComment.trim() || undefined,
       });
       setShowReviewModal(false);
-      Alert.alert('Thank You!', 'Your review has been published.');
+      Alert.alert(t('reviews.reviewSuccessTitle'), t('reviews.reviewSuccessDesc'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to submit review.');
+      Alert.alert(t('common.error'), err?.message || t('errors.reviewFailed'));
     } finally {
       setSubmittingReview(false);
     }
@@ -116,7 +118,7 @@ export default function CustomerBookingDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Booking Details" showBack />
+        <Header title={t('booking.bookingDetails')} showBack />
         <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
@@ -125,10 +127,10 @@ export default function CustomerBookingDetailScreen() {
   if (!booking) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Booking Details" showBack />
+        <Header title={t('booking.bookingDetails')} showBack />
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>BOOKING NOT FOUND</Text>
-          <CustomButton title="Back to Bookings" onPress={() => router.replace('/(customer)/history')} />
+          <Text style={styles.emptyTitle}>{t('errors.notFound').toUpperCase()}</Text>
+          <CustomButton title={t('navigation.bookings')} onPress={() => router.replace('/(customer)/history')} />
         </View>
       </SafeAreaView>
     );
@@ -140,17 +142,17 @@ export default function CustomerBookingDetailScreen() {
   const isCancelled = booking.status === 'cancelled';
 
   const timelineSteps = [
-    { title: 'Booking Created', completed: true },
-    { title: 'Confirmed by Workshop', completed: isConfirmed || isInProgress || isCompleted },
-    { title: 'In Progress', completed: isInProgress || isCompleted },
-    { title: 'Service Completed', completed: isCompleted },
+    { title: t('booking.title'), completed: true },
+    { title: t('booking.bookingConfirmed'), completed: isConfirmed || isInProgress || isCompleted },
+    { title: t('booking.inProgress'), completed: isInProgress || isCompleted },
+    { title: t('booking.bookingCompleted'), completed: isCompleted },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title={`Booking #${booking.id.substring(0, 8).toUpperCase()}`}
-        subtitle={`Scheduled: ${booking.booking_date} @ ${booking.booking_time}`}
+        title={`${t('booking.bookingId')} #${booking.id.substring(0, 8).toUpperCase()}`}
+        subtitle={`${t('booking.bookingDate')}: ${booking.booking_date} @ ${booking.booking_time}`}
         showBack
       />
 
@@ -158,7 +160,7 @@ export default function CustomerBookingDetailScreen() {
         {/* Status Header Badge */}
         <View style={styles.statusHeaderCard}>
           <View style={styles.statusRow}>
-            <Text style={styles.statusHeaderTitle}>APPOINTMENT STATUS</Text>
+            <Text style={styles.statusHeaderTitle}>{t('booking.bookingStatus').toUpperCase()}</Text>
             <View
               style={[
                 styles.statusBadge,
@@ -215,7 +217,7 @@ export default function CustomerBookingDetailScreen() {
 
         {/* Workshop Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>WORKSHOP</Text>
+          <Text style={styles.cardTitle}>{t('dashboard.workshop').toUpperCase()}</Text>
           <Text style={styles.workshopName}>
             {((booking.workshop as unknown as Record<string, unknown>)?.name as string) || 'RiderHood Moto Lab'}
           </Text>
@@ -226,7 +228,7 @@ export default function CustomerBookingDetailScreen() {
 
         {/* Motorcycle Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>MOTORCYCLE</Text>
+          <Text style={styles.cardTitle}>{t('dashboard.myMotorcycle').toUpperCase()}</Text>
           <View style={styles.bikeRow}>
             <Bike color={COLORS.primary} size={24} />
             <View>
@@ -235,7 +237,7 @@ export default function CustomerBookingDetailScreen() {
                   `${((booking.motorcycle as unknown as Record<string, unknown>)?.brand as string || 'Yamaha')} ${((booking.motorcycle as unknown as Record<string, unknown>)?.model as string || 'Y15ZR')}`}
               </Text>
               <Text style={styles.bikePlate}>
-                Plate: {((booking.motorcycle as unknown as Record<string, unknown>)?.plate_number as string || 'ABC 1234')}
+                {t('motorcycle.plateNumber')}: {((booking.motorcycle as unknown as Record<string, unknown>)?.plate_number as string || 'ABC 1234')}
               </Text>
             </View>
           </View>
@@ -243,25 +245,25 @@ export default function CustomerBookingDetailScreen() {
 
         {/* Selected Services Breakdown */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>SERVICES BOOKED</Text>
+          <Text style={styles.cardTitle}>{t('booking.selectServices').toUpperCase()}</Text>
           {booking.booking_services && booking.booking_services.length > 0 ? (
             booking.booking_services.map((svc: BookingService) => (
               <View key={svc.id} style={styles.svcRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.svcName}>{svc.service_name_snapshot}</Text>
-                  <Text style={styles.svcQty}>Qty: {svc.quantity}</Text>
+                  <Text style={styles.svcQty}>{t('invoice.qty')}: {svc.quantity}</Text>
                 </View>
                 <Text style={styles.svcPrice}>RM {Number(svc.price_snapshot * svc.quantity).toFixed(2)}</Text>
               </View>
             ))
           ) : (
-            <Text style={styles.svcName}>General Workshop Service & Inspection</Text>
+            <Text style={styles.svcName}>{t('services.title')}</Text>
           )}
 
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
+            <Text style={styles.totalLabel}>{t('common.total').toUpperCase()}</Text>
             <Text style={styles.totalVal}>RM {Number(booking.total_amount).toFixed(2)}</Text>
           </View>
         </View>
@@ -271,11 +273,11 @@ export default function CustomerBookingDetailScreen() {
           {isCompleted && (
             <>
               <CustomButton
-                title="📄 VIEW DIGITAL INVOICE"
+                title={`📄 ${t('invoice.view').toUpperCase()}`}
                 onPress={() => router.push(`/(customer)/invoice/${booking.id}` as any)}
               />
               <CustomButton
-                title="★ LEAVE WORKSHOP REVIEW"
+                title={`★ ${t('reviews.writeReview').toUpperCase()}`}
                 variant="secondary"
                 onPress={() => setShowReviewModal(true)}
               />
@@ -285,7 +287,7 @@ export default function CustomerBookingDetailScreen() {
           {(booking.status === 'pending' || isConfirmed) && (
             <TouchableOpacity style={styles.cancelBookingBtn} onPress={handleCancelBooking}>
               <XCircle color={COLORS.danger} size={16} />
-              <Text style={styles.cancelBookingText}>CANCEL APPOINTMENT</Text>
+              <Text style={styles.cancelBookingText}>{t('booking.cancelBooking').toUpperCase()}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -295,7 +297,7 @@ export default function CustomerBookingDetailScreen() {
       <Modal visible={showReviewModal} transparent animationType="fade" onRequestClose={() => setShowReviewModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Rate & Review Workshop</Text>
+            <Text style={styles.modalTitle}>{t('reviews.writeReview')}</Text>
 
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(s => (
@@ -306,23 +308,23 @@ export default function CustomerBookingDetailScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>YOUR FEEDBACK & REVIEW</Text>
+              <Text style={styles.inputLabel}>{t('reviews.yourComment')}</Text>
               <TextInput
                 style={[styles.input, { height: 80 }]}
                 value={reviewComment}
                 onChangeText={setReviewComment}
-                placeholder="Share your service experience..."
+                placeholder={t('reviews.commentPlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
                 multiline
               />
             </View>
 
             <CustomButton
-              title={submittingReview ? 'SUBMITTING...' : 'SUBMIT REVIEW'}
+              title={submittingReview ? t('reviews.submittingReview') : t('reviews.submitReview')}
               onPress={handleSubmitReview}
               disabled={submittingReview}
             />
-            <CustomButton title="CANCEL" variant="secondary" onPress={() => setShowReviewModal(false)} />
+            <CustomButton title={t('common.cancel').toUpperCase()} variant="secondary" onPress={() => setShowReviewModal(false)} />
           </View>
         </View>
       </Modal>

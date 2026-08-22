@@ -3,14 +3,62 @@ import type { Review, ReviewPhoto } from '../types/database';
 
 // ─── Get workshop reviews with customer profiles ─────────────
 export async function getWorkshopReviews(workshopId: string): Promise<Review[]> {
+  // Try combined query with joined customer profile & review_photos
   const { data, error } = await supabase
     .from('reviews')
     .select('*, customer:profiles(id, full_name, avatar_url), photos:review_photos(*)')
     .eq('workshop_id', workshopId)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Review[];
+
+  if (!error) {
+    return (data ?? []) as Review[];
+  }
+
+  console.warn('getWorkshopReviews primary query failed, using fallback:', error.message);
+
+  // Fallback query without embedded review_photos relation
+  const { data: reviewsData, error: reviewsErr } = await supabase
+    .from('reviews')
+    .select('*, customer:profiles(id, full_name, avatar_url)')
+    .eq('workshop_id', workshopId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (reviewsErr) throw reviewsErr;
+
+  const reviews = (reviewsData ?? []) as Review[];
+  if (reviews.length === 0) return reviews;
+
+  // Attempt to fetch photos separately from review_photos if table exists
+  try {
+    const reviewIds = reviews.map((r) => r.id);
+    const { data: photosData } = await supabase
+      .from('review_photos')
+      .select('*')
+      .in('review_id', reviewIds);
+
+    if (photosData && photosData.length > 0) {
+      const photosByReviewId: Record<string, ReviewPhoto[]> = {};
+      photosData.forEach((p: ReviewPhoto) => {
+        if (!photosByReviewId[p.review_id]) photosByReviewId[p.review_id] = [];
+        photosByReviewId[p.review_id].push(p);
+      });
+      reviews.forEach((r) => {
+        r.photos = photosByReviewId[r.id] || [];
+      });
+    } else {
+      reviews.forEach((r) => {
+        r.photos = r.photos || [];
+      });
+    }
+  } catch {
+    reviews.forEach((r) => {
+      r.photos = r.photos || [];
+    });
+  }
+
+  return reviews;
 }
 
 // ─── Get review stats (average, count, star distribution) ────

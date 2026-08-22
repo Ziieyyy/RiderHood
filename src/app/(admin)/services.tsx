@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { COLORS } from '../../constants/theme';
 import { Settings, Wrench, MapPin } from 'lucide-react-native';
 import { getAllServices } from '../../services/adminService';
+import { useTranslation } from '../../i18n';
 
 export default function AdminServicesScreen() {
+  const { t } = useTranslation();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,8 +42,8 @@ export default function AdminServicesScreen() {
         ) : services.length === 0 ? (
           <View style={styles.emptyState}>
             <Settings color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyTitle}>No Services Found</Text>
-            <Text style={styles.emptyDesc}>Workshop admins can add services from their dashboard.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noServices')}</Text>
+            <Text style={styles.emptyDesc}>{t('empty.noServicesSub')}</Text>
           </View>
         ) : (
           sortedWorkshops.map(workshopName => (
@@ -65,7 +67,7 @@ export default function AdminServicesScreen() {
                     )}
                     <View style={[styles.availBadge, !srv.is_available && styles.unavailBadge]}>
                       <Text style={[styles.availText, !srv.is_available && styles.unavailText]}>
-                        {srv.is_available ? 'AVAILABLE' : 'UNAVAILABLE'}
+                        {srv.is_available ? t('common.available').toUpperCase() : t('common.unavailable').toUpperCase()}
                       </Text>
                     </View>
                   </View>

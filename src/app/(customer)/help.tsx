@@ -23,8 +23,10 @@ import {
   Phone,
   Mail,
 } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
 
 export default function HelpSupportScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
@@ -73,8 +75,8 @@ export default function HelpSupportScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="Help & Support"
-        subtitle="FAQs, knowledge base & support contacts"
+        title={t('help.title')}
+        subtitle={t('help.subtitle')}
         showBack
       />
 
@@ -84,7 +86,7 @@ export default function HelpSupportScreen() {
           <Search color={COLORS.textMuted} size={18} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search help topics..."
+            placeholder={t('common.search')}
             placeholderTextColor={COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -92,7 +94,7 @@ export default function HelpSupportScreen() {
         </View>
 
         {/* Popular Topics Accordion */}
-        <Text style={styles.sectionTitle}>POPULAR TOPICS</Text>
+        <Text style={styles.sectionTitle}>{t('help.faqTitle').toUpperCase()}</Text>
 
         <View style={styles.topicsList}>
           {filteredTopics.map(topic => {
@@ -120,21 +122,21 @@ export default function HelpSupportScreen() {
         </View>
 
         {/* Contact & Support Section */}
-        <Text style={styles.sectionTitle}>STILL NEED HELP?</Text>
+        <Text style={styles.sectionTitle}>{t('help.contactUs').toUpperCase()}</Text>
 
         <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>Reach out to RiderHood Care Team</Text>
-          <Text style={styles.contactSub}>We are available 24/7 to assist with your workshop appointments and account.</Text>
+          <Text style={styles.contactTitle}>{t('help.contactSupport')}</Text>
+          <Text style={styles.contactSub}>{t('help.contactSupportDesc')}</Text>
 
           <View style={styles.contactBtnsRow}>
             <TouchableOpacity style={styles.contactBtn} onPress={handleContactWhatsApp}>
               <MessageSquare color={COLORS.primary} size={16} />
-              <Text style={styles.contactBtnText}>WHATSAPP SUPPORT</Text>
+              <Text style={styles.contactBtnText}>WHATSAPP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.contactBtn} onPress={handleContactEmail}>
               <Mail color={COLORS.primary} size={16} />
-              <Text style={styles.contactBtnText}>EMAIL SUPPORT</Text>
+              <Text style={styles.contactBtnText}>{t('help.emailSupport').toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -146,8 +148,8 @@ export default function HelpSupportScreen() {
         >
           <AlertCircle color={COLORS.danger} size={20} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>REPORT A PROBLEM</Text>
-            <Text style={styles.reportSub}>Found a bug, glitch or payment issue? Let us know.</Text>
+            <Text style={styles.reportTitle}>{t('settings.reportProblem').toUpperCase()}</Text>
+            <Text style={styles.reportSub}>{t('settings.reportProblemDesc')}</Text>
           </View>
           <ChevronRight color={COLORS.textMuted} size={16} />
         </TouchableOpacity>

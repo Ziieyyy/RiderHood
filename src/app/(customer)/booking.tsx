@@ -16,11 +16,13 @@ import {
   Wrench, ChevronDown, ShieldCheck, Zap, Bike, X, MapPin, Check
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import type { Workshop, Service, Motorcycle } from '../../types/database';
 
 export default function CustomerBookingScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t, formatDate, formatCurrency } = useTranslation();
   const params = useLocalSearchParams();
 
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
@@ -30,6 +32,8 @@ export default function CustomerBookingScreen() {
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState<Motorcycle | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All');
+  const [serviceSearch, setServiceSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -199,10 +203,10 @@ export default function CustomerBookingScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Service Booking" subtitle="Schedule Maintenance & Diagnostics" />
+        <Header title={t('booking.title')} subtitle={t('booking.subtitle')} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading available workshops & services...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -210,14 +214,14 @@ export default function CustomerBookingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Service Booking" subtitle="Schedule Maintenance & Diagnostics" />
+      <Header title={t('booking.title')} subtitle={t('booking.subtitle')} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Step 0: Motorcycle Selection */}
         {motorcycles.length > 0 && (
           <>
-            <Text style={styles.stepTitle}>0. SELECT MOTORCYCLE</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+            <Text style={styles.stepTitle}>{t('booking.step0')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               <View style={styles.dateRow}>
                 {motorcycles.map(bike => {
                   const isSelected = selectedMotorcycle?.id === bike.id;
@@ -241,7 +245,7 @@ export default function CustomerBookingScreen() {
         )}
 
         {/* Step 1: Workshop Selection */}
-        <Text style={styles.stepTitle}>1. CHOOSE WORKSHOP LAB</Text>
+        <Text style={styles.stepTitle}>{t('booking.step1')}</Text>
         <TouchableOpacity
           style={styles.dropdownBox}
           onPress={() => setShowWorkshopModal(true)}
@@ -249,14 +253,14 @@ export default function CustomerBookingScreen() {
         >
           <Wrench color={COLORS.primary} size={18} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.dropdownLabel}>TARGET WORKSHOP</Text>
-            <Text style={styles.dropdownValue}>{selectedWorkshop?.name ?? 'Select a workshop'}</Text>
+            <Text style={styles.dropdownLabel}>{t('booking.selectWorkshop').toUpperCase()}</Text>
+            <Text style={styles.dropdownValue}>{selectedWorkshop?.name ?? t('booking.selectWorkshop')}</Text>
           </View>
           <ChevronDown color={COLORS.textSecondary} size={18} />
         </TouchableOpacity>
 
         {/* Step 2: Date & Time Slot */}
-        <Text style={styles.stepTitle}>2. SELECT DATE & TIME SLOT</Text>
+        <Text style={styles.stepTitle}>{t('booking.step2')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
           <View style={styles.dateRow}>
             {availableDates.map(date => {
@@ -294,58 +298,119 @@ export default function CustomerBookingScreen() {
         </View>
 
         {/* Step 3: Services Selection */}
-        <Text style={styles.stepTitle}>3. SELECT SERVICES</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={styles.stepTitle}>{t('booking.step3')}</Text>
+          <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
+            {services.length} {t('booking.servicesAvailable')}
+          </Text>
+        </View>
+
+        {/* Category Horizontal Filter Chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+          {['All', 'Full Service', 'Minyak Hitam', 'Gear Oil', 'CVT', 'Throttle Body', 'Brake Pad', 'Chain & Sprocket', 'Tayar Depan', 'Tayar Belakang', 'Spark Plug', 'Bateri', 'Coolant', 'Brake Fluid', 'Fork Oil', '2T'].map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.categoryChip,
+                serviceCategoryFilter === cat && styles.activeCategoryChip,
+              ]}
+              onPress={() => setServiceCategoryFilter(cat)}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  serviceCategoryFilter === cat && styles.activeCategoryChipText,
+                ]}
+              >
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {loadingServices ? (
           <View style={styles.noServicesCard}>
             <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.noServicesText}>Loading services...</Text>
+            <Text style={styles.noServicesText}>{t('common.loading')}</Text>
           </View>
         ) : services.length === 0 ? (
           <View style={styles.noServicesCard}>
-            <Text style={styles.noServicesText}>No services configured yet for this workshop.</Text>
+            <Text style={styles.noServicesText}>{t('services.noServicesConfigured')}</Text>
           </View>
         ) : (
-          services.map(srv => {
-            const isChecked = selectedServices.includes(srv.id);
-            return (
-              <TouchableOpacity
-                key={srv.id}
-                style={[styles.serviceCard, isChecked && styles.activeServiceCard]}
-                onPress={() => toggleService(srv.id)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.checkboxRow}>
-                  <View style={[styles.checkbox, isChecked && styles.checkedBox]}>
-                    {isChecked && <CheckCircle2 color={COLORS.primaryDark} size={16} />}
+          services
+            .filter(srv => {
+              if (serviceCategoryFilter !== 'All') {
+                const sCat = (srv.category || '').toLowerCase();
+                const fCat = serviceCategoryFilter.toLowerCase();
+                if (!sCat.includes(fCat) && !fCat.includes(sCat)) return false;
+              }
+              if (serviceSearch.trim()) {
+                const q = serviceSearch.toLowerCase();
+                const n = (srv.name || '').toLowerCase();
+                const d = (srv.description || '').toLowerCase();
+                if (!n.includes(q) && !d.includes(q)) return false;
+              }
+              return true;
+            })
+            .map(srv => {
+              const isChecked = selectedServices.includes(srv.id);
+              return (
+                <TouchableOpacity
+                  key={srv.id}
+                  style={[styles.serviceCard, isChecked && styles.activeServiceCard]}
+                  onPress={() => toggleService(srv.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.checkboxRow}>
+                    <View style={[styles.checkbox, isChecked && styles.checkedBox]}>
+                      {isChecked && <CheckCircle2 color={COLORS.primaryDark} size={16} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.serviceTitle}>{srv.name}</Text>
+                      <Text style={styles.serviceMeta}>
+                        {srv.category || 'General'}{srv.estimated_duration_minutes ? ` • ~${srv.estimated_duration_minutes} min` : ''}
+                      </Text>
+                    </View>
+                    <Text style={styles.servicePrice}>{formatCurrency(srv.price || 0)}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.serviceTitle}>{srv.name}</Text>
-                    <Text style={styles.serviceMeta}>
-                      {srv.category || 'General'}{srv.estimated_duration_minutes ? ` • ~${srv.estimated_duration_minutes} min` : ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.servicePrice}>RM {(srv.price || 0).toFixed(2)}</Text>
-                </View>
-                {srv.description ? <Text style={styles.serviceDesc}>{srv.description}</Text> : null}
-              </TouchableOpacity>
-            );
-          })
+                  {srv.description ? <Text style={styles.serviceDesc}>{srv.description}</Text> : null}
+                </TouchableOpacity>
+              );
+            })
         )}
 
         {/* Summary Card */}
         {selectedServices.length > 0 && (
           <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>{t('booking.bookingSummary').toUpperCase()}</Text>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Total ({selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''})
+              <Text style={styles.summaryLabel}>{t('motorcycle.details')}:</Text>
+              <Text style={styles.summaryValue}>{selectedMotorcycle ? `${selectedMotorcycle.brand} ${selectedMotorcycle.model}` : '-'}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{t('dashboard.workshop')}:</Text>
+              <Text style={styles.summaryValue}>{selectedWorkshop?.name ?? '-'}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{t('common.date')} & {t('common.time')}:</Text>
+              <Text style={styles.summaryValue}>{selectedDate || '-'} at {selectedTime || '-'}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{t('booking.totalServices')}:</Text>
+              <Text style={styles.summaryValue}>{selectedServices.length} {t('common.selected')}</Text>
+            </View>
+            <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, marginTop: 4 }]}>
+              <Text style={[styles.summaryLabel, { fontWeight: '900', color: COLORS.textPrimary }]}>{t('common.total')}:</Text>
+              <Text style={[styles.summaryValue, { color: COLORS.primary, fontSize: 16, fontWeight: '900' }]}>
+                {formatCurrency(totalPrice)}
               </Text>
-              <Text style={styles.totalPriceText}>RM {totalPrice.toFixed(2)}</Text>
             </View>
             <CustomButton
-              title={submitting ? 'SUBMITTING...' : 'CONFIRM & BOOK SLOT'}
+              title={submitting ? t('booking.submittingBooking') : t('booking.confirmBooking')}
               onPress={handleConfirmBooking}
               icon={submitting ? <ActivityIndicator size="small" color={COLORS.primaryDark} /> : <Zap color={COLORS.primaryDark} size={18} />}
-              disabled={submitting}
+              disabled={submitting || !selectedDate || !selectedTime || !selectedWorkshop || selectedServices.length === 0}
               style={{ marginTop: 12 }}
             />
           </View>
@@ -357,7 +422,7 @@ export default function CustomerBookingScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Choose Target Workshop</Text>
+              <Text style={styles.modalTitle}>{t('booking.selectWorkshop')}</Text>
               <TouchableOpacity onPress={() => setShowWorkshopModal(false)}>
                 <X color={COLORS.textMuted} size={20} />
               </TouchableOpacity>
@@ -397,15 +462,15 @@ export default function CustomerBookingScreen() {
             <View style={styles.modalIconBox}>
               <ShieldCheck color={COLORS.success} size={42} />
             </View>
-            <Text style={styles.modalTitle}>BOOKING SUBMITTED!</Text>
+            <Text style={styles.modalTitle}>{t('booking.bookingSubmittedTitle')}</Text>
             <Text style={styles.modalSub}>
-              Your booking at <Text style={{ color: COLORS.primary }}>{selectedWorkshop?.name}</Text> is pending confirmation from the workshop.
+              {t('booking.bookingSubmittedSub')}
             </Text>
             <View style={styles.ticketBox}>
-              <Text style={styles.ticketDetail}>Date: {selectedDate} at {selectedTime}</Text>
-              <Text style={styles.ticketDetail}>Total: RM {totalPrice.toFixed(2)}</Text>
+              <Text style={styles.ticketDetail}>{t('common.date')}: {selectedDate} at {selectedTime}</Text>
+              <Text style={styles.ticketDetail}>{t('common.total')}: {formatCurrency(totalPrice)}</Text>
             </View>
-            <CustomButton title="VIEW MY BOOKINGS" onPress={() => { setShowSuccessModal(false); router.replace('/(customer)/history'); }} />
+            <CustomButton title={t('booking.viewMyBookings')} onPress={() => { setShowSuccessModal(false); router.replace('/(customer)/history'); }} />
           </View>
         </View>
       </Modal>
@@ -434,6 +499,10 @@ const styles = StyleSheet.create({
   activeTimeChip: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   timeChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
   activeTimeText: { color: COLORS.primaryDark, fontWeight: '800' },
+  categoryChip: { backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, marginRight: 8 },
+  activeCategoryChip: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: COLORS.primary },
+  categoryChipText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
+  activeCategoryChipText: { color: COLORS.primary, fontWeight: '800' },
   noServicesCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 8 },
   noServicesText: { color: COLORS.textSecondary, fontSize: 13 },
   serviceCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, gap: 8 },
@@ -446,8 +515,10 @@ const styles = StyleSheet.create({
   servicePrice: { color: COLORS.primary, fontSize: 16, fontWeight: '900' },
   serviceDesc: { color: COLORS.textSecondary, fontSize: 12, paddingLeft: 34 },
   summaryCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.primary, marginTop: 16, gap: 8 },
+  summaryTitle: { color: COLORS.primary, fontSize: 12, fontWeight: '900', letterSpacing: 0.8, marginBottom: 4 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryLabel: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
+  summaryValue: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
   totalPriceText: { color: COLORS.primary, fontSize: 22, fontWeight: '900' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   modalContent: { backgroundColor: COLORS.surfaceContainer, borderRadius: 24, padding: 24, width: '100%', borderWidth: 1, borderColor: COLORS.primary, gap: 12 },

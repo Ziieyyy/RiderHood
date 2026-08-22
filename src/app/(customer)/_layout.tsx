@@ -2,8 +2,11 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { Home, Wrench, Calendar, Clock, User } from 'lucide-react-native';
+import { useTranslation } from '../../i18n';
 
 export default function CustomerTabsLayout() {
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -27,35 +30,35 @@ export default function CustomerTabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: t('navigation.home'),
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="workshops"
         options={{
-          title: 'Workshops',
+          title: t('navigation.workshops'),
           tabBarIcon: ({ color, size }) => <Wrench color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="booking"
         options={{
-          title: 'Bookings',
+          title: t('navigation.bookings'),
           tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
+          title: t('navigation.history'),
           tabBarIcon: ({ color, size }) => <Clock color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('navigation.profile'),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />

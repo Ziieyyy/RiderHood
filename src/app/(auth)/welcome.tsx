@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Cpu, Mail, ArrowRight, Wrench, ShieldCheck } from 'lucide-react-native';
 import { COLORS } from '../../constants/theme';
-import { Cpu, Mail, ArrowRight, ShieldCheck, Wrench } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
+import { LanguageSelector } from '../../components/LanguageSelector';
 import { PasswordInput } from '../../components/PasswordInput';
 import {
   PasswordSecurityModal,
@@ -24,6 +26,7 @@ import { resendConfirmationEmail } from '../../services/authService';
 export default function WelcomeScreen() {
   const router = useRouter();
   const { login, isLoading: authLoading } = useAuth();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,15 +44,15 @@ export default function WelcomeScreen() {
     try {
       await resendConfirmationEmail(email.trim());
       setModalMode('reset_email_sent');
-      setModalTitle('Verification Sent');
-      setModalMessage(`A new confirmation link has been sent to ${email.trim()}. Please check your inbox.`);
+      setModalTitle(t('auth.resetLinkSent'));
+      setModalMessage(t('auth.resetLinkSentDesc'));
       setSecondaryText(undefined);
       setSecondaryAction(undefined);
     } catch (err: unknown) {
       const error = err as { message?: string };
       setModalMode('general_error');
-      setModalTitle('Unable to Resend');
-      setModalMessage(error?.message || 'Could not send verification email. Please try again later.');
+      setModalTitle(t('errors.genericTitle'));
+      setModalMessage(error?.message || t('errors.genericMessage'));
       setSecondaryText(undefined);
       setSecondaryAction(undefined);
     }
@@ -63,24 +66,24 @@ export default function WelcomeScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) {
       setModalMode('invalid_email');
-      setModalTitle('Missing Email');
-      setModalMessage('Please enter your registered email address.');
+      setModalTitle(t('errors.requiredField'));
+      setModalMessage(t('auth.fillAllFields'));
       setModalVisible(true);
       return;
     }
 
     if (!emailRegex.test(email.trim())) {
       setModalMode('invalid_email');
-      setModalTitle('Invalid Email Format');
-      setModalMessage('Please enter a valid email address (e.g., rider@example.com).');
+      setModalTitle(t('auth.invalidEmail'));
+      setModalMessage(t('auth.invalidEmail'));
       setModalVisible(true);
       return;
     }
 
     if (!password) {
       setModalMode('wrong_password');
-      setModalTitle('Missing Password');
-      setModalMessage('Please enter your password to sign in.');
+      setModalTitle(t('errors.requiredField'));
+      setModalMessage(t('auth.fillAllFields'));
       setModalVisible(true);
       return;
     }
@@ -105,74 +108,78 @@ export default function WelcomeScreen() {
         switch (result.errorType) {
           case 'email_not_confirmed':
             setModalMode('email_not_confirmed');
-            setModalTitle('Email Confirmation Required');
+            setModalTitle(t('auth.resetPasswordTitle'));
             setModalMessage(
               result.errorMessage ||
-                'Your email address has not been confirmed yet. Please check your inbox and verify your email before logging in.'
+                t('auth.resetLinkSentDesc')
             );
-            setSecondaryText('Resend Confirmation Email');
+            setSecondaryText(t('auth.sendResetLink'));
             setSecondaryAction(() => handleResendConfirmation);
             break;
           case 'suspended':
             setModalMode('account_suspended');
-            setModalTitle('Account Suspended');
+            setModalTitle(t('errors.unauthorized'));
             setModalMessage(
               result.errorMessage ||
-                'Your account has been suspended. Please contact RiderHood support.'
+                t('auth.accountDisabled')
             );
             break;
           case 'pending':
             setModalMode('account_pending');
-            setModalTitle('Application Pending');
+            setModalTitle(t('superAdmin.pending'));
             setModalMessage(
               result.errorMessage ||
-                'Your account is still awaiting approval.'
+                t('booking.pendingApproval')
             );
             break;
           case 'deleted':
             setModalMode('general_error');
-            setModalTitle('Account Unavailable');
+            setModalTitle(t('errors.notFound'));
             setModalMessage(
               result.errorMessage ||
-                'This account has been deleted. Please contact support.'
+                t('auth.accountNotFound')
             );
             break;
           case 'rate_limit':
             setModalMode('rate_limit');
-            setModalTitle('Too Many Attempts');
+            setModalTitle(t('errors.tryAgainLater'));
             setModalMessage(
               result.errorMessage ||
-                'Security rate limit reached. Please wait a few moments before trying again.'
+                t('errors.tryAgainLater')
             );
             break;
           case 'invalid_email':
             setModalMode('invalid_email');
-            setModalTitle('Invalid Email');
+            setModalTitle(t('auth.invalidEmail'));
             setModalMessage(
-              result.errorMessage || 'Please enter a valid email address.'
+              result.errorMessage || t('auth.invalidEmail')
             );
             break;
           case 'network_error':
             setModalMode('general_error');
-            setModalTitle('Connection Error');
+            setModalTitle(t('errors.networkError'));
             setModalMessage(
-              'Unable to reach RiderHood authentication server. Please check your internet connection.'
+              result.errorMessage ||
+                t('errors.networkError')
             );
             break;
+          case 'invalid_credentials':
           default:
             setModalMode('wrong_password');
-            setModalTitle('Incorrect Credentials');
+            setModalTitle(t('errors.loginFailed'));
             setModalMessage(
-              'Incorrect email or password. Please check your details and try again.'
+              result.errorMessage ||
+                t('auth.incorrectPassword')
             );
             break;
         }
         setModalVisible(true);
       }
-    } catch {
+    } catch (err: unknown) {
+      const error = err as { message?: string };
       setModalMode('general_error');
-      setModalTitle('Authentication Error');
-      setModalMessage('An unexpected error occurred. Please try again.');
+      setModalTitle(t('errors.genericTitle'));
+      setModalMessage(error?.message || t('errors.genericMessage'));
       setModalVisible(true);
     } finally {
       setLoading(false);
@@ -187,6 +194,11 @@ export default function WelcomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Language Switcher Bar */}
+        <View style={{ marginBottom: 12 }}>
+          <LanguageSelector variant="inline" />
+        </View>
+
         {/* Brand Header */}
         <View style={styles.brandHeader}>
           <View style={styles.logoBadge}>
@@ -196,8 +208,8 @@ export default function WelcomeScreen() {
           <Text style={styles.brandSubtitle}>Premium Moto Care</Text>
 
           <View style={styles.subHeaderBox}>
-            <Text style={styles.welcomeTitle}>Welcome Back</Text>
-            <Text style={styles.welcomeSub}>Sign in to continue to RiderHood</Text>
+            <Text style={styles.welcomeTitle}>{t('auth.welcomeTitle')}</Text>
+            <Text style={styles.welcomeSub}>{t('auth.welcomeSub')}</Text>
           </View>
         </View>
 
@@ -205,29 +217,29 @@ export default function WelcomeScreen() {
         <View style={styles.formCard}>
           {/* Email Field */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>EMAIL</Text>
+            <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
             <View style={styles.inputWrapper}>
               <Mail color={COLORS.textMuted} size={18} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Enter your email"
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
-                accessibilityLabel="Email address"
+                accessibilityLabel={t('auth.emailAddress')}
               />
             </View>
           </View>
 
           {/* Password Field */}
           <PasswordInput
-            label="PASSWORD"
+            label={t('auth.password').toUpperCase()}
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
+            placeholder={t('auth.passwordPlaceholder')}
             showStrength={false}
           />
 
@@ -235,9 +247,9 @@ export default function WelcomeScreen() {
           <TouchableOpacity
             style={styles.forgotBtn}
             onPress={() => router.push('/(auth)/forgot-password')}
-            accessibilityLabel="Forgot password"
+            accessibilityLabel={t('auth.forgotPassword')}
           >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
+            <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
           {/* Sign In Button */}
@@ -246,13 +258,13 @@ export default function WelcomeScreen() {
             activeOpacity={0.8}
             onPress={handleSignIn}
             disabled={loading || authLoading}
-            accessibilityLabel="Sign in"
+            accessibilityLabel={t('auth.login')}
           >
             {loading || authLoading ? (
               <ActivityIndicator color={COLORS.primaryDark} size="small" />
             ) : (
               <>
-                <Text style={styles.signInBtnText}>SIGN IN</Text>
+                <Text style={styles.signInBtnText}>{t('auth.login').toUpperCase()}</Text>
                 <ArrowRight color={COLORS.primaryDark} size={18} />
               </>
             )}
@@ -262,9 +274,9 @@ export default function WelcomeScreen() {
         {/* Registration & Action Links */}
         <View style={styles.footerLinks}>
           <View style={styles.registerRow}>
-            <Text style={styles.noAccountText}>Don't have an account? </Text>
+            <Text style={styles.noAccountText}>{t('auth.dontHaveAccount')} </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.createAccountText}>Create Account</Text>
+              <Text style={styles.createAccountText}>{t('auth.createAccount')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -273,17 +285,17 @@ export default function WelcomeScreen() {
             style={styles.workshopRegBtn}
             activeOpacity={0.8}
             onPress={() => router.push('/(auth)/workshop-registration')}
-            accessibilityLabel="Register workshop partner account"
+            accessibilityLabel={t('auth.registerWorkshopPartner')}
           >
             <Wrench color="#f59e0b" size={14} />
-            <Text style={styles.workshopRegText}>Register Workshop Partner Account</Text>
+            <Text style={styles.workshopRegText}>{t('auth.registerWorkshopPartner')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Security Footer Banner */}
         <View style={styles.securityBanner}>
           <ShieldCheck color={COLORS.primary} size={14} />
-          <Text style={styles.securityText}>Your motorcycle companion.</Text>
+          <Text style={styles.securityText}>{t('auth.welcomeSub')}</Text>
         </View>
       </ScrollView>
 

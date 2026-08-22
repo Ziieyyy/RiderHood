@@ -33,8 +33,10 @@ import { useAuth } from '../../context/AuthContext';
 import { getMotorcycles, deleteMotorcycle, updateMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
 import type { Motorcycle } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 export default function MyGarageScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -103,7 +105,7 @@ export default function MyGarageScreen() {
   const handleSaveEdit = async () => {
     if (!editingBike) return;
     if (!editBrand.trim() || !editModel.trim() || !editPlate.trim()) {
-      Alert.alert('Incomplete Information', 'Brand, Model, and Plate Number are required.');
+      Alert.alert(t('errors.invalidForm'), t('auth.fillAllFields'));
       return;
     }
 
@@ -131,9 +133,9 @@ export default function MyGarageScreen() {
 
       setBikes(prev => prev.map(b => b.id === updated.id ? updated : b));
       setEditingBike(null);
-      Alert.alert('Success', 'Detailed motorcycle specifications updated.');
+      Alert.alert(t('common.success'), t('motorcycle.updateMotorcycle'));
     } catch (err: any) {
-      Alert.alert('Update Error', err?.message || 'Failed to update motorcycle.');
+      Alert.alert(t('errors.updateFailed'), err?.message || t('errors.updateFailed'));
     } finally {
       setSavingEdit(false);
     }
@@ -141,20 +143,20 @@ export default function MyGarageScreen() {
 
   const handleDelete = (bikeId: string, name: string) => {
     Alert.alert(
-      'Delete Motorcycle?',
-      `Are you sure you want to remove ${name} from your garage? This will remove access to its maintenance records.`,
+      t('dialogs.deleteMotorcycleTitle'),
+      t('dialogs.deleteMotorcycleMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteMotorcycle(bikeId);
               setBikes(prev => prev.filter(b => b.id !== bikeId));
-              Alert.alert('Deleted', `${name} removed from garage.`);
+              Alert.alert(t('common.success'), t('common.success'));
             } catch (err: any) {
-              Alert.alert('Error', err?.message || 'Failed to delete motorcycle.');
+              Alert.alert(t('common.error'), err?.message || t('errors.deleteFailed'));
             }
           },
         },
@@ -165,8 +167,8 @@ export default function MyGarageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        title="My Garage"
-        subtitle="Manage registered motorcycles, specs & telemetry"
+        title={t('motorcycle.garage')}
+        subtitle={t('motorcycle.garage')}
         rightElement={
           <TouchableOpacity
             style={styles.addBtnHeader}
@@ -174,7 +176,7 @@ export default function MyGarageScreen() {
             activeOpacity={0.8}
           >
             <Plus color={COLORS.primary} size={16} />
-            <Text style={styles.addBtnText}>+ Add Motorcycle</Text>
+            <Text style={styles.addBtnText}>+ {t('motorcycle.registerNew')}</Text>
           </TouchableOpacity>
         }
       />
@@ -197,12 +199,12 @@ export default function MyGarageScreen() {
         ) : bikes.length === 0 ? (
           <View style={styles.emptyCard}>
             <Bike color={COLORS.textMuted} size={56} />
-            <Text style={styles.emptyTitle}>NO MOTORCYCLES IN GARAGE</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noMotorcycles').toUpperCase()}</Text>
             <Text style={styles.emptySub}>
-              Register your motorcycle to track service reminders, oil changes & digital documents.
+              {t('empty.noMotorcyclesSub')}
             </Text>
             <CustomButton
-              title="+ Register New Motorcycle"
+              title={`+ ${t('motorcycle.registerNew')}`}
               onPress={() => router.push('/(customer)/setup-motorcycle')}
               style={{ marginTop: 12 }}
             />
@@ -230,14 +232,14 @@ export default function MyGarageScreen() {
                       <Text style={styles.bikeNickname}>{bike.nickname || `${bike.brand} ${bike.model}`}</Text>
                       {isPrimary && (
                         <View style={styles.primaryTag}>
-                          <Text style={styles.primaryTagText}>PRIMARY</Text>
+                          <Text style={styles.primaryTagText}>{t('motorcycle.primaryBadge').toUpperCase()}</Text>
                         </View>
                       )}
                     </View>
                     <Text style={styles.bikeModelSub}>
                       {bike.brand} {bike.model} • {bike.year || '2024'}
                     </Text>
-                    <Text style={styles.bikePlateText}>Plate: {bike.plate_number}</Text>
+                    <Text style={styles.bikePlateText}>{t('motorcycle.plateNumber')}: {bike.plate_number}</Text>
                   </View>
                 </View>
 
@@ -246,7 +248,7 @@ export default function MyGarageScreen() {
                   <View style={styles.infoCol}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Gauge color={COLORS.primary} size={12} />
-                      <Text style={styles.infoLabel}>ODOMETER</Text>
+                      <Text style={styles.infoLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                     </View>
                     <Text style={styles.infoVal}>{bike.current_mileage.toLocaleString()} km</Text>
                   </View>
@@ -254,7 +256,7 @@ export default function MyGarageScreen() {
                   <View style={styles.infoCol}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Zap color={COLORS.primary} size={12} />
-                      <Text style={styles.infoLabel}>ENGINE / OIL</Text>
+                      <Text style={styles.infoLabel}>{t('motorcycle.engineOil').toUpperCase()}</Text>
                     </View>
                     <Text style={styles.infoVal}>
                       {bike.engine_cc ? `${bike.engine_cc}cc` : 'N/A'} • {bike.engine_oil_type || '10W-40'}
@@ -264,7 +266,7 @@ export default function MyGarageScreen() {
                   <View style={styles.infoCol}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Disc color={COLORS.primary} size={12} />
-                      <Text style={styles.infoLabel}>TYRES</Text>
+                      <Text style={styles.infoLabel}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                     </View>
                     <Text style={styles.infoVal}>
                       {bike.front_tyre_size ? bike.front_tyre_size.split('-')[0] : '90/80'} / {bike.rear_tyre_size ? bike.rear_tyre_size.split('-')[0] : '120/70'}
@@ -287,10 +289,10 @@ export default function MyGarageScreen() {
                         { color: isHealthy ? COLORS.success : '#f59e0b' },
                       ]}
                     >
-                      {isHealthy ? 'Healthy Condition' : 'Needs Attention'} ({score}%)
+                      {isHealthy ? t('motorcycle.healthGood') : t('motorcycle.healthPoor')} ({score}%)
                     </Text>
                   </View>
-                  <Text style={styles.healthDetailSub}>Optimal Telemetry</Text>
+                  <Text style={styles.healthDetailSub}>{t('common.telemetryLive')}</Text>
                 </View>
 
                 {/* CARD ACTIONS */}
@@ -300,7 +302,7 @@ export default function MyGarageScreen() {
                     onPress={() => router.push(`/(customer)/motorcycle/${bike.id}` as any)}
                   >
                     <Eye color={COLORS.textPrimary} size={14} />
-                    <Text style={styles.actionBtnText}>View</Text>
+                    <Text style={styles.actionBtnText}>{t('common.view')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -308,7 +310,7 @@ export default function MyGarageScreen() {
                     onPress={() => handleDelete(bike.id, bike.nickname || bike.model)}
                   >
                     <Trash2 color={COLORS.danger} size={14} />
-                    <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Delete</Text>
+                    <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -327,7 +329,7 @@ export default function MyGarageScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.editModalCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>✏️ Edit Detailed Motorcycle Specs</Text>
+              <Text style={styles.modalTitle}>✏️ {t('motorcycle.edit')}</Text>
               <TouchableOpacity onPress={() => setEditingBike(null)}>
                 <X color={COLORS.textSecondary} size={20} />
               </TouchableOpacity>
@@ -335,34 +337,34 @@ export default function MyGarageScreen() {
 
             <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
               <View style={styles.modalInputGroup}>
-                <Text style={styles.inputCategoryHeader}>1. IDENTITY & REGISTRATION</Text>
-                <Text style={styles.inputLabel}>NICKNAME</Text>
+                <Text style={styles.inputCategoryHeader}>{t('motorcycle.step1BasicInfo').toUpperCase()}</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.nickname').toUpperCase()}</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={editNickname}
                   onChangeText={setEditNickname}
-                  placeholder="e.g. My Beast or Ahxia"
+                  placeholder={t('motorcycle.nicknamePlaceholder')}
                   placeholderTextColor={COLORS.textMuted}
                 />
 
                 <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>BRAND *</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.brand').toUpperCase()} *</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editBrand}
                       onChangeText={setEditBrand}
-                      placeholder="e.g. Yamaha or Perodua"
+                      placeholder={t('motorcycle.selectBrand')}
                       placeholderTextColor={COLORS.textMuted}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>MODEL *</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.model').toUpperCase()} *</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editModel}
                       onChangeText={setEditModel}
-                      placeholder="e.g. MT-09 or Myvi"
+                      placeholder={t('motorcycle.selectModel')}
                       placeholderTextColor={COLORS.textMuted}
                     />
                   </View>
@@ -370,33 +372,33 @@ export default function MyGarageScreen() {
 
                 <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>YEAR</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.year').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editYear}
                       onChangeText={setEditYear}
-                      placeholder="e.g. 2024"
+                      placeholder={t('motorcycle.yearPlaceholder')}
                       placeholderTextColor={COLORS.textMuted}
                       keyboardType="number-pad"
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>PLATE NUMBER *</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.plateNumber').toUpperCase()} *</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editPlate}
                       onChangeText={setEditPlate}
-                      placeholder="e.g. ABC 1234"
+                      placeholder={t('motorcycle.plateNumberPlaceholder')}
                       placeholderTextColor={COLORS.textMuted}
                       autoCapitalize="characters"
                     />
                   </View>
                 </View>
 
-                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>2. ENGINE & POWERTRAIN</Text>
+                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>{t('motorcycle.technicalInfo').toUpperCase()}</Text>
                 <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>ENGINE CC</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.engineCapacity').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editEngineCc}
@@ -407,7 +409,7 @@ export default function MyGarageScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>CURRENT ODOMETER (KM)</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editMileage}
@@ -421,28 +423,28 @@ export default function MyGarageScreen() {
 
                 <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>FUEL TYPE</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.fuelType').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editFuelType}
                       onChangeText={setEditFuelType}
-                      placeholder="e.g. Petrol"
+                      placeholder={t('motorcycle.selectFuelType')}
                       placeholderTextColor={COLORS.textMuted}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>TRANSMISSION</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.transmission').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editTransmission}
                       onChangeText={setEditTransmission}
-                      placeholder="e.g. Manual"
+                      placeholder={t('motorcycle.selectTransmission')}
                       placeholderTextColor={COLORS.textMuted}
                     />
                   </View>
                 </View>
 
-                <Text style={styles.inputLabel}>ENGINE OIL GRADE</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.engineOilGrade').toUpperCase()}</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={editEngineOil}
@@ -451,10 +453,10 @@ export default function MyGarageScreen() {
                   placeholderTextColor={COLORS.textMuted}
                 />
 
-                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>3. TYRES & WHEELS</Text>
+                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                 <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>FRONT TYRE</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.tyreFront').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editFrontTyre}
@@ -464,7 +466,7 @@ export default function MyGarageScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>REAR TYRE</Text>
+                    <Text style={styles.inputLabel}>{t('motorcycle.tyreRear').toUpperCase()}</Text>
                     <TextInput
                       style={styles.modalInput}
                       value={editRearTyre}
@@ -475,8 +477,8 @@ export default function MyGarageScreen() {
                   </View>
                 </View>
 
-                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>4. MEDIA & COVER PHOTO</Text>
-                <Text style={styles.inputLabel}>PHOTO URL</Text>
+                <Text style={[styles.inputCategoryHeader, { marginTop: 12 }]}>{t('motorcycle.photoAndDocs').toUpperCase()}</Text>
+                <Text style={styles.inputLabel}>{t('motorcycle.photoUrl').toUpperCase()}</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={editPhotoUrl}
@@ -492,10 +494,10 @@ export default function MyGarageScreen() {
                 style={styles.cancelBtn}
                 onPress={() => setEditingBike(null)}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <CustomButton
-                title={savingEdit ? 'SAVING CHANGES...' : 'SAVE SPECS'}
+                title={savingEdit ? t('common.saving').toUpperCase() : t('common.save').toUpperCase()}
                 onPress={handleSaveEdit}
                 disabled={savingEdit}
                 style={{ flex: 1 }}

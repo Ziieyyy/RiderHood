@@ -27,9 +27,11 @@ import {
   Bell, Moon, ChevronRight, Check, Award, RefreshCw, KeyRound, Camera, X,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
+import { LanguageSelector } from '../../components/LanguageSelector';
 import { getMotorcycles, updateMotorcycle, deleteMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
-import { getCustomerDocuments, createDocument, updateDocument, deleteDocument } from '../../services/documentService';
+import { getCustomerDocuments, createDocument, updateDocument, deleteDocument, uploadAndCreateDocument, validateDocumentFile } from '../../services/documentService';
 import { updateProfile, resetPassword, updatePassword } from '../../services/authService';
 import { PasswordInput } from '../../components/PasswordInput';
 import type { Motorcycle, Document as RiderDoc, DocumentType } from '../../types/database';
@@ -37,6 +39,7 @@ import type { Motorcycle, Document as RiderDoc, DocumentType } from '../../types
 export default function CustomerProfileScreen() {
   const router = useRouter();
   const { user, profile, logout, refreshProfile } = useAuth();
+  const { t, language } = useTranslation();
 
   // Garage State
   const [bikes, setBikes] = useState<Motorcycle[]>([]);
@@ -53,6 +56,7 @@ export default function CustomerProfileScreen() {
   const [newDocBikeId, setNewDocBikeId] = useState<string>('');
   const [newDocExpiryDate, setNewDocExpiryDate] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [selectedNewDocFile, setSelectedNewDocFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
   // Document Edit Modal State
   const [editingDoc, setEditingDoc] = useState<RiderDoc | null>(null);
@@ -102,7 +106,6 @@ export default function CustomerProfileScreen() {
 
   // Settings State
   const [notifications, setNotifications] = useState(true);
-  const [language, setLanguage] = useState<'EN' | 'BM'>('EN');
   const [darkMode, setDarkMode] = useState(true);
   const [useKm, setUseKm] = useState(true);
   const [privacyEnabled, setPrivacyEnabled] = useState(true);
@@ -287,28 +290,52 @@ export default function CustomerProfileScreen() {
   };
 
   // ─── DOCUMENT ACTIONS & FULL DOCUMENT EDITING ─────────────────
+  const handlePickNewDocFile = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        setSelectedNewDocFile(res.assets[0]);
+      }
+    } catch (err: any) {
+      console.log('Profile doc picker error:', err);
+    }
+  };
+
   const handleUploadDocumentSubmit = async () => {
     if (!user?.id || !newDocTitle.trim()) {
       Alert.alert('Required', 'Please enter a document title.');
       return;
     }
+    if (!selectedNewDocFile) {
+      Alert.alert('Required', 'Please select a document file (PDF, JPG, PNG, WEBP).');
+      return;
+    }
+    const valRes = validateDocumentFile(selectedNewDocFile);
+    if (!valRes.valid) {
+      Alert.alert('Invalid File', valRes.error || 'Please attach a valid PDF or image file.');
+      return;
+    }
     setUploadingDoc(true);
     try {
-      const created = await createDocument({
+      const created = await uploadAndCreateDocument({
         customer_id: user.id,
         motorcycle_id: newDocBikeId || undefined,
         title: newDocTitle.trim(),
         type: newDocType,
-        file_path: `documents/${user.id}/${Date.now()}_${newDocTitle.replace(/\s+/g, '_')}.pdf`,
+        file: selectedNewDocFile,
         expiry_date: newDocExpiryDate && newDocExpiryDate.trim() ? newDocExpiryDate.trim() : null,
       });
       setDocuments([created, ...documents]);
       setNewDocTitle('');
       setNewDocExpiryDate('');
+      setSelectedNewDocFile(null);
       setShowUploadDocModal(false);
-      Alert.alert('Success', 'Document saved to profile vault.');
+      Alert.alert('Success', 'Document uploaded to Supabase Storage and saved to vault.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to save document.');
+      Alert.alert('Upload Error', err?.message || 'Failed to upload document.');
     } finally {
       setUploadingDoc(false);
     }
@@ -472,13 +499,13 @@ export default function CustomerProfileScreen() {
                 style={styles.input}
                 value={fullName}
                 onChangeText={setFullName}
-                placeholder="Full Name"
+                placeholder={t('auth.fullNamePlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS (READ-ONLY)</Text>
+              <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
               <TextInput
                 style={[styles.input, { opacity: 0.6 }]}
                 value={profile?.email || ''}
@@ -487,19 +514,19 @@ export default function CustomerProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>PHONE NUMBER</Text>
+              <Text style={styles.inputLabel}>{t('auth.phone').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="e.g. 0123456789"
+                placeholder={t('auth.phonePlaceholder')}
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="phone-pad"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>AVATAR PHOTO URL</Text>
+              <Text style={styles.inputLabel}>{t('motorcycle.photoUrl').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={avatarUrl || ''}
@@ -510,7 +537,7 @@ export default function CustomerProfileScreen() {
             </View>
 
             <CustomButton
-              title={savingProfile ? 'SAVING PROFILE...' : 'SAVE CHANGES'}
+              title={savingProfile ? t('common.submitting').toUpperCase() : t('common.save').toUpperCase()}
               onPress={handleSaveProfile}
               disabled={savingProfile}
               style={{ marginTop: 8 }}
@@ -518,26 +545,26 @@ export default function CustomerProfileScreen() {
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>PERSONAL INFORMATION</Text>
+            <Text style={styles.cardTitle}>{t('profile.personalInfo').toUpperCase()}</Text>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Full Name</Text>
-                <Text style={styles.infoValue}>{profile?.full_name || 'Not set'}</Text>
+                <Text style={styles.infoLabel}>{t('auth.fullName')}</Text>
+                <Text style={styles.infoValue}>{profile?.full_name || '-'}</Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoLabel}>{t('auth.emailAddress')}</Text>
                 <Text style={styles.infoValue}>{profile?.email || user?.email}</Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{profile?.phone || 'Not set'}</Text>
+                <Text style={styles.infoLabel}>{t('auth.phone')}</Text>
+                <Text style={styles.infoValue}>{profile?.phone || '-'}</Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Location</Text>
+                <Text style={styles.infoLabel}>{t('workshop.address')}</Text>
                 <Text style={styles.infoValue}>{address}</Text>
               </View>
             </View>
@@ -546,13 +573,13 @@ export default function CustomerProfileScreen() {
 
         {/* ================= 3. MY MOTORCYCLE GARAGE ================= */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>MY MOTORCYCLE GARAGE ({bikes.length})</Text>
+          <Text style={styles.sectionTitle}>{t('motorcycle.garage').toUpperCase()} ({bikes.length})</Text>
           <TouchableOpacity
             style={styles.addBikeBtn}
             onPress={() => router.push('/(customer)/setup-motorcycle')}
           >
             <Plus color={COLORS.primary} size={14} />
-            <Text style={styles.addBikeText}>+ Register Bike</Text>
+            <Text style={styles.addBikeText}>+ {t('motorcycle.addFirstBike')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -561,14 +588,14 @@ export default function CustomerProfileScreen() {
         ) : bikes.length === 0 ? (
           <View style={styles.emptyGarageCard}>
             <Bike color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyGarageTitle}>No Motorcycles Registered</Text>
-            <Text style={styles.emptyGarageSub}>Add your motorcycle to track service history and digital documents.</Text>
+            <Text style={styles.emptyGarageTitle}>{t('motorcycle.noBikesRegistered')}</Text>
+            <Text style={styles.emptyGarageSub}>{t('motorcycle.noBikesDesc')}</Text>
           </View>
         ) : (
           bikes.map((bike, index) => {
             const isPrimary = index === 0;
             const healthScore = bikeHealthScores[bike.id] ?? 90;
-            const healthStatus = healthScore >= 80 ? 'Good' : 'Service Due';
+            const healthStatus = healthScore >= 80 ? t('motorcycle.healthGood') : t('motorcycle.serviceDue');
 
             return (
               <View key={bike.id} style={styles.garageCard}>
@@ -578,7 +605,7 @@ export default function CustomerProfileScreen() {
                       <Text style={styles.bikeName}>🏍️ {bike.nickname || `${bike.brand} ${bike.model}`}</Text>
                       {isPrimary && (
                         <View style={styles.primaryBadge}>
-                          <Text style={styles.primaryBadgeText}>PRIMARY</Text>
+                          <Text style={styles.primaryBadgeText}>{t('motorcycle.primaryBadge').toUpperCase()}</Text>
                         </View>
                       )}
                     </View>
@@ -588,15 +615,15 @@ export default function CustomerProfileScreen() {
 
                 <View style={styles.garageSpecsGrid}>
                   <View style={styles.garageSpecItem}>
-                    <Text style={styles.garageSpecLabel}>PLATE NUMBER</Text>
+                    <Text style={styles.garageSpecLabel}>{t('motorcycle.plateNumber').toUpperCase()}</Text>
                     <Text style={styles.garageSpecVal}>{bike.plate_number}</Text>
                   </View>
                   <View style={styles.garageSpecItem}>
-                    <Text style={styles.garageSpecLabel}>CURRENT MILEAGE</Text>
+                    <Text style={styles.garageSpecLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                     <Text style={styles.garageSpecVal}>{bike.current_mileage.toLocaleString()} km</Text>
                   </View>
                   <View style={styles.garageSpecItem}>
-                    <Text style={styles.garageSpecLabel}>HEALTH STATUS</Text>
+                    <Text style={styles.garageSpecLabel}>{t('motorcycle.healthScore').toUpperCase()}</Text>
                     <Text style={[styles.garageSpecVal, { color: healthScore >= 80 ? COLORS.success : '#f59e0b' }]}>
                       {healthStatus} ({healthScore}%)
                     </Text>
@@ -609,7 +636,7 @@ export default function CustomerProfileScreen() {
                     onPress={() => router.push(`/(customer)/motorcycle/${bike.id}` as any)}
                   >
                     <Eye color={COLORS.textPrimary} size={14} />
-                    <Text style={styles.garageActionText}>View</Text>
+                    <Text style={styles.garageActionText}>{t('common.view')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -617,7 +644,7 @@ export default function CustomerProfileScreen() {
                     onPress={() => handleDeleteBike(bike.id, bike.nickname || bike.model)}
                   >
                     <Trash2 color={COLORS.danger} size={14} />
-                    <Text style={[styles.garageActionText, { color: COLORS.danger }]}>Delete</Text>
+                    <Text style={[styles.garageActionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -626,7 +653,7 @@ export default function CustomerProfileScreen() {
         )}
 
         {/* ================= 4. ACCOUNT & SECURITY ================= */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ACCOUNT & SECURITY</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('navigation.security').toUpperCase()}</Text>
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.menuRow}
@@ -634,8 +661,8 @@ export default function CustomerProfileScreen() {
           >
             <Lock color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuRowTitle}>Change Password</Text>
-              <Text style={styles.menuRowSub}>Update account security password</Text>
+              <Text style={styles.menuRowTitle}>{t('security.changePassword')}</Text>
+              <Text style={styles.menuRowSub}>{t('security.changePasswordDesc')}</Text>
             </View>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
@@ -644,25 +671,31 @@ export default function CustomerProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => Alert.alert('Active Sessions', 'Currently logged in on Expo Mobile Client (Active Session)')}
+            onPress={() => Alert.alert(t('security.activeSessions'), t('security.activeSessionsDesc'))}
           >
             <Shield color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuRowTitle}>Active Login Sessions</Text>
-              <Text style={styles.menuRowSub}>1 active mobile device session</Text>
+              <Text style={styles.menuRowTitle}>{t('security.activeSessions')}</Text>
+              <Text style={styles.menuRowSub}>{t('security.activeSessionsDesc')}</Text>
             </View>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
         </View>
 
         {/* ================= 6. APP SETTINGS & PREFERENCES ================= */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>APP SETTINGS & PREFERENCES</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('settings.subtitle').toUpperCase()}</Text>
+        
+        {/* Universal Language Selector */}
+        <View style={{ marginBottom: 12 }}>
+          <LanguageSelector variant="card" />
+        </View>
+
         <View style={styles.card}>
           <View style={styles.menuRow}>
             <Bell color={COLORS.primary} size={18} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuRowTitle}>Push Notifications</Text>
-              <Text style={styles.menuRowSub}>Maintenance & booking alerts</Text>
+              <Text style={styles.menuRowTitle}>{t('settings.notifications')}</Text>
+              <Text style={styles.menuRowSub}>{t('dashboard.serviceReminderDesc')}</Text>
             </View>
             <Switch
               value={notifications}
@@ -671,33 +704,17 @@ export default function CustomerProfileScreen() {
               thumbColor={notifications ? COLORS.primary : '#888'}
             />
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.menuRow}>
-            <Globe color={COLORS.primary} size={18} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.menuRowTitle}>App Language</Text>
-              <Text style={styles.menuRowSub}>{language === 'EN' ? 'English (US)' : 'Bahasa Melayu'}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.langToggleBtn}
-              onPress={() => setLanguage(language === 'EN' ? 'BM' : 'EN')}
-            >
-              <Text style={styles.langToggleText}>{language}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* ================= 7. HELP & SUPPORT ================= */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>HELP & SUPPORT</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('navigation.help').toUpperCase()}</Text>
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => Alert.alert('Help Centre', 'RiderHood Help Center & FAQ guide is active.')}
+            onPress={() => router.push('/(customer)/help')}
           >
             <HelpCircle color={COLORS.primary} size={18} />
-            <Text style={styles.menuRowTitleFlex}>Help Centre & FAQs</Text>
+            <Text style={styles.menuRowTitleFlex}>{t('help.faqTitle')}</Text>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
 
@@ -705,10 +722,10 @@ export default function CustomerProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => Alert.alert('Contact Support', 'Email us at support@riderhood.app or WhatsApp +60123456789')}
+            onPress={() => router.push('/(customer)/help')}
           >
             <MessageSquare color={COLORS.primary} size={18} />
-            <Text style={styles.menuRowTitleFlex}>Contact Customer Support</Text>
+            <Text style={styles.menuRowTitleFlex}>{t('help.contactSupport')}</Text>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
 
@@ -716,10 +733,10 @@ export default function CustomerProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => Alert.alert('Report Problem', 'Thank you for reporting. Technical support team has been alerted.')}
+            onPress={() => router.push('/(customer)/help')}
           >
             <AlertTriangle color={COLORS.primary} size={18} />
-            <Text style={styles.menuRowTitleFlex}>Report a Problem</Text>
+            <Text style={styles.menuRowTitleFlex}>{t('help.reportIssue')}</Text>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
 
@@ -727,10 +744,10 @@ export default function CustomerProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => Alert.alert('Terms & Privacy', 'RiderHood v2.4.0 — All Terms & Privacy Policies apply.')}
+            onPress={() => router.push('/(customer)/help')}
           >
             <Info color={COLORS.primary} size={18} />
-            <Text style={styles.menuRowTitleFlex}>About RiderHood (v2.4.0)</Text>
+            <Text style={styles.menuRowTitleFlex}>{t('help.aboutRiderHood')}</Text>
             <ChevronRight color={COLORS.textMuted} size={18} />
           </TouchableOpacity>
         </View>
@@ -738,7 +755,7 @@ export default function CustomerProfileScreen() {
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
           <LogOut color={COLORS.danger} size={18} />
-          <Text style={styles.logoutBtnText}>Logout Customer Account</Text>
+          <Text style={styles.logoutBtnText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -754,39 +771,39 @@ export default function CustomerProfileScreen() {
             <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
               <View style={styles.specsGrid}>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>BRAND</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.brand').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.brand}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>MODEL</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.model').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.model}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>YEAR</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.year').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.year || '2024'}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>PLATE</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.plateNumber').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.plate_number}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>ENGINE CC</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.engineCapacity').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.engine_cc ? `${selectedBike.engine_cc} cc` : 'N/A'}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>FUEL / TRANS</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.fuelType').toUpperCase()} / {t('motorcycle.transmission').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.fuel_type || 'Petrol'} • {selectedBike?.transmission || 'Manual'}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>ENGINE OIL</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.engineOil').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.engine_oil_type || '10W-40'}</Text>
                 </View>
                 <View style={styles.specBox}>
-                  <Text style={styles.specBoxLabel}>TYRE SIZES</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                   <Text style={styles.specBoxVal}>{selectedBike?.front_tyre_size || '90/80-17'} / {selectedBike?.rear_tyre_size || '120/70-17'}</Text>
                 </View>
                 <View style={[styles.specBox, { width: '100%' }]}>
-                  <Text style={styles.specBoxLabel}>CURRENT ODOMETER</Text>
+                  <Text style={styles.specBoxLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                   <Text style={[styles.specBoxVal, { color: COLORS.primary, fontSize: 18 }]}>
                     {selectedBike?.current_mileage.toLocaleString()} km
                   </Text>
@@ -794,7 +811,7 @@ export default function CustomerProfileScreen() {
               </View>
             </ScrollView>
 
-            <CustomButton title="CLOSE" variant="secondary" onPress={() => setShowBikeViewModal(false)} />
+            <CustomButton title={t('common.close').toUpperCase()} variant="secondary" onPress={() => setShowBikeViewModal(false)} />
           </View>
         </View>
       </Modal>

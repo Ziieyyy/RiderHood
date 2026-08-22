@@ -1,6 +1,36 @@
 import { supabase } from '../lib/supabase';
 import type { Motorcycle, UpdateMileagePayload } from '../types/database';
 
+const VALID_MOTORCYCLE_COLUMNS = new Set([
+  'id',
+  'owner_id',
+  'nickname',
+  'brand',
+  'model',
+  'year',
+  'plate_number',
+  'engine_cc',
+  'fuel_type',
+  'transmission',
+  'current_mileage',
+  'engine_oil_type',
+  'front_tyre_size',
+  'rear_tyre_size',
+  'photo_url',
+  'created_at',
+  'updated_at',
+]);
+
+function sanitizeMotorcyclePayload(payload: Record<string, any>): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (VALID_MOTORCYCLE_COLUMNS.has(key) && value !== undefined) {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
 // ─── List all motorcycles for the current customer ───────────
 export async function getMotorcycles(ownerId: string): Promise<Motorcycle[]> {
   const { data, error } = await supabase
@@ -31,12 +61,14 @@ export async function createMotorcycle(payload: Partial<Motorcycle>): Promise<Mo
       `${payload.brand ?? ''} ${payload.model ?? ''}`.trim() ||
       'My Motorcycle';
 
+    const cleanData = sanitizeMotorcyclePayload({
+      ...payload,
+      nickname,
+    });
+
     const { data, error } = await supabase
       .from('motorcycles')
-      .insert({
-        ...payload,
-        nickname,
-      })
+      .insert(cleanData)
       .select()
       .single();
 
@@ -58,9 +90,14 @@ export async function createMotorcycle(payload: Partial<Motorcycle>): Promise<Mo
 
 // ─── Update a motorcycle ──────────────────────────────────────
 export async function updateMotorcycle(id: string, updates: Partial<Motorcycle>): Promise<Motorcycle> {
+  const cleanUpdates = sanitizeMotorcyclePayload({
+    ...updates,
+    updated_at: new Date().toISOString(),
+  });
+
   const { data, error } = await supabase
     .from('motorcycles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(cleanUpdates)
     .eq('id', id)
     .select()
     .single();

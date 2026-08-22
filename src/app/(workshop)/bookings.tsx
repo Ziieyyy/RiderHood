@@ -36,6 +36,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import type { Booking, BookingStatus } from '../../types/database';
+import { useTranslation } from '../../i18n';
 
 const STATUS_CONFIG: Record<BookingStatus, { label: string; color: string; bg: string }> = {
   pending:     { label: 'Pending',     color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' },
@@ -54,6 +55,7 @@ const NEXT_ACTIONS: Partial<Record<BookingStatus, { to: BookingStatus; label: st
 };
 
 export default function WorkshopBookingsScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string; status?: string; filter?: string }>();
   const { profile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -254,7 +256,7 @@ export default function WorkshopBookingsScreen() {
               activeOpacity={0.8}
             >
               <Text style={[styles.tabText, isActive && { color: cfg?.color ?? COLORS.primary, fontWeight: '900' }]}>
-                {tab === 'all' ? 'ALL' : STATUS_CONFIG[tab].label.toUpperCase()} ({count})
+                {tab === 'all' ? t('common.all').toUpperCase() : STATUS_CONFIG[tab].label.toUpperCase()} ({count})
               </Text>
             </TouchableOpacity>
           );
@@ -279,8 +281,8 @@ export default function WorkshopBookingsScreen() {
         {filteredBookings.length === 0 ? (
           <View style={styles.emptyState}>
             <Calendar color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>No bookings match your filters</Text>
-            <Text style={styles.emptyDesc}>Try adjusting search criteria or selecting a different status filter.</Text>
+            <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
+            <Text style={styles.emptyDesc}>{t('empty.noBookingsSub')}</Text>
           </View>
         ) : (
           filteredBookings.map((bk) => {
@@ -348,12 +350,12 @@ export default function WorkshopBookingsScreen() {
                         setShowDetailModal(true);
                       }}
                     >
-                      <Text style={styles.viewBtnText}>DETAILS</Text>
+                      <Text style={styles.viewBtnText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
                     </TouchableOpacity>
 
                     {bk.status === 'confirmed' && (
                       <TouchableOpacity style={styles.reschedBtn} onPress={() => handleOpenReschedule(bk)}>
-                        <Text style={styles.reschedBtnText}>RESCHEDULE</Text>
+                        <Text style={styles.reschedBtnText}>{t('booking.reschedule').toUpperCase()}</Text>
                       </TouchableOpacity>
                     )}
 
@@ -407,24 +409,24 @@ export default function WorkshopBookingsScreen() {
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScroll}>
                 {/* Customer Section */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>CUSTOMER</Text>
+                  <Text style={styles.detailSectionLabel}>{t('workshopAdmin.customerInfo').toUpperCase()}</Text>
                   <Text style={styles.detailValueBold}>{(selectedBooking.customer as any)?.full_name ?? 'N/A'}</Text>
                   <Text style={styles.detailValue}>{(selectedBooking.customer as any)?.phone ?? (selectedBooking.customer as any)?.email ?? 'N/A'}</Text>
                 </View>
 
                 {/* Motorcycle Section */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>MOTORCYCLE</Text>
+                  <Text style={styles.detailSectionLabel}>{t('motorcycle.details').toUpperCase()}</Text>
                   <Text style={styles.detailValueBold}>
                     {(selectedBooking.motorcycle as any)?.brand} {(selectedBooking.motorcycle as any)?.model}
                   </Text>
-                  <Text style={styles.detailValue}>Plate: {(selectedBooking.motorcycle as any)?.plate_number ?? 'N/A'}</Text>
-                  <Text style={styles.detailValue}>Current Mileage: {(selectedBooking.motorcycle as any)?.current_mileage ?? 0} km</Text>
+                  <Text style={styles.detailValue}>{t('motorcycle.plateNumber')}: {(selectedBooking.motorcycle as any)?.plate_number ?? 'N/A'}</Text>
+                  <Text style={styles.detailValue}>{t('motorcycle.currentOdometer')}: {(selectedBooking.motorcycle as any)?.current_mileage ?? 0} km</Text>
                 </View>
 
                 {/* Services Section */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>SERVICES & PACKAGES</Text>
+                  <Text style={styles.detailSectionLabel}>{t('workshopAdmin.manageServices').toUpperCase()}</Text>
                   {(selectedBooking.booking_services ?? []).map((s) => (
                     <View key={s.id} style={styles.detailSvcRow}>
                       <Text style={styles.detailSvcName}>{s.service_name_snapshot}</Text>
@@ -432,18 +434,18 @@ export default function WorkshopBookingsScreen() {
                     </View>
                   ))}
                   <View style={styles.detailTotalRow}>
-                    <Text style={styles.detailTotalLabel}>TOTAL AMOUNT</Text>
+                    <Text style={styles.detailTotalLabel}>{t('common.total').toUpperCase()}</Text>
                     <Text style={styles.detailTotalVal}>RM {Number(selectedBooking.total_amount).toFixed(2)}</Text>
                   </View>
                 </View>
 
                 {/* Appointment Section */}
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionLabel}>APPOINTMENT & NOTES</Text>
-                  <Text style={styles.detailValue}>DATE: {selectedBooking.booking_date}</Text>
-                  <Text style={styles.detailValue}>TIME: {selectedBooking.booking_time}</Text>
+                  <Text style={styles.detailSectionLabel}>{t('booking.appointmentTime').toUpperCase()}</Text>
+                  <Text style={styles.detailValue}>{t('common.date').toUpperCase()}: {selectedBooking.booking_date}</Text>
+                  <Text style={styles.detailValue}>{t('common.time').toUpperCase()}: {selectedBooking.booking_time}</Text>
                   {selectedBooking.notes ? (
-                    <Text style={styles.detailValue}>NOTES: {selectedBooking.notes}</Text>
+                    <Text style={styles.detailValue}>{t('common.info').toUpperCase()}: {selectedBooking.notes}</Text>
                   ) : null}
                 </View>
 
