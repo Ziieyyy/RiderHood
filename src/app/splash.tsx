@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../constants/theme';
 import { Cpu, ShieldCheck } from 'lucide-react-native';
@@ -32,10 +32,12 @@ export default function SplashScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
       <View style={styles.content}>
-        {/* Glow Badge */}
-        <View style={styles.logoBadge}>
-          <Cpu color={COLORS.primary} size={64} />
-        </View>
+        {/* Glow Logo */}
+        <Image
+          source={require('../../assets/images/riderhood-logo.png')}
+          style={styles.splashLogoImg}
+          resizeMode="contain"
+        />
 
         {/* Brand Name */}
         <Text style={styles.title}>RIDERHOOD</Text>
@@ -64,6 +66,11 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  splashLogoImg: {
+    width: 130,
+    height: 130,
+    marginBottom: 20,
   },
   logoBadge: {
     width: 120,

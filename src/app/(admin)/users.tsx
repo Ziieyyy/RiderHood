@@ -5,9 +5,14 @@ import { Search, MoreVertical, Shield, UserX, UserCheck } from 'lucide-react-nat
 import { getAllUsers, setUserStatus } from '../../services/adminService';
 import type { Profile } from '../../types/database';
 import { useTranslation } from '../../i18n';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 
 export default function AdminUsersScreen() {
   const { t } = useTranslation();
+  const { isPhone, contentPadding } = useResponsive();
+
   const [users, setUsers] = useState<Partial<Profile>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -63,50 +68,54 @@ export default function AdminUsersScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContent}>
-        {loading ? (
-          <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
-        ) : (
-          filteredUsers.map((user) => {
-            const displayName = user.full_name || user.email || 'User';
-            const isActive = user.status === 'active';
-            const isAdmin = user.role === 'super_admin' || user.role === 'workshop_admin';
+      <ScrollView contentContainerStyle={[styles.listContent, { paddingHorizontal: contentPadding }]}>
+        <ResponsiveContainer>
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredUsers.map((user) => {
+                const displayName = user.full_name || user.email || 'User';
+                const isActive = user.status === 'active';
+                const isAdmin = user.role === 'super_admin' || user.role === 'workshop_admin';
 
-            return (
-              <View key={user.id} style={styles.userCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{displayName}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                  <View style={styles.badges}>
-                    <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeSuspended]}>
-                      <Text style={[styles.badgeText, isActive ? styles.badgeTextActive : styles.badgeTextSuspended]}>
-                        {isActive ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
-                      </Text>
+                return (
+                  <View key={user.id} style={styles.userCard}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
                     </View>
-                    {isAdmin && (
-                      <View style={[styles.badge, styles.badgeAdmin]}>
-                        <Shield color={COLORS.primaryDark} size={10} style={{marginRight: 4}} />
-                        <Text style={[styles.badgeText, {color: COLORS.primaryDark}]}>
-                          {user.role === 'super_admin' ? t('superAdmin.superAdminRole').toUpperCase() : t('workshopAdmin.workshopRole').toUpperCase()}
-                        </Text>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
+                      <Text style={styles.userEmail} numberOfLines={1}>{user.email}</Text>
+                      <View style={styles.badges}>
+                        <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeSuspended]}>
+                          <Text style={[styles.badgeText, isActive ? styles.badgeTextActive : styles.badgeTextSuspended]}>
+                            {isActive ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
+                          </Text>
+                        </View>
+                        {isAdmin && (
+                          <View style={[styles.badge, styles.badgeAdmin]}>
+                            <Shield color={COLORS.primaryDark} size={10} style={{marginRight: 4}} />
+                            <Text style={[styles.badgeText, {color: COLORS.primaryDark}]}>
+                              {user.role === 'super_admin' ? t('superAdmin.superAdminRole').toUpperCase() : t('workshopAdmin.workshopRole').toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    )}
+                    </View>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleToggleStatus(user)}>
+                      {isActive ? (
+                        <UserX color={COLORS.danger} size={20} />
+                      ) : (
+                        <UserCheck color={COLORS.success} size={20} />
+                      )}
+                    </TouchableOpacity>
                   </View>
-                </View>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => handleToggleStatus(user)}>
-                  {isActive ? (
-                    <UserX color={COLORS.danger} size={20} />
-                  ) : (
-                    <UserCheck color={COLORS.success} size={20} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

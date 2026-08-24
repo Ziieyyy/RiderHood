@@ -21,6 +21,11 @@ import { getWorkshopServices, createService, getMyWorkshop } from '../../service
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { formatCategoryName } from '../../utils/categoryUtils';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
+
 
 const CATEGORIES = ['All', 'Engine', 'Brake', 'Oil & Fluid', 'Suspension', 'Electrical', 'General', 'Custom'];
 
@@ -36,8 +41,11 @@ const DURATION_OPTIONS = [
 ];
 
 export default function WorkshopServicesScreen() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { profile } = useAuth();
+  const { isPhone, contentPadding } = useResponsive();
+
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -266,17 +274,18 @@ export default function WorkshopServicesScreen() {
               onPress={() => setSelectedCategory(cat)}
             >
               <Text style={[styles.categoryChipText, isSel && styles.activeCategoryChipText]}>
-                {cat}
+                {formatCategoryName(cat, language)}
               </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
+
       {/* Services List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -289,74 +298,78 @@ export default function WorkshopServicesScreen() {
           />
         }
       >
-        {filteredServices.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Wrench color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>{t('empty.noServices')}</Text>
-            <Text style={styles.emptyDesc}>
-              {t('empty.noServicesSub')}
-            </Text>
-          </View>
-        ) : (
-          filteredServices.map((srv) => {
-            const isAct = srv.is_available ?? true;
-            return (
-              <View key={srv.id} style={[styles.serviceCard, !isAct && styles.disabledCard]}>
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <View style={styles.titleRow}>
-                      <Text style={styles.srvTitle}>{srv.name}</Text>
-                      <View style={[styles.activeStatusChip, { backgroundColor: isAct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(113, 113, 122, 0.15)' }]}>
-                        <Text style={[styles.activeStatusText, { color: isAct ? COLORS.success : COLORS.textMuted }]}>
-                          {isAct ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
-                        </Text>
+        <ResponsiveContainer>
+          {filteredServices.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Wrench color={COLORS.textMuted} size={48} />
+              <Text style={styles.emptyTitle}>{t('empty.noServices')}</Text>
+              <Text style={styles.emptyDesc}>
+                {t('empty.noServicesSub')}
+              </Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredServices.map((srv) => {
+                const isAct = srv.is_available ?? true;
+                return (
+                  <View key={srv.id} style={[styles.serviceCard, !isAct && styles.disabledCard]}>
+                    <View style={styles.cardTop}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <View style={styles.titleRow}>
+                          <Text style={styles.srvTitle} numberOfLines={1}>{srv.name}</Text>
+                          <View style={[styles.activeStatusChip, { backgroundColor: isAct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(113, 113, 122, 0.15)' }]}>
+                            <Text style={[styles.activeStatusText, { color: isAct ? COLORS.success : COLORS.textMuted }]}>
+                              {isAct ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.metaRow}>
+                          <View style={styles.metaChip}>
+                            <Clock color={COLORS.primary} size={12} />
+                            <Text style={styles.metaText}>{srv.estimated_duration_minutes || 30} mins</Text>
+                          </View>
+                          <View style={styles.metaChip}>
+                            <Wrench color={COLORS.textSecondary} size={12} />
+                            <Text style={styles.metaText}>{formatCategoryName(srv.category || 'General', language)}</Text>
+                          </View>
+                        </View>
                       </View>
+
+                      <Text style={styles.srvPrice}>RM {Number(srv.price || 0).toFixed(2)}</Text>
                     </View>
 
-                    <View style={styles.metaRow}>
-                      <View style={styles.metaChip}>
-                        <Clock color={COLORS.primary} size={12} />
-                        <Text style={styles.metaText}>{srv.estimated_duration_minutes || 30} mins</Text>
+                    <Text style={styles.srvDesc} numberOfLines={2}>{srv.description || t('services.title')}</Text>
+
+                    <View style={styles.cardActions}>
+                      <View style={styles.toggleActiveContainer}>
+                        <Text style={styles.toggleLabel}>{t('common.status')}:</Text>
+                        <Switch
+                          value={isAct}
+                          onValueChange={() => handleToggleActiveStatus(srv)}
+                          trackColor={{ false: COLORS.border, true: 'rgba(255, 107, 0, 0.5)' }}
+                          thumbColor={isAct ? COLORS.primary : COLORS.textMuted}
+                        />
                       </View>
-                      <View style={styles.metaChip}>
-                        <Wrench color={COLORS.textSecondary} size={12} />
-                        <Text style={styles.metaText}>{srv.category || 'General'}</Text>
+
+                      <View style={styles.rightActionBtns}>
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenEditModal(srv)}>
+                          <Edit2 color={COLORS.textSecondary} size={14} />
+                          <Text style={styles.actionText}>{t('common.edit')}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(srv)}>
+                          <Trash2 color={COLORS.danger} size={14} />
+                          <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </View>
-
-                  <Text style={styles.srvPrice}>RM {Number(srv.price || 0).toFixed(2)}</Text>
-                </View>
-
-                <Text style={styles.srvDesc}>{srv.description || t('services.title')}</Text>
-
-                <View style={styles.cardActions}>
-                  <View style={styles.toggleActiveContainer}>
-                    <Text style={styles.toggleLabel}>{t('common.status')}:</Text>
-                    <Switch
-                      value={isAct}
-                      onValueChange={() => handleToggleActiveStatus(srv)}
-                      trackColor={{ false: COLORS.border, true: 'rgba(255, 107, 0, 0.5)' }}
-                      thumbColor={isAct ? COLORS.primary : COLORS.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.rightActionBtns}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenEditModal(srv)}>
-                      <Edit2 color={COLORS.textSecondary} size={14} />
-                      <Text style={styles.actionText}>{t('common.edit')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(srv)}>
-                      <Trash2 color={COLORS.danger} size={14} />
-                      <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Add / Edit Service Modal */}

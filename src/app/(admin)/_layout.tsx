@@ -7,11 +7,13 @@ import { useRouter } from 'expo-router';
 
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useResponsive } from '../../hooks/useResponsive';
 
 export default function AdminDrawerLayout() {
   const router = useRouter();
   const { logout } = useAuth();
   const { t } = useTranslation();
+  const { isPhone } = useResponsive();
 
   return (
     <Drawer
@@ -22,8 +24,10 @@ export default function AdminDrawerLayout() {
         drawerActiveBackgroundColor: COLORS.primaryDark,
         drawerActiveTintColor: COLORS.primary,
         drawerInactiveTintColor: COLORS.textSecondary,
-        drawerStyle: { backgroundColor: COLORS.surface, width: 280 },
+        drawerType: isPhone ? 'front' : 'permanent',
+        drawerStyle: { backgroundColor: COLORS.surface, width: 270 },
         sceneStyle: { backgroundColor: COLORS.background },
+
         headerRight: () => (
           <TouchableOpacity 
             style={{ marginRight: 16, width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.dangerBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.danger }}

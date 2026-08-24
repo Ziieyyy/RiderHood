@@ -14,8 +14,10 @@ import { COLORS } from '../../constants/theme';
 import { Mail, ArrowLeft, Send } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { PasswordSecurityModal, PasswordModalMode } from '../../components/PasswordSecurityModal';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { resetPassword } from '../../services/authService';
 import { useTranslation } from '../../i18n';
+
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -52,49 +54,51 @@ export default function ForgotPasswordScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft color={COLORS.textPrimary} size={20} />
-          <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
-        </TouchableOpacity>
+        <ResponsiveContainer maxWidth={480}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft color={COLORS.textPrimary} size={20} />
+            <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
+          </TouchableOpacity>
 
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('auth.passwordRecovery')}</Text>
-          <Text style={styles.subtitle}>{t('auth.recoveryInstructions')}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>{t('auth.registeredEmail').toUpperCase()}</Text>
-            <View style={[styles.inputBox, errorText ? styles.inputBoxError : null]}>
-              <Mail color={COLORS.textSecondary} size={18} />
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={(val) => {
-                  setEmail(val);
-                  if (errorText) setErrorText('');
-                }}
-                placeholder="your.email@riderhood.app"
-                placeholderTextColor={COLORS.textMuted}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!loading}
-              />
-            </View>
-            {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('auth.passwordRecovery')}</Text>
+            <Text style={styles.subtitle}>{t('auth.recoveryInstructions')}</Text>
           </View>
 
-          <CustomButton
-            title={loading ? t('auth.sendingRequest') : t('auth.sendRecovery')}
-            onPress={handleReset}
-            icon={<Send color="#000" size={18} />}
-            disabled={loading}
-            style={{ marginTop: 10 }}
-          />
-        </View>
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>{t('auth.registeredEmail').toUpperCase()}</Text>
+              <View style={[styles.inputBox, errorText ? styles.inputBoxError : null]}>
+                <Mail color={COLORS.textSecondary} size={18} />
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={(val) => {
+                    setEmail(val);
+                    if (errorText) setErrorText('');
+                  }}
+                  placeholder="your.email@riderhood.app"
+                  placeholderTextColor={COLORS.textMuted}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!loading}
+                />
+              </View>
+              {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+            </View>
+
+            <CustomButton
+              title={loading ? t('auth.sendingRequest') : t('auth.sendRecovery')}
+              onPress={handleReset}
+              icon={<Send color="#000" size={18} />}
+              disabled={loading}
+              style={{ marginTop: 10 }}
+            />
+          </View>
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Password Security Modal */}

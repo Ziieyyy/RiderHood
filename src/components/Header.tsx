@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../constants/theme';
-import { ChevronLeft, Cpu, Bell } from 'lucide-react-native';
+import { ChevronLeft, Bell } from 'lucide-react-native';
 import { useTranslation } from '../i18n';
 
 interface HeaderProps {
@@ -34,9 +34,11 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronLeft color={COLORS.textPrimary} size={24} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.brandIcon}>
-            <Cpu color={COLORS.primary} size={22} />
-          </View>
+          <Image
+            source={require('../../assets/images/riderhood-logo.png')}
+            style={styles.headerLogoImg}
+            resizeMode="contain"
+          />
         )}
         
         <View style={styles.textContainer}>
@@ -96,6 +98,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  headerLogoImg: {
+    width: 38,
+    height: 38,
   },
   brandIcon: {
     width: 42,

@@ -4,12 +4,18 @@ import { useRouter } from 'expo-router';
 import { COLORS } from '../../../constants/theme';
 import { CheckCircle2, XCircle, MapPin } from 'lucide-react-native';
 import { getAllWorkshops, setWorkshopVerification } from '../../../services/workshopService';
+
 import type { Workshop } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
+import { useResponsive } from '../../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../../components/responsive/ResponsiveGrid';
 
 export default function AdminWorkshopsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { isPhone, contentPadding } = useResponsive();
+
   const [workshops, setWorkshops] = useState<Partial<Workshop>[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,64 +52,70 @@ export default function AdminWorkshopsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.listContent}>
-        <Text style={styles.sectionTitle}>{t('superAdmin.workshopApproval').toUpperCase()} ({pendingShops.length})</Text>
-        
-        {loading ? (
-          <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
-        ) : pendingShops.length === 0 ? (
-          <Text style={styles.emptyText}>{t('empty.noNotificationsSub')}</Text>
-        ) : (
-          pendingShops.map((shop) => (
-            <TouchableOpacity 
-              key={shop.id} 
-              style={styles.card}
-              activeOpacity={0.7}
-              onPress={() => router.push(`/(admin)/workshops/${shop.id}`)}
-            >
-              <View style={styles.shopInfo}>
-                <Text style={styles.shopName}>{shop.name}</Text>
-                <Text style={styles.shopOwner}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
-                <View style={styles.locationRow}>
-                  <MapPin color={COLORS.textSecondary} size={12} />
-                  <Text style={styles.locationText}>{shop.district || shop.state || 'Malaysia'}</Text>
-                </View>
-              </View>
-              <View style={styles.actionRow}>
+      <ScrollView contentContainerStyle={[styles.listContent, { paddingHorizontal: contentPadding }]}>
+        <ResponsiveContainer>
+          <Text style={styles.sectionTitle}>{t('superAdmin.workshopApproval').toUpperCase()} ({pendingShops.length})</Text>
+          
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 20 }} />
+          ) : pendingShops.length === 0 ? (
+            <Text style={styles.emptyText}>{t('empty.noNotificationsSub')}</Text>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={12}>
+              {pendingShops.map((shop) => (
                 <TouchableOpacity 
-                  style={[styles.btn, styles.btnReject]} 
-                  onPress={() => shop.id && handleVerification(shop.id, 'rejected')}
+                  key={shop.id} 
+                  style={styles.card}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/(admin)/workshops/${shop.id}`)}
                 >
-                  <XCircle color={COLORS.danger} size={20} />
+                  <View style={styles.shopInfo}>
+                    <Text style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
+                    <Text style={styles.shopOwner} numberOfLines={1}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
+                    <View style={styles.locationRow}>
+                      <MapPin color={COLORS.textSecondary} size={12} />
+                      <Text style={styles.locationText}>{shop.district || shop.state || 'Malaysia'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity 
+                      style={[styles.btn, styles.btnReject]} 
+                      onPress={() => shop.id && handleVerification(shop.id, 'rejected')}
+                    >
+                      <XCircle color={COLORS.danger} size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.btn, styles.btnApprove]}
+                      onPress={() => shop.id && handleVerification(shop.id, 'approved')}
+                    >
+                      <CheckCircle2 color={COLORS.success} size={20} />
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.btn, styles.btnApprove]}
-                  onPress={() => shop.id && handleVerification(shop.id, 'approved')}
-                >
-                  <CheckCircle2 color={COLORS.success} size={20} />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+              ))}
+            </ResponsiveGrid>
+          )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('superAdmin.approved').toUpperCase()} ({approvedShops.length})</Text>
-        {approvedShops.map((shop) => (
-          <TouchableOpacity 
-            key={shop.id} 
-            style={styles.card}
-            activeOpacity={0.7}
-            onPress={() => router.push(`/(admin)/workshops/${shop.id}`)}
-          >
-            <View style={styles.shopInfo}>
-              <Text style={styles.shopName}>{shop.name}</Text>
-              <Text style={styles.shopOwner}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
-            </View>
-            <View style={styles.badgeApproved}>
-              <Text style={styles.badgeTextApproved}>{t('common.active').toUpperCase()}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('superAdmin.approved').toUpperCase()} ({approvedShops.length})</Text>
+          <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={12}>
+            {approvedShops.map((shop) => (
+              <TouchableOpacity 
+                key={shop.id} 
+                style={styles.card}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/(admin)/workshops/${shop.id}`)}
+              >
+                <View style={styles.shopInfo}>
+                  <Text style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
+                  <Text style={styles.shopOwner} numberOfLines={1}>{t('workshopAdmin.workshopAddress')}: {shop.address || '-'}</Text>
+                </View>
+                <View style={styles.badgeApproved}>
+                  <Text style={styles.badgeTextApproved}>{t('common.active').toUpperCase()}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ResponsiveGrid>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

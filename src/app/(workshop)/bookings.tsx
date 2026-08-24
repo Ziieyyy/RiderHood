@@ -32,9 +32,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Play,
-  CalendarDays,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import type { Booking, BookingStatus } from '../../types/database';
 import { useTranslation } from '../../i18n';
 
@@ -58,6 +61,8 @@ export default function WorkshopBookingsScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string; status?: string; filter?: string }>();
   const { profile } = useAuth();
+  const { isPhone, contentPadding } = useResponsive();
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [workshopId, setWorkshopId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -265,7 +270,7 @@ export default function WorkshopBookingsScreen() {
 
       {/* Booking List */}
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -278,118 +283,121 @@ export default function WorkshopBookingsScreen() {
           />
         }
       >
-        {filteredBookings.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Calendar color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
-            <Text style={styles.emptyDesc}>{t('empty.noBookingsSub')}</Text>
-          </View>
-        ) : (
-          filteredBookings.map((bk) => {
-            const cfg = STATUS_CONFIG[bk.status];
-            const actions = NEXT_ACTIONS[bk.status] ?? [];
-            const customer = bk.customer as any;
-            const motorcycle = bk.motorcycle as any;
-            const refCode = `#RH-${bk.id.slice(0, 8).toUpperCase()}`;
+        <ResponsiveContainer>
+          {filteredBookings.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Calendar color={COLORS.textMuted} size={48} />
+              <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
+              <Text style={styles.emptyDesc}>{t('empty.noBookingsSub')}</Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredBookings.map((bk) => {
+                const cfg = STATUS_CONFIG[bk.status];
+                const actions = NEXT_ACTIONS[bk.status] ?? [];
+                const customer = bk.customer as any;
+                const motorcycle = bk.motorcycle as any;
+                const refCode = `#RH-${bk.id.slice(0, 8).toUpperCase()}`;
 
-            return (
-              <View key={bk.id} style={styles.bookingCard}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.refCode}>{refCode}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color }]}>
-                    <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label.toUpperCase()}</Text>
-                  </View>
-                </View>
+                return (
+                  <View key={bk.id} style={styles.bookingCard}>
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.refCode}>{refCode}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color }]}>
+                        <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label.toUpperCase()}</Text>
+                      </View>
+                    </View>
 
-                <View style={styles.customerRow}>
-                  <View style={styles.avatar}>
-                    <User color={COLORS.textMuted} size={18} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.customerName}>{customer?.full_name ?? 'Customer'}</Text>
-                    <Text style={styles.customerPhone}>{customer?.phone ?? customer?.email ?? 'No contact info'}</Text>
-                  </View>
-                </View>
+                    <View style={styles.customerRow}>
+                      <View style={styles.avatar}>
+                        <User color={COLORS.textMuted} size={18} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.customerName} numberOfLines={1}>{customer?.full_name ?? 'Customer'}</Text>
+                        <Text style={styles.customerPhone} numberOfLines={1}>{customer?.phone ?? customer?.email ?? 'No contact info'}</Text>
+                      </View>
+                    </View>
 
-                {motorcycle && (
-                  <View style={styles.bikeBox}>
-                    <Text style={styles.bikeTag}>
-                      🏍️ {motorcycle.brand} {motorcycle.model} • {motorcycle.plate_number}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.dateRow}>
-                  <View style={styles.metaRow}>
-                    <Calendar color={COLORS.textMuted} size={13} />
-                    <Text style={styles.metaText}>{bk.booking_date}</Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Clock color={COLORS.textMuted} size={13} />
-                    <Text style={styles.metaText}>{bk.booking_time}</Text>
-                  </View>
-                </View>
-
-                {(bk.booking_services ?? []).length > 0 && (
-                  <View style={styles.servicesList}>
-                    {(bk.booking_services ?? []).map((s) => (
-                      <Text key={s.id} style={styles.serviceItem}>
-                        • {s.service_name_snapshot} — RM {s.price_snapshot.toFixed(2)}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-
-                <View style={styles.cardFooter}>
-                  <Text style={styles.totalText}>RM {Number(bk.total_amount).toFixed(2)}</Text>
-                  <View style={styles.actionsRow}>
-                    <TouchableOpacity
-                      style={styles.viewBtn}
-                      onPress={() => {
-                        setSelectedBooking(bk);
-                        setShowDetailModal(true);
-                      }}
-                    >
-                      <Text style={styles.viewBtnText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
-                    </TouchableOpacity>
-
-                    {bk.status === 'confirmed' && (
-                      <TouchableOpacity style={styles.reschedBtn} onPress={() => handleOpenReschedule(bk)}>
-                        <Text style={styles.reschedBtnText}>{t('booking.reschedule').toUpperCase()}</Text>
-                      </TouchableOpacity>
+                    {motorcycle && (
+                      <View style={styles.bikeBox}>
+                        <Text style={styles.bikeTag} numberOfLines={1}>
+                          🏍️ {motorcycle.brand} {motorcycle.model} • {motorcycle.plate_number}
+                        </Text>
+                      </View>
                     )}
 
-                    {actions.map((a) => (
-                      <TouchableOpacity
-                        key={a.to}
-                        style={[
-                          styles.actionBtn,
-                          a.primary ? styles.primaryBtn : (a.to === 'rejected' || a.to === 'cancelled' ? styles.dangerBtn : styles.secondaryBtn),
-                        ]}
-                        onPress={() => handleAction(bk.id, a.to)}
-                        disabled={actionLoading !== null}
-                        activeOpacity={0.8}
-                      >
-                        {actionLoading === bk.id + a.to ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <Text
-                            style={[
-                              styles.actionBtnText,
-                              a.primary ? { color: '#FFFFFF' } : (a.to === 'rejected' || a.to === 'cancelled' ? { color: COLORS.danger } : { color: COLORS.textPrimary }),
-                            ]}
-                          >
-                            {a.label.toUpperCase()}
+                    <View style={styles.dateRow}>
+                      <View style={styles.metaRow}>
+                        <Calendar color={COLORS.textMuted} size={13} />
+                        <Text style={styles.metaText}>{bk.booking_date}</Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Clock color={COLORS.textMuted} size={13} />
+                        <Text style={styles.metaText}>{bk.booking_time}</Text>
+                      </View>
+                    </View>
+
+                    {(bk.booking_services ?? []).length > 0 && (
+                      <View style={styles.servicesList}>
+                        {(bk.booking_services ?? []).map((s) => (
+                          <Text key={s.id} style={styles.serviceItem} numberOfLines={1}>
+                            • {s.service_name_snapshot} — RM {s.price_snapshot.toFixed(2)}
                           </Text>
+                        ))}
+                      </View>
+                    )}
+
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.totalText}>RM {Number(bk.total_amount).toFixed(2)}</Text>
+                      <View style={styles.actionsRow}>
+                        <TouchableOpacity
+                          style={styles.viewBtn}
+                          onPress={() => {
+                            setSelectedBooking(bk);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <Text style={styles.viewBtnText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
+                        </TouchableOpacity>
+
+                        {bk.status === 'confirmed' && (
+                          <TouchableOpacity style={styles.reschedBtn} onPress={() => handleOpenReschedule(bk)}>
+                            <Text style={styles.reschedBtnText}>{t('booking.reschedule').toUpperCase()}</Text>
+                          </TouchableOpacity>
                         )}
-                      </TouchableOpacity>
-                    ))}
+
+                        {actions.map((a) => (
+                          <TouchableOpacity
+                            key={a.to}
+                            style={[
+                              styles.actionBtn,
+                              a.primary ? styles.primaryBtn : (a.to === 'rejected' || a.to === 'cancelled' ? styles.dangerBtn : styles.secondaryBtn),
+                            ]}
+                            onPress={() => handleAction(bk.id, a.to)}
+                            disabled={actionLoading !== null}
+                          >
+                            {actionLoading === bk.id + a.to ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Text
+                                style={[
+                                  styles.actionBtnText,
+                                  a.primary ? { color: '#FFFFFF' } : (a.to === 'rejected' || a.to === 'cancelled' ? { color: COLORS.danger } : { color: COLORS.textPrimary }),
+                                ]}
+                              >
+                                {a.label.toUpperCase()}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Booking Details Modal */}

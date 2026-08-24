@@ -14,18 +14,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
+import { useResponsive } from '../../hooks/useResponsive';
 import {
   Search,
   MapPin,
   Star,
   Wrench,
   ChevronRight,
-  Calendar,
-  CheckCircle2,
   Phone,
   Clock,
-  Package,
-  Layers,
   X,
 } from 'lucide-react-native';
 import { getWorkshops, canBookWorkshop } from '../../services/workshopService';
@@ -36,6 +35,8 @@ import type { Workshop } from '../../types/database';
 export default function CustomerWorkshopsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { contentPadding } = useResponsive();
+
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'open_now' | 'bookable' | 'highest_rated'>('all');
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
@@ -127,203 +128,198 @@ export default function CustomerWorkshopsScreen() {
     <SafeAreaView style={styles.container}>
       <Header title={t('workshop.directoryTitle')} subtitle={t('workshop.directorySub')} />
 
-      {/* Search & Filter Container */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchWrapper}>
-          <Search color={COLORS.textMuted} size={18} style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder={t('workshop.searchPlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
-          />
-          {search ? (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <X color={COLORS.textMuted} size={16} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <ResponsiveContainer>
+          {/* Search & Filter Container */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchWrapper}>
+              <Search color={COLORS.textMuted} size={18} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder={t('workshop.searchPlaceholder')}
+                placeholderTextColor={COLORS.textMuted}
+              />
+              {search ? (
+                <TouchableOpacity onPress={() => setSearch('')}>
+                  <X color={COLORS.textMuted} size={16} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
-        {/* 4 Standard Filter Chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, filterMode === 'all' && styles.activeFilterChip]}
-            onPress={() => setFilterMode('all')}
-          >
-            <Text style={[styles.filterChipText, filterMode === 'all' && styles.activeFilterChipText]}>
-              {t('common.all')} ({workshops.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, filterMode === 'open_now' && styles.activeFilterChip]}
-            onPress={() => setFilterMode('open_now')}
-          >
-            <Text style={[styles.filterChipText, filterMode === 'open_now' && styles.activeFilterChipText]}>
-              🟢 {t('workshop.openNow')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, filterMode === 'bookable' && styles.activeFilterChip]}
-            onPress={() => setFilterMode('bookable')}
-          >
-            <Text style={[styles.filterChipText, filterMode === 'bookable' && styles.activeFilterChipText]}>
-              ⚡ {t('workshop.onlineBookingAvailable')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, filterMode === 'highest_rated' && styles.activeFilterChip]}
-            onPress={() => setFilterMode('highest_rated')}
-          >
-            <Text style={[styles.filterChipText, filterMode === 'highest_rated' && styles.activeFilterChipText]}>
-              ⭐ {t('workshop.highestRated')}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>
-          {filterMode === 'bookable'
-            ? t('workshop.onlineBookingAvailable').toUpperCase()
-            : filterMode === 'open_now'
-            ? t('workshop.openNow').toUpperCase()
-            : filterMode === 'highest_rated'
-            ? t('workshop.highestRated').toUpperCase()
-            : t('workshop.directoryTitle').toUpperCase()} ({workshops.length})
-        </Text>
-
-        {loading ? (
-          <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 24 }} />
-        ) : workshops.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Wrench color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyTitle}>{t('workshop.noWorkshopsFound')}</Text>
-            <Text style={styles.emptyDesc}>
-              {t('workshop.noWorkshopsFoundDesc')}
-            </Text>
-          </View>
-        ) : (
-          workshops.map((w) => {
-            const isBookable = canBookWorkshop(w);
-            const openStatus = getWorkshopOpenStatus(w);
-
-            return (
-              <View
-                key={w.id}
-                style={[
-                  styles.workshopCard,
-                  isBookable && styles.bookableCardHighlight,
-                ]}
+            {/* Filter Chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChipRow}
+            >
+              <TouchableOpacity
+                style={[styles.filterChip, filterMode === 'all' && styles.activeFilterChip]}
+                onPress={() => setFilterMode('all')}
               >
-                {/* Header Row: Title & Partner Badge */}
-                <View style={styles.cardHeaderRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.workshopName}>{w.name}</Text>
-                    <Text style={styles.addressText}>
-                      {w.address}
-                      {w.district ? `, ${w.district}` : ''}
-                    </Text>
-                  </View>
+                <Text style={[styles.filterChipText, filterMode === 'all' && styles.activeFilterChipText]}>
+                  {t('common.all')} ({workshops.length})
+                </Text>
+              </TouchableOpacity>
 
-                  {/* Collaboration Status Badge */}
-                  <View
-                    style={[
-                      styles.badge,
-                      isBookable ? styles.partnerBadge : styles.directoryBadge,
-                    ]}
-                  >
-                    <Text style={isBookable ? styles.partnerBadgeText : styles.directoryBadgeText}>
-                      {isBookable ? t('workshop.onlineBookingAvailable').toUpperCase() : t('workshop.directoryListing').toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
+              <TouchableOpacity
+                style={[styles.filterChip, filterMode === 'open_now' && styles.activeFilterChip]}
+                onPress={() => setFilterMode('open_now')}
+              >
+                <Text style={[styles.filterChipText, filterMode === 'open_now' && styles.activeFilterChipText]}>
+                  🟢 {t('workshop.openNow')}
+                </Text>
+              </TouchableOpacity>
 
-                {/* Rating, Open Schedule & Phone Meta Row */}
-                <View style={styles.metaRow}>
-                  <View style={styles.ratingBadge}>
-                    <Star color="#f59e0b" size={13} fill="#f59e0b" />
-                    <Text style={styles.ratingText}>{(w.rating ?? 4.4).toFixed(1)}</Text>
-                  </View>
+              <TouchableOpacity
+                style={[styles.filterChip, filterMode === 'bookable' && styles.activeFilterChip]}
+                onPress={() => setFilterMode('bookable')}
+              >
+                <Text style={[styles.filterChipText, filterMode === 'bookable' && styles.activeFilterChipText]}>
+                  ⚡ {t('workshop.onlineBookingAvailable')}
+                </Text>
+              </TouchableOpacity>
 
-                  <Text style={styles.metaDot}>•</Text>
+              <TouchableOpacity
+                style={[styles.filterChip, filterMode === 'highest_rated' && styles.activeFilterChip]}
+                onPress={() => setFilterMode('highest_rated')}
+              >
+                <Text style={[styles.filterChipText, filterMode === 'highest_rated' && styles.activeFilterChipText]}>
+                  ⭐ {t('workshop.highestRated')}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
 
-                  <View
-                    style={[
-                      styles.statusTag,
-                      {
-                        backgroundColor: openStatus.isOpen
-                          ? 'rgba(16,185,129,0.12)'
-                          : 'rgba(239,68,68,0.12)',
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusTagText,
-                        { color: openStatus.isOpen ? COLORS.success : COLORS.danger },
-                      ]}
-                    >
-                      {openStatus.statusText}
-                    </Text>
-                  </View>
+          {/* Workshop Cards Grid */}
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+          ) : workshops.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Wrench color={COLORS.textMuted} size={48} />
+              <Text style={styles.emptyTitle}>{t('workshop.noWorkshopsFound')}</Text>
+              <Text style={styles.emptySub}>{t('workshop.noWorkshopsFoundDesc')}</Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {workshops.map((w) => {
+                const bookable = canBookWorkshop(w);
+                const openStatus = getWorkshopOpenStatus(w);
 
-                  {w.phone && (
-                    <>
-                      <Text style={styles.metaDot}>•</Text>
-                      <View style={styles.phoneBadge}>
-                        <Phone color={COLORS.textSecondary} size={11} />
-                        <Text style={styles.phoneText}>{w.phone}</Text>
+                return (
+                  <View key={w.id} style={styles.workshopCard}>
+                    {/* Header Row */}
+                    <View style={styles.cardTopRow}>
+                      <View style={styles.iconBox}>
+                        <Wrench color={COLORS.primary} size={20} />
                       </View>
-                    </>
-                  )}
-                </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.wsName} numberOfLines={1}>
+                          {w.name}
+                        </Text>
+                        <View style={styles.ratingRow}>
+                          <Star color="#F59E0B" fill="#F59E0B" size={13} />
+                          <Text style={styles.ratingText}>
+                            {w.rating ? Number(w.rating).toFixed(1) : '4.8'}
+                          </Text>
+                          <Text style={styles.reviewsCount}>
+                            ({w.review_count || 24} {t('workshop.reviewsCount')})
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
 
-                {/* Catalogue Capability Indicators */}
-                <View style={styles.catalogueBadgeRow}>
-                  <View style={styles.catIndicator}>
-                    <Wrench color={COLORS.primary} size={12} />
-                    <Text style={styles.catIndicatorText}>{t('services.title')}</Text>
+                    {/* Address */}
+                    <View style={styles.addressRow}>
+                      <MapPin color={COLORS.textMuted} size={14} style={{ marginTop: 2 }} />
+                      <Text style={styles.addressText} numberOfLines={2}>
+                        {w.address || 'Kulim, Kedah'}
+                      </Text>
+                    </View>
+
+                    {/* Status & Timing */}
+                    <View style={styles.statusRow}>
+                      <View
+                        style={[
+                          styles.openBadge,
+                          {
+                            backgroundColor: openStatus.isOpen
+                              ? 'rgba(16, 185, 129, 0.12)'
+                              : 'rgba(239, 68, 68, 0.12)',
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.dot,
+                            {
+                              backgroundColor: openStatus.isOpen
+                                ? COLORS.success
+                                : COLORS.danger,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.openBadgeText,
+                            {
+                              color: openStatus.isOpen ? COLORS.success : COLORS.danger,
+                            },
+                          ]}
+                        >
+                          {openStatus.statusText}
+                        </Text>
+                      </View>
+
+                      {bookable && (
+                        <View style={styles.partnerBadge}>
+                          <Text style={styles.partnerBadgeText}>
+                            ⚡ {t('workshop.verified')}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Actions */}
+                    <View style={styles.actionsRow}>
+                      <TouchableOpacity
+                        style={styles.detailsBtn}
+                        onPress={() => handleOpenDetails(w)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.detailsBtnText}>{t('common.details')}</Text>
+                        <ChevronRight color={COLORS.textPrimary} size={14} />
+                      </TouchableOpacity>
+
+                      {bookable ? (
+                        <TouchableOpacity
+                          style={styles.bookBtn}
+                          onPress={() => handleBookNow(w)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.bookBtnText}>{t('common.bookNow')}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.callBtn}
+                          onPress={() => handleCallWorkshop(w)}
+                          activeOpacity={0.8}
+                        >
+                          <Phone color={COLORS.primary} size={14} />
+                          <Text style={styles.callBtnText}>{t('common.call')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-
-                {/* Action Buttons: Strict Wan Legacy vs Directory Control */}
-                <View style={styles.cardActionRow}>
-                  <TouchableOpacity
-                    style={styles.viewDetailsBtn}
-                    onPress={() => handleOpenDetails(w)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.viewDetailsText}>{t('workshop.viewWorkshop')}</Text>
-                  </TouchableOpacity>
-
-                  {isBookable ? (
-                    <TouchableOpacity
-                      style={styles.bookServiceBtn}
-                      onPress={() => handleBookNow(w)}
-                      activeOpacity={0.85}
-                    >
-                      <Calendar color="#FFFFFF" size={14} />
-                      <Text style={styles.bookServiceText}>{t('common.bookNow')}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.callWorkshopBtn}
-                      onPress={() => handleCallWorkshop(w)}
-                      activeOpacity={0.85}
-                    >
-                      <Phone color={COLORS.textPrimary} size={13} />
-                      <Text style={styles.callWorkshopText}>{t('workshop.callWorkshop')}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
     </SafeAreaView>
   );
@@ -334,9 +330,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  scrollContent: {
+    paddingVertical: 16,
+    paddingBottom: 40,
+  },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    marginBottom: 16,
     gap: 10,
   },
   searchWrapper: {
@@ -347,7 +346,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: 14,
-    height: 44,
+    height: 46,
   },
   searchInput: {
     flex: 1,
@@ -357,18 +356,17 @@ const styles = StyleSheet.create({
   filterChipRow: {
     flexDirection: 'row',
     gap: 8,
-    paddingVertical: 2,
   },
   filterChip: {
-    backgroundColor: COLORS.surfaceContainer,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
+    backgroundColor: COLORS.surfaceContainer,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   activeFilterChip: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 107, 0, 0.15)',
     borderColor: COLORS.primary,
   },
   filterChipText: {
@@ -380,28 +378,22 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '800',
   },
-  scrollContent: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  emptyBox: {
+  emptyCard: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 20,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
-    paddingVertical: 48,
-    gap: 10,
+    gap: 8,
+    marginTop: 20,
   },
   emptyTitle: {
     color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '800',
   },
-  emptyDesc: {
+  emptySub: {
     color: COLORS.textMuted,
     fontSize: 12,
     textAlign: 'center',
@@ -413,164 +405,141 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: 12,
+    width: '100%',
   },
-  bookableCardHighlight: {
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-    backgroundColor: 'rgba(239, 68, 68, 0.03)',
-  },
-  cardHeaderRow: {
+  cardTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
+    gap: 12,
+    alignItems: 'center',
   },
-  workshopName: {
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  wsName: {
     color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  ratingText: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reviewsCount: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'flex-start',
   },
   addressText: {
     color: COLORS.textSecondary,
     fontSize: 12,
-    marginTop: 3,
     lineHeight: 16,
+    flex: 1,
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  partnerBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: COLORS.primary,
-  },
-  partnerBadgeText: {
-    color: COLORS.primary,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  directoryBadge: {
-    backgroundColor: 'rgba(113, 113, 122, 0.12)',
-    borderColor: COLORS.border,
-  },
-  directoryBadgeText: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  metaRow: {
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flexWrap: 'wrap',
   },
-  ratingBadge: {
+  openBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 7,
+    gap: 6,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  ratingText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  openBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
   },
-  metaDot: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-  },
-  statusTag: {
-    paddingHorizontal: 7,
+  partnerBadge: {
+    backgroundColor: 'rgba(255, 107, 0, 0.15)',
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 0, 0.35)',
   },
-  statusTagText: {
-    fontSize: 11,
+  partnerBadgeText: {
+    color: COLORS.primary,
+    fontSize: 10,
     fontWeight: '800',
   },
-  phoneBadge: {
+  actionsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  phoneText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  catalogueBadgeRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 4,
-    flexWrap: 'wrap',
-  },
-  catIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  catIndicatorText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  cardActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 6,
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    paddingTop: 12,
   },
-  viewDetailsBtn: {
+  detailsBtn: {
     flex: 1,
-    height: 40,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: COLORS.surface,
+    paddingVertical: 9,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  viewDetailsText: {
+  detailsBtnText: {
     color: COLORS.textPrimary,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
-  bookServiceBtn: {
+  bookBtn: {
     flex: 1,
-    height: 40,
     backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
-  bookServiceText: {
-    color: '#FFFFFF',
+  bookBtnText: {
+    color: '#000',
     fontSize: 12,
     fontWeight: '800',
   },
-  callWorkshopBtn: {
+  callBtn: {
     flex: 1,
-    height: 40,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 10,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(255, 107, 0, 0.12)',
+    paddingVertical: 9,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 107, 0, 0.3)',
   },
-  callWorkshopText: {
-    color: COLORS.textPrimary,
+  callBtnText: {
+    color: COLORS.primary,
     fontSize: 12,
     fontWeight: '800',
   },

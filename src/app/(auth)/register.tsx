@@ -18,9 +18,11 @@ import { User, Mail, Phone, Bike, ArrowLeft, ArrowRight } from 'lucide-react-nat
 import { CustomButton } from '../../components/CustomButton';
 import { PasswordInput } from '../../components/PasswordInput';
 import { PasswordSecurityModal, PasswordModalMode } from '../../components/PasswordSecurityModal';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { signUp } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -140,110 +142,112 @@ export default function RegisterScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Back button */}
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft color={COLORS.textPrimary} size={20} />
-            <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
-          </TouchableOpacity>
-
-          {/* Header */}
-          <View style={styles.brandHeader}>
-            <Text style={styles.brandTitle}>{t('auth.createRiderAccount')}</Text>
-            <Text style={styles.brandSubtitle}>{t('auth.joinRiderHood')}</Text>
-          </View>
-
-          {/* Form Card */}
-          <View style={styles.card}>
-            {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{t('auth.fullName').toUpperCase()}</Text>
-              <View style={styles.inputBox}>
-                <User color={COLORS.textSecondary} size={18} />
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder={t('auth.fullNamePlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
-              <View style={styles.inputBox}>
-                <Mail color={COLORS.textSecondary} size={18} />
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder={t('auth.emailPlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            {/* Phone */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{`${t('auth.phone').toUpperCase()} (${t('common.optional').toUpperCase()})`}</Text>
-              <View style={styles.inputBox}>
-                <Phone color={COLORS.textSecondary} size={18} />
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder={t('auth.phonePlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
-                  keyboardType="phone-pad"
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            {/* Password input with strength indicator */}
-            <PasswordInput
-              label={t('auth.password').toUpperCase()}
-              value={password}
-              onChangeText={setPassword}
-              placeholder={t('auth.passwordPlaceholder')}
-              showStrength
-              errorText={errorText}
-              disabled={loading}
-            />
-
-            {/* Confirm Password input */}
-            <PasswordInput
-              label={t('auth.confirmPassword').toUpperCase()}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder={t('auth.confirmPasswordPlaceholder')}
-              errorText={confirmError}
-              disabled={loading}
-            />
-
-            <CustomButton
-              title={loading ? t('auth.creatingAccount') : t('auth.createAndEnter')}
-              onPress={handleRegister}
-              icon={<ArrowRight color="#000" size={18} />}
-              disabled={loading}
-              style={{ marginTop: 10 }}
-            />
-          </View>
-
-          <View style={styles.bottomActions}>
-            <Text style={styles.existingText}>{t('auth.alreadyRegistered')}</Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/welcome')}>
-              <Text style={styles.loginText}>{t('auth.signIn')}</Text>
+          <ResponsiveContainer maxWidth={480}>
+            {/* Back button */}
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft color={COLORS.textPrimary} size={20} />
+              <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
             </TouchableOpacity>
-          </View>
+
+            {/* Header */}
+            <View style={styles.brandHeader}>
+              <Text style={styles.brandTitle}>{t('auth.createRiderAccount')}</Text>
+              <Text style={styles.brandSubtitle}>{t('auth.joinRiderHood')}</Text>
+            </View>
+
+            {/* Form Card */}
+            <View style={styles.card}>
+              {/* Full Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{t('auth.fullName').toUpperCase()}</Text>
+                <View style={styles.inputBox}>
+                  <User color={COLORS.textSecondary} size={18} />
+                  <TextInput
+                    style={styles.input}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder={t('auth.fullNamePlaceholder')}
+                    placeholderTextColor={COLORS.textMuted}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              {/* Email */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
+                <View style={styles.inputBox}>
+                  <Mail color={COLORS.textSecondary} size={18} />
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder={t('auth.emailPlaceholder')}
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              {/* Phone */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{`${t('auth.phone').toUpperCase()} (${t('common.optional').toUpperCase()})`}</Text>
+                <View style={styles.inputBox}>
+                  <Phone color={COLORS.textSecondary} size={18} />
+                  <TextInput
+                    style={styles.input}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder={t('auth.phonePlaceholder')}
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="phone-pad"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              {/* Password input with strength indicator */}
+              <PasswordInput
+                label={t('auth.password').toUpperCase()}
+                value={password}
+                onChangeText={setPassword}
+                placeholder={t('auth.passwordPlaceholder')}
+                showStrength
+                errorText={errorText}
+                disabled={loading}
+              />
+
+              {/* Confirm Password input */}
+              <PasswordInput
+                label={t('auth.confirmPassword').toUpperCase()}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder={t('auth.confirmPasswordPlaceholder')}
+                errorText={confirmError}
+                disabled={loading}
+              />
+
+              <CustomButton
+                title={loading ? t('auth.creatingAccount') : t('auth.createAndEnter')}
+                onPress={handleRegister}
+                icon={<ArrowRight color="#000" size={18} />}
+                disabled={loading}
+                style={{ marginTop: 10 }}
+              />
+            </View>
+
+            <View style={styles.bottomActions}>
+              <Text style={styles.existingText}>{t('auth.alreadyRegistered')}</Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/welcome')}>
+                <Text style={styles.loginText}>{t('auth.signIn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </ResponsiveContainer>
         </ScrollView>
       </KeyboardAvoidingView>
 

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { COLORS } from '../../constants/theme';
@@ -29,7 +30,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { getMyWorkshop } from '../../services/workshopService';
+import { useResponsive } from '../../hooks/useResponsive';
 import type { Workshop } from '../../types/database';
+
 
 function CustomWorkshopDrawerContent(props: any) {
   const router = useRouter();
@@ -61,9 +64,11 @@ function CustomWorkshopDrawerContent(props: any) {
       {/* Brand Header */}
       <View style={sidebarStyles.brandCard}>
         <View style={sidebarStyles.logoRow}>
-          <View style={sidebarStyles.logoBadge}>
-            <Zap color="#FFFFFF" size={18} />
-          </View>
+          <Image
+            source={require('../../../assets/images/riderhood-logo.png')}
+            style={sidebarStyles.drawerLogoImg}
+            resizeMode="contain"
+          />
           <View>
             <Text style={sidebarStyles.brandTitle}>RIDERHOOD</Text>
             <Text style={sidebarStyles.brandSub}>WORKSHOP ADMIN</Text>
@@ -149,9 +154,11 @@ function CustomWorkshopDrawerContent(props: any) {
     </View>
   );
 }
+
 export default function WorkshopDrawerLayout() {
   const router = useRouter();
   const { user, profile, isLoading } = useAuth();
+  const { isPhone } = useResponsive();
 
   useEffect(() => {
     if (!isLoading) {
@@ -179,13 +186,15 @@ export default function WorkshopDrawerLayout() {
       drawerContent={(props) => <CustomWorkshopDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
+        drawerType: isPhone ? 'front' : 'permanent',
         drawerStyle: {
           backgroundColor: COLORS.secondaryBackground,
-          width: 290,
+          width: 270,
         },
         sceneStyle: { backgroundColor: COLORS.background },
       }}
     >
+
       <Drawer.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       <Drawer.Screen name="bookings" options={{ title: 'Bookings Management' }} />
       <Drawer.Screen name="services" options={{ title: 'Service Catalog' }} />
@@ -221,6 +230,10 @@ const sidebarStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  drawerLogoImg: {
+    width: 36,
+    height: 36,
   },
   logoBadge: {
     width: 34,

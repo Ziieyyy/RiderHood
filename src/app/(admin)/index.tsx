@@ -11,10 +11,15 @@ import { Header } from '../../components/Header';
 import { Users, Building2, Calendar, TrendingUp, RefreshCw, Shield, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const { isPhone, contentPadding } = useResponsive();
+
   const [stats, setStats] = useState<{ totalUsers: number; totalWorkshops: number; totalBookings: number } | null>(null);
   const [pendingWorkshops, setPendingWorkshops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,34 +98,35 @@ export default function AdminDashboardScreen() {
     <SafeAreaView style={styles.container}>
       <Header title={t('superAdmin.commandCenter')} subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name}`} />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={COLORS.primary} />}
       >
-        {/* Platform Stats */}
-        <Text style={styles.sectionTitle}>{t('superAdmin.platformStatistics').toUpperCase()}</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Users color={COLORS.primary} size={24} />
-            <Text style={styles.statValue}>{stats?.totalUsers ?? 0}</Text>
-            <Text style={styles.statLabel}>{t('superAdmin.totalUsers')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Building2 color="#f59e0b" size={24} />
-            <Text style={styles.statValue}>{stats?.totalWorkshops ?? 0}</Text>
-            <Text style={styles.statLabel}>{t('superAdmin.totalWorkshops')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Calendar color={COLORS.success} size={24} />
-            <Text style={styles.statValue}>{stats?.totalBookings ?? 0}</Text>
-            <Text style={styles.statLabel}>{t('navigation.bookings')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <AlertTriangle color={COLORS.danger} size={24} />
-            <Text style={styles.statValue}>{pendingWorkshops.length}</Text>
-            <Text style={styles.statLabel}>{t('workshopAdmin.pendingBookings')}</Text>
-          </View>
-        </View>
+        <ResponsiveContainer>
+          {/* Platform Stats */}
+          <Text style={styles.sectionTitle}>{t('superAdmin.platformStatistics').toUpperCase()}</Text>
+          <ResponsiveGrid columns={{ phone: 2, tablet: 4, desktop: 4 }} gap={12}>
+            <View style={styles.statCard}>
+              <Users color={COLORS.primary} size={24} />
+              <Text style={styles.statValue}>{stats?.totalUsers ?? 0}</Text>
+              <Text style={styles.statLabel}>{t('superAdmin.totalUsers')}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Building2 color="#f59e0b" size={24} />
+              <Text style={styles.statValue}>{stats?.totalWorkshops ?? 0}</Text>
+              <Text style={styles.statLabel}>{t('superAdmin.totalWorkshops')}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Calendar color={COLORS.success} size={24} />
+              <Text style={styles.statValue}>{stats?.totalBookings ?? 0}</Text>
+              <Text style={styles.statLabel}>{t('navigation.bookings')}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <AlertTriangle color={COLORS.danger} size={24} />
+              <Text style={styles.statValue}>{pendingWorkshops.length}</Text>
+              <Text style={styles.statLabel}>{t('workshopAdmin.pendingBookings')}</Text>
+            </View>
+          </ResponsiveGrid>
 
         {/* Pending Workshop Approvals */}
         <Text style={styles.sectionTitle}>{t('superAdmin.workshopApproval').toUpperCase()}</Text>
@@ -177,6 +183,7 @@ export default function AdminDashboardScreen() {
           <Shield color={COLORS.danger} size={16} />
           <Text style={styles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
+        </ResponsiveContainer>
       </ScrollView>
     </SafeAreaView>
   );

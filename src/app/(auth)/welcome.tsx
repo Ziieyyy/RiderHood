@@ -8,6 +8,7 @@ import {
   StatusBar,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,11 +18,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { PasswordInput } from '../../components/PasswordInput';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import {
   PasswordSecurityModal,
   PasswordModalMode,
 } from '../../components/PasswordSecurityModal';
 import { resendConfirmationEmail } from '../../services/authService';
+
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -194,16 +197,19 @@ export default function WelcomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Language Switcher Bar */}
-        <View style={{ marginBottom: 12 }}>
-          <LanguageSelector variant="inline" />
-        </View>
+        <ResponsiveContainer maxWidth={480}>
+          {/* Language Switcher Bar */}
+          <View style={{ marginBottom: 12 }}>
+            <LanguageSelector variant="inline" />
+          </View>
 
         {/* Brand Header */}
         <View style={styles.brandHeader}>
-          <View style={styles.logoBadge}>
-            <Cpu color={COLORS.primary} size={36} />
-          </View>
+          <Image
+            source={require('../../../assets/images/riderhood-logo.png')}
+            style={styles.brandLogoImg}
+            resizeMode="contain"
+          />
           <Text style={styles.brandTitle}>RIDERHOOD</Text>
           <Text style={styles.brandSubtitle}>Premium Moto Care</Text>
 
@@ -297,6 +303,7 @@ export default function WelcomeScreen() {
           <ShieldCheck color={COLORS.primary} size={14} />
           <Text style={styles.securityText}>{t('auth.welcomeSub')}</Text>
         </View>
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Password & Security Feedback Modal */}
@@ -326,6 +333,11 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     marginBottom: 24,
+  },
+  brandLogoImg: {
+    width: 84,
+    height: 84,
+    marginBottom: 12,
   },
   logoBadge: {
     width: 64,

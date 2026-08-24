@@ -32,6 +32,9 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { getMyWorkshop } from '../../services/workshopService';
 import { getWorkshopBookings, updateBookingStatus } from '../../services/bookingService';
@@ -43,6 +46,8 @@ export default function WorkshopDashboardScreen() {
   const router = useRouter();
   const { profile } = useAuth();
   const { t, formatCurrency, formatDate } = useTranslation();
+  const { isPhone, isTablet, isDesktop, contentPadding } = useResponsive();
+
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -167,7 +172,7 @@ export default function WorkshopDashboardScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -180,8 +185,9 @@ export default function WorkshopDashboardScreen() {
           />
         }
       >
-        {/* Welcome Greeting Header */}
-        <View style={styles.welcomeCard}>
+        <ResponsiveContainer>
+          {/* Welcome Greeting Header */}
+          <View style={styles.welcomeCard}>
           <View style={styles.welcomeTextGroup}>
             <Text style={styles.greetingTitle}>
               {t('common.welcome')}, {profile?.full_name?.split(' ')[0] || 'Admin'} 👋
@@ -514,6 +520,7 @@ export default function WorkshopDashboardScreen() {
             );
           })
         )}
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

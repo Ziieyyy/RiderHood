@@ -39,6 +39,8 @@ import { createReminder } from '../../services/maintenanceService';
 import { createDocument, uploadAndCreateDocument } from '../../services/documentService';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../i18n';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+
 
 const BRANDS = ['Yamaha', 'Honda', 'Modenas', 'Suzuki', 'Kawasaki', 'SYM', 'Benelli', 'KTM', 'BMW', 'Ducati'];
 const POPULAR_MODELS = ['Y15ZR', 'Y16ZR', 'RS150R', 'LC135', 'EX5', 'NVX 155', 'VF3i', 'Dash 125', 'MT-09', 'R15', 'Ninja 250'];
@@ -471,8 +473,9 @@ export default function SetupMotorcycleScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Step Progress Bar */}
-        {step <= 4 && (
+        <ResponsiveContainer maxWidth={640}>
+          {/* Step Progress Bar */}
+          {step <= 4 && (
           <View style={styles.progressContainer}>
             <View style={styles.stepsRow}>
               {[1, 2, 3, 4].map((s) => (
@@ -942,6 +945,7 @@ export default function SetupMotorcycleScreen() {
             </View>
           </View>
         )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* ==================== INTERACTIVE VISUAL CALENDAR MODAL ==================== */}

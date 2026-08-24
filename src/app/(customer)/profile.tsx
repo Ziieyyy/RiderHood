@@ -29,6 +29,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { getMotorcycles, updateMotorcycle, deleteMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
 import { getCustomerDocuments, createDocument, updateDocument, deleteDocument, uploadAndCreateDocument, validateDocumentFile } from '../../services/documentService';
@@ -40,6 +42,8 @@ export default function CustomerProfileScreen() {
   const router = useRouter();
   const { user, profile, logout, refreshProfile } = useAuth();
   const { t, language } = useTranslation();
+  const { isPhone, contentPadding } = useResponsive();
+
 
   // Garage State
   const [bikes, setBikes] = useState<Motorcycle[]>([]);
@@ -453,9 +457,10 @@ export default function CustomerProfileScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="Rider Profile" subtitle="Garage, Personal Info, Documents & Security" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* ================= 1. PROFILE HEADER ================= */}
-        <View style={styles.profileHeaderCard}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]} showsVerticalScrollIndicator={false}>
+        <ResponsiveContainer>
+          {/* ================= 1. PROFILE HEADER ================= */}
+          <View style={styles.profileHeaderCard}>
           <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickProfilePicture} activeOpacity={0.8}>
             {avatarUrl || profile?.avatar_url ? (
               <Image source={{ uri: (avatarUrl || profile?.avatar_url)! }} style={styles.avatarImg} />
@@ -757,6 +762,7 @@ export default function CustomerProfileScreen() {
           <LogOut color={COLORS.danger} size={18} />
           <Text style={styles.logoutBtnText}>{t('common.logout')}</Text>
         </TouchableOpacity>
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Modal: View Motorcycle Details */}
@@ -1167,16 +1173,18 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
-    gap: 16,
+    paddingTop: 24,
+    paddingBottom: 60,
+    gap: 20,
   },
   profileHeaderCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 24,
-    padding: 24,
+    padding: 26,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: 24,
   },
   avatarWrapper: {
     position: 'relative',
@@ -1269,24 +1277,26 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 12,
+    gap: 14,
+    marginBottom: 24,
   },
   cardTitle: {
     color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
+    marginBottom: 4,
   },
   infoGrid: {
-    gap: 10,
+    gap: 12,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -1304,12 +1314,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 14,
   },
   sectionTitle: {
     color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
+    marginBottom: 12,
   },
   addBikeBtn: {
     flexDirection: 'row',
@@ -1324,11 +1336,12 @@ const styles = StyleSheet.create({
   emptyGarageCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 16,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: 8,
+    marginBottom: 24,
   },
   emptyGarageTitle: {
     color: COLORS.textPrimary,
@@ -1343,10 +1356,11 @@ const styles = StyleSheet.create({
   garageCard: {
     backgroundColor: COLORS.surfaceContainer,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 12,
+    gap: 14,
+    marginBottom: 16,
   },
   garageHeader: {
     flexDirection: 'row',
@@ -1549,6 +1563,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.danger,
     marginTop: 12,
+    marginBottom: 36,
   },
   logoutBtnText: {
     color: COLORS.danger,

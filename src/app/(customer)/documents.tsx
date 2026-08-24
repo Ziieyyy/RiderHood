@@ -31,6 +31,9 @@ import {
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import {
   getCustomerDocuments,
   createDocument,
@@ -54,6 +57,8 @@ export default function DocumentsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
+  const { isPhone, contentPadding } = useResponsive();
+
 
   const [documents, setDocuments] = useState<RiderDoc[]>([]);
   const [selectedType, setSelectedType] = useState<DocumentType | 'ALL'>('ALL');
@@ -283,42 +288,46 @@ export default function DocumentsScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {loading ? (
-          <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
-        ) : filteredDocs.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <FileText color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>{t('empty.noDocuments').toUpperCase()}</Text>
-            <Text style={styles.emptySub}>{t('empty.noDocumentsSub')}</Text>
-            <CustomButton title={`+ ${t('motorcycle.uploadDocument')}`} onPress={() => setModalVisible(true)} style={{ marginTop: 12 }} />
-          </View>
-        ) : (
-          filteredDocs.map(doc => (
-            <View key={doc.id} style={styles.docCard}>
-              <View style={styles.docIconBox}>
-                <FileCheck color={COLORS.primary} size={22} />
-              </View>
-
-              <TouchableOpacity style={{ flex: 1 }} onPress={() => handleViewDocument(doc)}>
-                <Text style={styles.docTitle}>{doc.title}</Text>
-                <Text style={styles.docMeta}>
-                  {doc.type} {doc.expiry_date ? `• Expires: ${doc.expiry_date}` : ''}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.cardActions}>
-                <TouchableOpacity style={styles.viewDocBtn} onPress={() => handleViewDocument(doc)}>
-                  <Eye color={COLORS.primary} size={14} />
-                  <Text style={styles.viewDocBtnText}>{t('common.view')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(doc)}>
-                  <Trash2 color={COLORS.danger} size={16} />
-                </TouchableOpacity>
-              </View>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}>
+        <ResponsiveContainer>
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+          ) : filteredDocs.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <FileText color={COLORS.textMuted} size={48} />
+              <Text style={styles.emptyTitle}>{t('empty.noDocuments').toUpperCase()}</Text>
+              <Text style={styles.emptySub}>{t('empty.noDocumentsSub')}</Text>
+              <CustomButton title={`+ ${t('motorcycle.uploadDocument')}`} onPress={() => setModalVisible(true)} style={{ marginTop: 12 }} />
             </View>
-          ))
-        )}
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredDocs.map(doc => (
+                <View key={doc.id} style={styles.docCard}>
+                  <View style={styles.docIconBox}>
+                    <FileCheck color={COLORS.primary} size={22} />
+                  </View>
+
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => handleViewDocument(doc)}>
+                    <Text style={styles.docTitle} numberOfLines={1}>{doc.title}</Text>
+                    <Text style={styles.docMeta} numberOfLines={1}>
+                      {doc.type} {doc.expiry_date ? `• Expires: ${doc.expiry_date}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.cardActions}>
+                    <TouchableOpacity style={styles.viewDocBtn} onPress={() => handleViewDocument(doc)}>
+                      <Eye color={COLORS.primary} size={14} />
+                      <Text style={styles.viewDocBtnText}>{t('common.view')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(doc)}>
+                      <Trash2 color={COLORS.danger} size={16} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Upload Modal */}

@@ -8,6 +8,7 @@ import {
   StatusBar,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,11 +16,13 @@ import { COLORS } from '../../constants/theme';
 import { Wrench, Mail, User, Phone, MapPin, ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { PasswordInput } from '../../components/PasswordInput';
 import { supabase } from '../../lib/supabase';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import {
   PasswordSecurityModal,
   PasswordModalMode,
 } from '../../components/PasswordSecurityModal';
 import { useTranslation } from '../../i18n';
+
 
 export default function WorkshopRegistrationScreen() {
   const router = useRouter();
@@ -136,16 +139,19 @@ export default function WorkshopRegistrationScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft color={COLORS.textSecondary} size={20} />
-          <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
-        </TouchableOpacity>
+        <ResponsiveContainer maxWidth={480}>
+          {/* Header */}
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <ArrowLeft color={COLORS.textSecondary} size={20} />
+            <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
+          </TouchableOpacity>
 
         <View style={styles.brandHeader}>
-          <View style={styles.logoBadge}>
-            <Wrench color="#f59e0b" size={32} />
-          </View>
+          <Image
+            source={require('../../../assets/images/riderhood-logo.png')}
+            style={styles.brandLogoImg}
+            resizeMode="contain"
+          />
           <Text style={styles.brandTitle}>{t('auth.workshopPartnerApp').toUpperCase()}</Text>
           <Text style={styles.brandSubtitle}>
             {t('auth.joinRiderHood')}
@@ -269,6 +275,7 @@ export default function WorkshopRegistrationScreen() {
             )}
           </TouchableOpacity>
         </View>
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Security Feedback Modal */}
@@ -305,6 +312,11 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     marginBottom: 20,
+  },
+  brandLogoImg: {
+    width: 64,
+    height: 64,
+    marginBottom: 12,
   },
   logoBadge: {
     width: 56,

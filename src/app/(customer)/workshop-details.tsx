@@ -52,6 +52,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { fetchGooglePlaceDetails, type GooglePlaceDetailsResult } from '../../services/googlePlacesService';
 import { getWorkshopOpenStatus } from '../../utils/operatingHours';
+import { getCategoryFilterList, formatCategoryName, matchesCategoryFilter } from '../../utils/categoryUtils';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveModal } from '../../components/responsive/ResponsiveModal';
 import type { Service, Workshop, Part, Review } from '../../types/database';
 
 export default function WorkshopDetailsScreen() {
@@ -59,7 +63,9 @@ export default function WorkshopDetailsScreen() {
   const params = useLocalSearchParams();
   const workshopId = params.id as string;
   const { user } = useAuth();
-  const { t, formatDate } = useTranslation();
+  const { t, formatDate, language } = useTranslation();
+  const { isPhone, contentPadding } = useResponsive();
+
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [googlePlaceDetails, setGooglePlaceDetails] = useState<GooglePlaceDetailsResult | null>(null);
@@ -299,8 +305,9 @@ export default function WorkshopDetailsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Banner / Workshop Image Header */}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]} showsVerticalScrollIndicator={false}>
+        <ResponsiveContainer>
+          {/* Banner / Workshop Image Header */}
         <View style={styles.photoContainer}>
           <Image
             source={{ uri: workshop?.cover_image_url || 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80' }}
@@ -429,16 +436,16 @@ export default function WorkshopDetailsScreen() {
 
           {/* Sort / Filter by Categories Pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-            {['All', 'Full Service', 'Minyak Hitam', 'Gear Oil', 'CVT', 'Throttle Body', 'Brake Pad', 'Chain & Sprocket', 'Tayar Depan', 'Tayar Belakang', 'Spark Plug', 'Bateri', 'Coolant', 'Brake Fluid', 'Fork Oil', '2T'].map(cat => {
-              const isActive = selectedServiceCategory === cat;
+            {getCategoryFilterList(language).map((cat) => {
+              const isActive = selectedServiceCategory === cat.key;
               return (
                 <TouchableOpacity
-                  key={cat}
+                  key={cat.key}
                   style={[
                     styles.categoryFilterChip,
                     isActive && styles.activeCategoryFilterChip,
                   ]}
-                  onPress={() => setSelectedServiceCategory(cat)}
+                  onPress={() => setSelectedServiceCategory(cat.key)}
                   activeOpacity={0.8}
                 >
                   <Text
@@ -447,7 +454,7 @@ export default function WorkshopDetailsScreen() {
                       isActive && styles.activeCategoryFilterChipText,
                     ]}
                   >
-                    {cat}
+                    {cat.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -468,10 +475,8 @@ export default function WorkshopDetailsScreen() {
             <View style={{ gap: 10 }}>
               {services
                 .filter((serv) => {
-                  if (selectedServiceCategory !== 'All') {
-                    const sCat = (serv.category || '').toLowerCase();
-                    const fCat = selectedServiceCategory.toLowerCase();
-                    if (!sCat.includes(fCat) && !fCat.includes(sCat)) return false;
+                  if (!matchesCategoryFilter(serv.category, selectedServiceCategory)) {
+                    return false;
                   }
                   if (searchService.trim()) {
                     const q = searchService.toLowerCase();
@@ -494,7 +499,7 @@ export default function WorkshopDetailsScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                         <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                           <Text style={{ color: COLORS.primary, fontSize: 9, fontWeight: '800' }}>
-                            {(serv.category || 'SERVICE').toUpperCase()}
+                            {formatCategoryName(serv.category || 'SERVICE', language).toUpperCase()}
                           </Text>
                         </View>
                         {serv.estimated_duration_minutes ? (
@@ -517,6 +522,7 @@ export default function WorkshopDetailsScreen() {
             </View>
           )}
         </View>
+
 
         {/* ═══════════════════════════════════════════════════════════ */}
         {/* CUSTOMER REVIEWS SECTION                                  */}
@@ -776,89 +782,98 @@ export default function WorkshopDetailsScreen() {
         )}
 
         <View style={{ height: 20 }} />
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Write Review Modal (Inline) */}
-      <Modal visible={writeReviewModalVisible} transparent animationType="slide" onRequestClose={() => setWriteReviewModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('reviews.writeReview')}</Text>
-              <TouchableOpacity onPress={() => setWriteReviewModalVisible(false)}>
-                <X color={COLORS.textMuted} size={20} />
-              </TouchableOpacity>
+      <ResponsiveModal
+        visible={writeReviewModalVisible}
+        onClose={() => setWriteReviewModalVisible(false)}
+        title={t('reviews.writeReview')}
+      >
+        <View style={{ gap: 12, paddingVertical: 4 }}>
+          {/* Completed Booking Selector */}
+          {completedBookings.length > 0 && (
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>
+                {t('reviews.selectBookingToReview').toUpperCase()}
+              </Text>
+              {completedBookings.map((bk) => (
+                <TouchableOpacity
+                  key={bk.id}
+                  style={[
+                    styles.bookingSelectBox,
+                    selectedBookingForReview?.id === bk.id && styles.bookingSelectBoxActive,
+                  ]}
+                  onPress={() => setSelectedBookingForReview(bk)}
+                >
+                  <Bike
+                    color={selectedBookingForReview?.id === bk.id ? COLORS.primary : COLORS.textMuted}
+                    size={16}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' }}>
+                      {bk.motorcycle?.nickname || bk.motorcycle?.brand || 'Motorcycle'} ({bk.motorcycle?.plate_number})
+                    </Text>
+                    <Text style={{ color: COLORS.textMuted, fontSize: 10 }}>
+                      {t('common.date')}: {bk.booking_date}
+                    </Text>
+                  </View>
+                  {selectedBookingForReview?.id === bk.id && <Check color={COLORS.primary} size={16} />}
+                </TouchableOpacity>
+              ))}
             </View>
+          )}
 
-            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 12, paddingVertical: 4 }}>
-                {/* Completed Booking Selector */}
-                {completedBookings.length > 0 && (
-                  <View style={{ gap: 6 }}>
-                    <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>{t('reviews.selectBookingToReview').toUpperCase()}</Text>
-                    {completedBookings.map((bk) => (
-                      <TouchableOpacity
-                        key={bk.id}
-                        style={[
-                          styles.bookingSelectBox,
-                          selectedBookingForReview?.id === bk.id && styles.bookingSelectBoxActive,
-                        ]}
-                        onPress={() => setSelectedBookingForReview(bk)}
-                      >
-                        <Bike color={selectedBookingForReview?.id === bk.id ? COLORS.primary : COLORS.textMuted} size={16} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' }}>
-                            {bk.motorcycle?.nickname || bk.motorcycle?.brand || 'Motorcycle'} ({bk.motorcycle?.plate_number})
-                          </Text>
-                          <Text style={{ color: COLORS.textMuted, fontSize: 10 }}>{t('common.date')}: {bk.booking_date}</Text>
-                        </View>
-                        {selectedBookingForReview?.id === bk.id && <Check color={COLORS.primary} size={16} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {/* Rating Stars */}
-                <View style={{ alignItems: 'center', gap: 6, marginVertical: 8 }}>
-                  <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' }}>{t('reviews.yourRating').toUpperCase()}</Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <TouchableOpacity key={i} onPress={() => setNewRating(i)}>
-                        <Star color="#f59e0b" fill={i <= newRating ? '#f59e0b' : 'transparent'} size={32} />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Comment Text Area */}
-                <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>{t('reviews.yourComment').toUpperCase()} ({t('common.optional').toUpperCase()})</Text>
-                <TextInput
-                  style={styles.reviewCommentInput}
-                  value={newComment}
-                  onChangeText={setNewComment}
-                  placeholder={t('reviews.commentPlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  maxLength={300}
-                />
-              </View>
-            </ScrollView>
-
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-              <TouchableOpacity style={styles.cancelReviewBtn} onPress={() => setWriteReviewModalVisible(false)}>
-                <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' }}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <CustomButton
-                title={submittingReview ? t('common.submitting').toUpperCase() : t('reviews.submitReview').toUpperCase()}
-                onPress={handleSubmitReview}
-                disabled={submittingReview || newRating === 0}
-                style={{ flex: 1 }}
-              />
+          {/* Rating Stars */}
+          <View style={{ alignItems: 'center', gap: 6, marginVertical: 8 }}>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' }}>
+              {t('reviews.yourRating').toUpperCase()}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <TouchableOpacity key={i} onPress={() => setNewRating(i)}>
+                  <Star
+                    color="#f59e0b"
+                    fill={i <= newRating ? '#f59e0b' : 'transparent'}
+                    size={32}
+                  />
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
+
+          {/* Comment Text Area */}
+          <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>
+            {t('reviews.yourComment').toUpperCase()} ({t('common.optional').toUpperCase()})
+          </Text>
+          <TextInput
+            style={styles.reviewCommentInput}
+            value={newComment}
+            onChangeText={setNewComment}
+            placeholder={t('reviews.commentPlaceholder')}
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            maxLength={300}
+          />
         </View>
-      </Modal>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+          <TouchableOpacity style={styles.cancelReviewBtn} onPress={() => setWriteReviewModalVisible(false)}>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' }}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
+          <CustomButton
+            title={submittingReview ? t('common.submitting').toUpperCase() : t('reviews.submitReview').toUpperCase()}
+            onPress={handleSubmitReview}
+            disabled={submittingReview || newRating === 0}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </ResponsiveModal>
     </SafeAreaView>
   );
 }

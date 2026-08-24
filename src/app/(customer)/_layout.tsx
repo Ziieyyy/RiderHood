@@ -1,26 +1,34 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { Home, Wrench, Calendar, Clock, User } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveSidebar } from '../../components/responsive/ResponsiveSidebar';
 
 export default function CustomerTabsLayout() {
   const { t } = useTranslation();
+  const { isPhone } = useResponsive();
 
-  return (
+  const tabsContent = (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarStyle: {
-          backgroundColor: COLORS.surfaceContainer,
-          borderTopColor: COLORS.border,
-          borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 8,
-        },
+        tabBarStyle: isPhone
+          ? {
+              backgroundColor: COLORS.surfaceContainer,
+              borderTopColor: COLORS.border,
+              borderTopWidth: 1,
+              height: 64,
+              paddingBottom: 10,
+              paddingTop: 8,
+            }
+          : {
+              display: 'none',
+            },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '700',
@@ -172,4 +180,29 @@ export default function CustomerTabsLayout() {
       />
     </Tabs>
   );
+
+  if (isPhone) {
+    return tabsContent;
+  }
+
+  return (
+    <View style={styles.desktopLayoutContainer}>
+      <ResponsiveSidebar role="customer" />
+      <View style={styles.desktopMainContent}>{tabsContent}</View>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  desktopLayoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: COLORS.background,
+    height: '100%',
+  },
+  desktopMainContent: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: COLORS.background,
+  },
+});

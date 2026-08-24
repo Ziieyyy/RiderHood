@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
   ActivityIndicator,
   Linking,
 } from 'react-native';
@@ -14,9 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
+import { ResponsiveModal } from '../../components/responsive/ResponsiveModal';
+import { useResponsive } from '../../hooks/useResponsive';
 import {
   Search,
-  CheckCircle2,
   Calendar,
   Wrench,
   ChevronDown,
@@ -24,17 +26,18 @@ import {
   Check,
   MapPin,
   Phone,
-  Layers,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { getWorkshops, getWorkshopServices, canBookWorkshop } from '../../services/workshopService';
+import { getCategoryFilterList, formatCategoryName, matchesCategoryFilter } from '../../utils/categoryUtils';
 import type { Workshop, Service } from '../../types/database';
 
 export default function ServicesCatalogScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { t, formatCurrency } = useTranslation();
+  const { t, formatCurrency, language } = useTranslation();
+  const { contentPadding } = useResponsive();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
@@ -46,25 +49,6 @@ export default function ServicesCatalogScreen() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const SERVICE_CATEGORIES = [
-    'All',
-    'Full Service',
-    'Minyak Hitam',
-    'Gear Oil',
-    'CVT',
-    'Throttle Body',
-    'Brake Pad',
-    'Chain & Sprocket',
-    'Tayar Depan',
-    'Tayar Belakang',
-    'Spark Plug',
-    'Bateri',
-    'Coolant',
-    'Brake Fluid',
-    'Fork Oil',
-    '2T',
-  ];
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -72,12 +56,10 @@ export default function ServicesCatalogScreen() {
         const wsList = await getWorkshops();
         setWorkshops(wsList);
 
-        // Fetch services for all workshops or target workshop
         if (selectedWorkshopFilter?.id) {
           const svcs = await getWorkshopServices(selectedWorkshopFilter.id);
           setServices(svcs);
         } else {
-          // Fetch services for all workshops in parallel
           const allServicesNested = await Promise.all(
             wsList.map((ws) => getWorkshopServices(ws.id).catch(() => []))
           );
@@ -92,14 +74,8 @@ export default function ServicesCatalogScreen() {
     fetchData();
   }, [selectedWorkshopFilter?.id]);
 
-  // Filter services
   const filteredServices = services.filter((svc) => {
-    let matchesCategory = selectedCategory === 'All';
-    if (!matchesCategory && svc.category) {
-      const sCat = (svc.category || '').toLowerCase();
-      const fCat = selectedCategory.toLowerCase();
-      matchesCategory = sCat.includes(fCat) || fCat.includes(sCat);
-    }
+    const matchesCategory = matchesCategoryFilter(svc.category, selectedCategory);
     const q = (search || '').toLowerCase();
     const nameMatch = (svc.name || '').toLowerCase().includes(q);
     const descMatch = (svc.description || '').toLowerCase().includes(q);
@@ -140,237 +116,232 @@ export default function ServicesCatalogScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header
-        title={t('services.title')}
-        subtitle={t('services.subtitle')}
-      />
+      <Header title={t('services.title')} subtitle={t('services.subtitle')} />
 
-      {/* Search & Workshop Filter Bar */}
-      <View style={styles.searchBarContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Search color={COLORS.textMuted} size={18} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search service name, package, CVT, Oil..."
-            placeholderTextColor={COLORS.textMuted}
-          />
-          {search ? (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <X color={COLORS.textMuted} size={16} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Workshop Filter Picker Trigger */}
-        <TouchableOpacity
-          style={styles.workshopFilterBtn}
-          onPress={() => setShowWorkshopModal(true)}
-          activeOpacity={0.8}
-        >
-          <MapPin color={COLORS.primary} size={15} />
-          <Text style={styles.workshopFilterBtnText} numberOfLines={1}>
-            {selectedWorkshopFilter ? selectedWorkshopFilter.name : 'All Workshops'}
-          </Text>
-          <ChevronDown color={COLORS.textMuted} size={14} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Category Pills Slider */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
-      >
-        {SERVICE_CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat;
-          return (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-              onPress={() => setSelectedCategory(cat)}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  isActive && styles.categoryChipTextActive,
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Services List Content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.listHeaderRow}>
-          <Text style={styles.resultsCount}>
-            {filteredServices.length} AVAILABLE SERVICE PACKAGES
-          </Text>
-          {selectedWorkshopFilter && (
-            <TouchableOpacity onPress={() => setSelectedWorkshopFilter(null)}>
-              <Text style={styles.clearFilterText}>Show All Shops</Text>
+        <ResponsiveContainer>
+          {/* Search & Workshop Filter Bar */}
+          <View style={styles.searchBarContainer}>
+            <View style={styles.searchInputWrapper}>
+              <Search color={COLORS.textMuted} size={18} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search service name, package, CVT, Oil..."
+                placeholderTextColor={COLORS.textMuted}
+              />
+              {search ? (
+                <TouchableOpacity onPress={() => setSearch('')}>
+                  <X color={COLORS.textMuted} size={16} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Workshop Filter Picker Trigger */}
+            <TouchableOpacity
+              style={styles.workshopFilterBtn}
+              onPress={() => setShowWorkshopModal(true)}
+              activeOpacity={0.8}
+            >
+              <MapPin color={COLORS.primary} size={15} />
+              <Text style={styles.workshopFilterBtnText} numberOfLines={1}>
+                {selectedWorkshopFilter ? selectedWorkshopFilter.name : 'All Workshops'}
+              </Text>
+              <ChevronDown color={COLORS.textMuted} size={14} />
             </TouchableOpacity>
-          )}
-        </View>
-
-        {loading ? (
-          <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
-        ) : filteredServices.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Wrench color={COLORS.textMuted} size={40} />
-            <Text style={styles.emptyTitle}>No Workshop Services Found</Text>
-            <Text style={styles.emptySub}>
-              No active service packages match your filter criteria.
-            </Text>
           </View>
-        ) : (
-          filteredServices.map((svc) => {
-            const wsObj = getWorkshopObj(svc.workshop_id);
-            const isBookable = canBookWorkshop(wsObj);
 
-            return (
-              <View key={svc.id} style={styles.itemCard}>
-                <View style={styles.serviceIconBox}>
-                  <Wrench color={COLORS.primary} size={24} />
-                </View>
+          {/* Category Pills Slider */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScroll}
+          >
+            {getCategoryFilterList(language).map((cat) => {
+              const isActive = selectedCategory === cat.key;
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                  onPress={() => setSelectedCategory(cat.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      isActive && styles.categoryChipTextActive,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-                <View style={styles.partInfo}>
-                  <View style={styles.badgeRow}>
-                    <View style={styles.brandBadge}>
-                      <Text style={styles.brandText}>
-                        {(svc.category || 'SERVICE').toUpperCase()}
-                      </Text>
+          {/* Results Count Header */}
+          <View style={styles.listHeaderRow}>
+            <Text style={styles.resultsCount}>
+              {filteredServices.length} {t('services.title').toUpperCase()}
+            </Text>
+            {(selectedCategory !== 'All' || search || selectedWorkshopFilter) && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedCategory('All');
+                  setSearch('');
+                  setSelectedWorkshopFilter(null);
+                }}
+              >
+                <Text style={styles.clearFilterText}>{t('common.all')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+          ) : filteredServices.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Wrench color={COLORS.textMuted} size={40} />
+              <Text style={styles.emptyTitle}>No Workshop Services Found</Text>
+              <Text style={styles.emptySub}>
+                No active service packages match your filter criteria.
+              </Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredServices.map((svc) => {
+                const wsObj = getWorkshopObj(svc.workshop_id);
+                const isBookable = canBookWorkshop(wsObj);
+
+                return (
+                  <View key={svc.id} style={styles.itemCard}>
+                    <View style={styles.serviceIconBox}>
+                      <Wrench color={COLORS.primary} size={24} />
                     </View>
-                    <Text style={styles.workshopTag} numberOfLines={1}>
-                      📍 {getWorkshopName(svc.workshop_id)}
-                    </Text>
+
+                    <View style={styles.partInfo}>
+                      <View style={styles.badgeRow}>
+                        <View style={styles.brandBadge}>
+                          <Text style={styles.brandText}>
+                            {formatCategoryName(svc.category || 'SERVICE', language).toUpperCase()}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.workshopTag} numberOfLines={1}>
+                          📍 {getWorkshopName(svc.workshop_id)}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.partName}>{svc.name}</Text>
+                      {svc.description ? (
+                        <Text style={styles.partSpecs} numberOfLines={2}>
+                          {svc.description}
+                        </Text>
+                      ) : null}
+
+                      <View style={styles.priceRow}>
+                        <Text style={styles.partPrice}>RM {(svc.price || 0).toFixed(2)}</Text>
+                        <Text style={styles.durationText}>
+                          ⏱ ~{svc.estimated_duration_minutes || 30} mins
+                        </Text>
+                      </View>
+
+                      {isBookable ? (
+                        <TouchableOpacity
+                          style={styles.bookServiceFullBtn}
+                          activeOpacity={0.85}
+                          onPress={() => handleBookService(svc.workshop_id, svc.name)}
+                        >
+                          <Calendar color="#FFFFFF" size={15} />
+                          <Text style={styles.bookServiceFullBtnText}>BOOK SERVICE AT WAN LEGACY</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.callWorkshopBtn}
+                          activeOpacity={0.85}
+                          onPress={() =>
+                            wsObj?.phone &&
+                            Linking.openURL(`tel:${wsObj.phone.replace(/[^0-9+]/g, '')}`)
+                          }
+                        >
+                          <Phone color={COLORS.textPrimary} size={14} />
+                          <Text style={styles.callWorkshopBtnText}>
+                            CALL WORKSHOP ({wsObj?.phone || 'CONTACT'})
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-
-                  <Text style={styles.partName}>{svc.name}</Text>
-                  {svc.description ? (
-                    <Text style={styles.partSpecs} numberOfLines={2}>
-                      {svc.description}
-                    </Text>
-                  ) : null}
-
-                  <View style={styles.priceRow}>
-                    <Text style={styles.partPrice}>RM {(svc.price || 0).toFixed(2)}</Text>
-                    <Text style={styles.durationText}>
-                      ⏱ ~{svc.estimated_duration_minutes || 30} mins
-                    </Text>
-                  </View>
-
-                  {/* Strict Wan Legacy Booking vs Directory Call Button */}
-                  {isBookable ? (
-                    <TouchableOpacity
-                      style={styles.bookServiceFullBtn}
-                      activeOpacity={0.85}
-                      onPress={() => handleBookService(svc.workshop_id, svc.name)}
-                    >
-                      <Calendar color="#FFFFFF" size={15} />
-                      <Text style={styles.bookServiceFullBtnText}>BOOK SERVICE AT WAN LEGACY</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.callWorkshopBtn}
-                      activeOpacity={0.85}
-                      onPress={() =>
-                        wsObj?.phone &&
-                        Linking.openURL(`tel:${wsObj.phone.replace(/[^0-9+]/g, '')}`)
-                      }
-                    >
-                      <Phone color={COLORS.textPrimary} size={14} />
-                      <Text style={styles.callWorkshopBtnText}>
-                        CALL WORKSHOP ({wsObj?.phone || 'CONTACT'})
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* Workshop Filter Modal */}
-      <Modal
+      <ResponsiveModal
         visible={showWorkshopModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowWorkshopModal(false)}
+        onClose={() => setShowWorkshopModal(false)}
+        title="Filter by Workshop"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Workshop</Text>
-              <TouchableOpacity onPress={() => setShowWorkshopModal(false)}>
-                <X color={COLORS.textMuted} size={20} />
-              </TouchableOpacity>
-            </View>
+        <View style={{ gap: 8 }}>
+          <TouchableOpacity
+            style={[
+              styles.modalItem,
+              selectedWorkshopFilter === null && styles.modalItemActive,
+            ]}
+            onPress={() => {
+              setSelectedWorkshopFilter(null);
+              setShowWorkshopModal(false);
+            }}
+          >
+            <Text
+              style={[
+                styles.modalItemText,
+                selectedWorkshopFilter === null && styles.modalItemTextActive,
+              ]}
+            >
+              All 11 Workshops (Kulim Area)
+            </Text>
+            {selectedWorkshopFilter === null && <Check color={COLORS.primary} size={18} />}
+          </TouchableOpacity>
 
-            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+          {workshops.map((ws) => {
+            const isSelected = selectedWorkshopFilter?.id === ws.id;
+            const isBookable = canBookWorkshop(ws);
+            return (
               <TouchableOpacity
-                style={[
-                  styles.modalItem,
-                  selectedWorkshopFilter === null && styles.modalItemActive,
-                ]}
+                key={ws.id}
+                style={[styles.modalItem, isSelected && styles.modalItemActive]}
                 onPress={() => {
-                  setSelectedWorkshopFilter(null);
+                  setSelectedWorkshopFilter(ws);
                   setShowWorkshopModal(false);
                 }}
               >
-                <Text
-                  style={[
-                    styles.modalItemText,
-                    selectedWorkshopFilter === null && styles.modalItemTextActive,
-                  ]}
-                >
-                  All 11 Workshops (Kulim Area)
-                </Text>
-                {selectedWorkshopFilter === null && <Check color={COLORS.primary} size={18} />}
-              </TouchableOpacity>
-
-              {workshops.map((ws) => {
-                const isSelected = selectedWorkshopFilter?.id === ws.id;
-                const isBookable = canBookWorkshop(ws);
-                return (
-                  <TouchableOpacity
-                    key={ws.id}
-                    style={[styles.modalItem, isSelected && styles.modalItemActive]}
-                    onPress={() => {
-                      setSelectedWorkshopFilter(ws);
-                      setShowWorkshopModal(false);
-                    }}
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      isSelected && styles.modalItemTextActive,
+                    ]}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          isSelected && styles.modalItemTextActive,
-                        ]}
-                      >
-                        {ws.name}
-                      </Text>
-                      <Text style={styles.modalItemSub}>
-                        {isBookable ? '⚡ Online Booking Partner' : '📁 Directory Listing'}
-                      </Text>
-                    </View>
-                    {isSelected && <Check color={COLORS.primary} size={18} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                    {ws.name}
+                  </Text>
+                  <Text style={styles.modalItemSub}>
+                    {isBookable ? '⚡ Online Booking Partner' : '📁 Directory Listing'}
+                  </Text>
+                </View>
+                {isSelected && <Check color={COLORS.primary} size={18} />}
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </Modal>
+      </ResponsiveModal>
     </SafeAreaView>
   );
 }
@@ -380,10 +351,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  scrollContent: {
+    paddingVertical: 16,
+    paddingBottom: 40,
+  },
   searchBarContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
+    marginBottom: 12,
     gap: 8,
   },
   searchInputWrapper: {
@@ -422,9 +395,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   categoryScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 4,
     gap: 8,
+    marginBottom: 12,
   },
   categoryChip: {
     backgroundColor: COLORS.surfaceContainer,
@@ -435,7 +408,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   categoryChipActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 107, 0, 0.15)',
     borderColor: COLORS.primary,
   },
   categoryChipText: {
@@ -447,16 +420,11 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '800',
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 12,
-  },
   listHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   resultsCount: {
     color: COLORS.textMuted,
@@ -471,16 +439,17 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 32,
-    alignItems: 'center',
-    gap: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
   },
   emptyTitle: {
     color: COLORS.textPrimary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   emptySub: {
@@ -490,50 +459,53 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    flexDirection: 'row',
     gap: 12,
+    width: '100%',
   },
   serviceIconBox: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: COLORS.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   partInfo: {
-    flex: 1,
-    gap: 4,
+    gap: 6,
   },
   badgeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   brandBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: 'rgba(255, 107, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   brandText: {
     color: COLORS.primary,
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: '800',
   },
   workshopTag: {
     color: COLORS.textMuted,
     fontSize: 11,
     fontWeight: '600',
-    maxWidth: '60%',
+    flex: 1,
+    textAlign: 'right',
   },
   partName: {
     color: COLORS.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
   },
   partSpecs: {
@@ -549,95 +521,67 @@ const styles = StyleSheet.create({
   },
   partPrice: {
     color: COLORS.primary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
   },
   durationText: {
     color: COLORS.textMuted,
     fontSize: 11,
-    fontWeight: '600',
   },
   bookServiceFullBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    height: 38,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
     marginTop: 6,
   },
   bookServiceFullBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
+    color: '#000000',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   callWorkshopBtn: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 10,
-    height: 38,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
+    backgroundColor: COLORS.surface,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginTop: 6,
   },
   callWorkshopBtnText: {
     color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingBottom: 10,
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: '800',
   },
   modalItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   modalItemActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    backgroundColor: 'rgba(255, 107, 0, 0.12)',
+    borderColor: COLORS.primary,
   },
   modalItemText: {
     color: COLORS.textPrimary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   modalItemTextActive: {
     color: COLORS.primary,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   modalItemSub: {
     color: COLORS.textMuted,

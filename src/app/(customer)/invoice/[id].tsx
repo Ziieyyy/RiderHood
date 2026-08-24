@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -104,9 +105,11 @@ export default function CustomerInvoiceScreen() {
           {/* Header Branding */}
           <View style={styles.paperHeader}>
             <View style={styles.brandRow}>
-              <View style={styles.logoBadge}>
-                <Wrench color="#000" size={18} />
-              </View>
+              <Image
+                source={require('../../../../assets/images/riderhood-logo.png')}
+                style={styles.invoiceLogoImg}
+                resizeMode="contain"
+              />
               <Text style={styles.brandTitle}>RIDERHOOD</Text>
             </View>
             <Text style={styles.brandTagline}>PREMIUM MOTO CARE</Text>
@@ -264,6 +267,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  invoiceLogoImg: {
+    width: 28,
+    height: 28,
   },
   logoBadge: {
     width: 28,

@@ -54,10 +54,16 @@ import type {
   InventoryTransaction,
 } from '../../types/database';
 import { useTranslation } from '../../i18n';
+import { formatCategoryName } from '../../utils/categoryUtils';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 
 export default function WorkshopPartsScreen() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { profile, user } = useAuth();
+  const { isPhone, contentPadding } = useResponsive();
+
   const [workshopProducts, setWorkshopProducts] = useState<WorkshopProduct[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -403,10 +409,11 @@ export default function WorkshopPartsScreen() {
               onPress={() => setSelectedCategory(cat.name)}
             >
               <Text style={[styles.categoryChipText, selectedCategory === cat.name && styles.categoryChipTextActive]}>
-                {cat.name}
+                {formatCategoryName(cat.name, language)}
               </Text>
             </TouchableOpacity>
           ))}
+
         </ScrollView>
       </View>
 
@@ -434,7 +441,7 @@ export default function WorkshopPartsScreen() {
       {/* Product Inventory List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -447,111 +454,117 @@ export default function WorkshopPartsScreen() {
           />
         }
       >
-        {filteredProducts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Package color={COLORS.textMuted} size={48} />
-            <Text style={styles.emptyTitle}>{t('empty.noSpareParts')}</Text>
-            <Text style={styles.emptyDesc}>{t('empty.noSparePartsSub')}</Text>
-          </View>
-        ) : (
-          filteredProducts.map((item) => {
-            const isLow = item.stock_status === 'LOW_STOCK';
-            const isOut = item.stock_status === 'OUT_OF_STOCK';
+        <ResponsiveContainer>
+          {filteredProducts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Package color={COLORS.textMuted} size={48} />
+              <Text style={styles.emptyTitle}>{t('empty.noSpareParts')}</Text>
+              <Text style={styles.emptyDesc}>{t('empty.noSparePartsSub')}</Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {filteredProducts.map((item) => {
+                const isLow = item.stock_status === 'LOW_STOCK';
+                const isOut = item.stock_status === 'OUT_OF_STOCK';
 
-            return (
-              <View key={item.id} style={[styles.productCard, !item.is_available && styles.disabledCard]}>
-                {/* Card Top: Title, Category & Price */}
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.productName}>{item.product?.name || 'Spare Part'}</Text>
-                      {!item.is_available && (
-                        <View style={styles.disabledBadge}>
-                          <Text style={styles.disabledBadgeText}>DISABLED</Text>
+                return (
+                  <View key={item.id} style={[styles.productCard, !item.is_available && styles.disabledCard]}>
+                    {/* Card Top: Title, Category & Price */}
+                    <View style={styles.cardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.productName} numberOfLines={1}>{item.product?.name || 'Spare Part'}</Text>
+                          {!item.is_available && (
+                            <View style={styles.disabledBadge}>
+                              <Text style={styles.disabledBadgeText}>DISABLED</Text>
+                            </View>
+                          )}
                         </View>
-                      )}
+                        <Text style={styles.productMeta} numberOfLines={1}>
+                          {formatCategoryName(item.product?.category?.name || 'General', language)}
+                          {item.product?.specification ? ` • Spec: ${item.product.specification}` : ''}
+                        </Text>
+
+                        <Text style={styles.skuText} numberOfLines={1}>SKU: {item.product?.sku || 'N/A'}</Text>
+                      </View>
+
+                      <View style={styles.priceContainer}>
+                        <Text style={styles.priceLabel}>PRICE</Text>
+                        <Text style={styles.priceValue}>RM {Number(item.price).toFixed(2)}</Text>
+                        <TouchableOpacity
+                          style={styles.editPriceLink}
+                          onPress={() => handleOpenPriceModal(item)}
+                        >
+                          <Edit3 color={COLORS.primary} size={11} />
+                          <Text style={styles.editPriceText}>Edit Price</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <Text style={styles.productMeta}>
-                      {item.product?.category?.name || 'General'}
-                      {item.product?.specification ? ` • Spec: ${item.product.specification}` : ''}
-                    </Text>
-                    <Text style={styles.skuText}>SKU: {item.product?.sku || 'N/A'}</Text>
+
+                    {/* Card Bottom: Stock Status & Action Buttons */}
+                    <View style={styles.cardFooter}>
+                      {/* Stock Status Pill */}
+                      <View
+                        style={[
+                          styles.stockStatusBadge,
+                          isOut
+                            ? styles.badgeOut
+                            : isLow
+                            ? styles.badgeLow
+                            : styles.badgeIn,
+                        ]}
+                      >
+                        {isOut ? (
+                          <AlertTriangle color={COLORS.danger} size={13} />
+                        ) : isLow ? (
+                          <AlertTriangle color={COLORS.warning} size={13} />
+                        ) : (
+                          <CheckCircle2 color={COLORS.success} size={13} />
+                        )}
+                        <Text
+                          style={[
+                            styles.stockStatusText,
+                            { color: isOut ? COLORS.danger : isLow ? COLORS.warning : COLORS.success },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.stock_quantity} in stock
+                        </Text>
+                      </View>
+
+                      {/* Actions Row */}
+                      <View style={styles.actionBtnRow}>
+                        <TouchableOpacity
+                          style={styles.iconBtn}
+                          onPress={() => handleOpenHistoryModal(item)}
+                          accessibilityLabel="View audit history"
+                        >
+                          <History color={COLORS.textSecondary} size={15} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.adjustStockBtn}
+                          onPress={() => handleOpenStockModal(item)}
+                        >
+                          <Sliders color="#FFFFFF" size={13} />
+                          <Text style={styles.adjustStockBtnText}>Adjust Stock</Text>
+                        </TouchableOpacity>
+
+                        {/* Available Toggle Switch */}
+                        <Switch
+                          value={item.is_available}
+                          onValueChange={() => handleToggleAvailability(item)}
+                          trackColor={{ false: COLORS.surfaceContainer, true: COLORS.primary }}
+                          thumbColor="#FFFFFF"
+                        />
+                      </View>
+                    </View>
                   </View>
-
-                  <View style={styles.priceContainer}>
-                    <Text style={styles.priceLabel}>PRICE</Text>
-                    <Text style={styles.priceValue}>RM {Number(item.price).toFixed(2)}</Text>
-                    <TouchableOpacity
-                      style={styles.editPriceLink}
-                      onPress={() => handleOpenPriceModal(item)}
-                    >
-                      <Edit3 color={COLORS.primary} size={11} />
-                      <Text style={styles.editPriceText}>Edit Price</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Card Bottom: Stock Status & Action Buttons */}
-                <View style={styles.cardFooter}>
-                  {/* Stock Status Pill */}
-                  <View
-                    style={[
-                      styles.stockStatusBadge,
-                      isOut
-                        ? styles.badgeOut
-                        : isLow
-                        ? styles.badgeLow
-                        : styles.badgeIn,
-                    ]}
-                  >
-                    {isOut ? (
-                      <AlertTriangle color={COLORS.danger} size={13} />
-                    ) : isLow ? (
-                      <AlertTriangle color={COLORS.warning} size={13} />
-                    ) : (
-                      <CheckCircle2 color={COLORS.success} size={13} />
-                    )}
-                    <Text
-                      style={[
-                        styles.stockStatusText,
-                        { color: isOut ? COLORS.danger : isLow ? COLORS.warning : COLORS.success },
-                      ]}
-                    >
-                      {item.stock_quantity} in stock • {item.stock_status?.replace('_', ' ')}
-                    </Text>
-                  </View>
-
-                  {/* Actions Row */}
-                  <View style={styles.actionBtnRow}>
-                    <TouchableOpacity
-                      style={styles.iconBtn}
-                      onPress={() => handleOpenHistoryModal(item)}
-                      accessibilityLabel="View audit history"
-                    >
-                      <History color={COLORS.textSecondary} size={15} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.adjustStockBtn}
-                      onPress={() => handleOpenStockModal(item)}
-                    >
-                      <Sliders color="#FFFFFF" size={13} />
-                      <Text style={styles.adjustStockBtnText}>Adjust Stock</Text>
-                    </TouchableOpacity>
-
-                    {/* Available Toggle Switch */}
-                    <Switch
-                      value={item.is_available}
-                      onValueChange={() => handleToggleAvailability(item)}
-                      trackColor={{ false: COLORS.surfaceContainer, true: COLORS.primary }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                </View>
-              </View>
-            );
-          })
-        )}
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* ─── MODAL 1: STOCK ADJUSTMENT ───────────────────────── */}
@@ -640,8 +653,9 @@ export default function WorkshopPartsScreen() {
               <View style={styles.modalProductHeader}>
                 <Text style={styles.modalProdName}>{selectedWp.product?.name}</Text>
                 <Text style={styles.modalProdMeta}>
-                  Category: {selectedWp.product?.category?.name} • SKU: {selectedWp.product?.sku}
+                  Category: {formatCategoryName(selectedWp.product?.category?.name || '', language)} • SKU: {selectedWp.product?.sku}
                 </Text>
+
               </View>
             )}
 
