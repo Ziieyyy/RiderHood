@@ -38,6 +38,7 @@ import { getWorkshopReviews, getReviewStats, canCustomerReview, getCompletedBook
 import { useAuth } from '../../../context/AuthContext';
 import type { Workshop, Service, Review } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
+import { getWorkshopImageSource } from '../../../utils/workshopImage';
 
 export default function CustomerWorkshopDetailScreen() {
   const { t } = useTranslation();
@@ -246,7 +247,7 @@ export default function CustomerWorkshopDetailScreen() {
         <View style={styles.headerCard}>
           <View style={styles.coverImageContainer}>
             <Image
-              source={{ uri: workshop.cover_image_url || 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80' }}
+              source={getWorkshopImageSource(workshop)}
               style={styles.coverImage}
               resizeMode="cover"
             />

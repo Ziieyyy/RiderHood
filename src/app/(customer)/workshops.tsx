@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,9 +27,19 @@ import {
   Phone,
   Clock,
   X,
+  Navigation,
+  RotateCw,
 } from 'lucide-react-native';
 import { getWorkshops, canBookWorkshop } from '../../services/workshopService';
 import { getWorkshopOpenStatus } from '../../utils/operatingHours';
+import { getWorkshopImageSource } from '../../utils/workshopImage';
+import {
+  requestUserLocation,
+  getWorkshopCoordinates,
+  calculateDistanceKm,
+  formatDistance,
+  type Coordinates,
+} from '../../utils/location';
 import { useTranslation } from '../../i18n';
 import type { Workshop } from '../../types/database';
 
@@ -38,11 +49,48 @@ export default function CustomerWorkshopsScreen() {
   const { contentPadding } = useResponsive();
 
   const [search, setSearch] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'open_now' | 'bookable' | 'highest_rated'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'nearby' | 'open_now' | 'bookable' | 'highest_rated'>('all');
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkshops = async () => {
+  // GPS State
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'active' | 'denied'>('idle');
+
+  // Request GPS Location
+  const handleRequestGPS = useCallback(async (autoSetNearby = false) => {
+    setLocationLoading(true);
+    try {
+      const coords = await requestUserLocation();
+      if (coords) {
+        setUserLocation(coords);
+        setLocationStatus('active');
+        if (autoSetNearby) {
+          setFilterMode('nearby');
+        }
+      } else {
+        setLocationStatus('denied');
+        if (autoSetNearby) {
+          // If browser denied GPS, default to Kulim center
+          setUserLocation({ latitude: 5.3644, longitude: 100.5618 });
+          setFilterMode('nearby');
+        }
+      }
+    } catch (e) {
+      console.warn('GPS location request error:', e);
+      setLocationStatus('denied');
+    } finally {
+      setLocationLoading(false);
+    }
+  }, []);
+
+  // Request GPS on initial mount
+  useEffect(() => {
+    handleRequestGPS(false);
+  }, [handleRequestGPS]);
+
+  const fetchWorkshops = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getWorkshops({
@@ -53,7 +101,19 @@ export default function CustomerWorkshopsScreen() {
 
       let list = data ?? [];
 
-      if (filterMode === 'highest_rated') {
+      if (filterMode === 'nearby') {
+        // Sort by Distance using GPS coordinates
+        const refLat = userLocation?.latitude ?? 5.3644;
+        const refLng = userLocation?.longitude ?? 100.5618;
+
+        list = list.slice().sort((a, b) => {
+          const coordsA = getWorkshopCoordinates(a);
+          const coordsB = getWorkshopCoordinates(b);
+          const distA = coordsA ? calculateDistanceKm(refLat, refLng, coordsA.latitude, coordsA.longitude) : 9999;
+          const distB = coordsB ? calculateDistanceKm(refLat, refLng, coordsB.latitude, coordsB.longitude) : 9999;
+          return distA - distB;
+        });
+      } else if (filterMode === 'highest_rated') {
         list = list.slice().sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
       } else if (filterMode !== 'bookable') {
         // Standard sort: Pin Wan Legacy / Online Booking Partner to top, followed by rating
@@ -72,14 +132,22 @@ export default function CustomerWorkshopsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, filterMode, userLocation]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchWorkshops();
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, filterMode]);
+  }, [fetchWorkshops]);
+
+  const handleNearbyFilterClick = () => {
+    if (!userLocation) {
+      handleRequestGPS(true);
+    } else {
+      setFilterMode('nearby');
+    }
+  };
 
   const handleOpenDetails = (w: Workshop) => {
     router.push({
@@ -135,6 +203,37 @@ export default function CustomerWorkshopsScreen() {
         <ResponsiveContainer>
           {/* Search & Filter Container */}
           <View style={styles.searchContainer}>
+            {/* GPS Location Status Bar */}
+            <View style={styles.gpsBanner}>
+              <View style={styles.gpsInfo}>
+                <Navigation color={userLocation ? COLORS.primary : COLORS.textMuted} size={15} />
+                <Text style={styles.gpsText} numberOfLines={1}>
+                  {locationLoading
+                    ? '🛰️ ' + t('common.loading') + ' GPS...'
+                    : userLocation
+                    ? `📍 GPS Aktif • ${filterMode === 'nearby' ? 'Disusun paling dekat' : 'Jarak dipaparkan'}`
+                    : '📍 Bolehkan GPS untuk melihat jarak bengkel'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.gpsBtn, userLocation ? styles.gpsBtnActive : undefined]}
+                onPress={() => handleRequestGPS(true)}
+                disabled={locationLoading}
+                activeOpacity={0.8}
+              >
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <>
+                    <RotateCw color={userLocation ? '#000' : COLORS.primary} size={12} />
+                    <Text style={[styles.gpsBtnText, userLocation ? styles.gpsBtnTextActive : undefined]}>
+                      {userLocation ? 'Kemaskini GPS' : 'Kesan GPS'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.searchWrapper}>
               <Search color={COLORS.textMuted} size={18} style={{ marginRight: 8 }} />
               <TextInput
@@ -163,6 +262,15 @@ export default function CustomerWorkshopsScreen() {
               >
                 <Text style={[styles.filterChipText, filterMode === 'all' && styles.activeFilterChipText]}>
                   {t('common.all')} ({workshops.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterChip, filterMode === 'nearby' && styles.activeFilterChip]}
+                onPress={handleNearbyFilterClick}
+              >
+                <Text style={[styles.filterChipText, filterMode === 'nearby' && styles.activeFilterChipText]}>
+                  📍 {t('workshop.nearbyWorkshops')}
                 </Text>
               </TouchableOpacity>
 
@@ -209,14 +317,20 @@ export default function CustomerWorkshopsScreen() {
               {workshops.map((w) => {
                 const bookable = canBookWorkshop(w);
                 const openStatus = getWorkshopOpenStatus(w);
+                const coords = getWorkshopCoordinates(w);
+                const refLat = userLocation?.latitude ?? 5.3644;
+                const refLng = userLocation?.longitude ?? 100.5618;
+                const distKm = coords ? calculateDistanceKm(refLat, refLng, coords.latitude, coords.longitude) : null;
 
                 return (
                   <View key={w.id} style={styles.workshopCard}>
                     {/* Header Row */}
                     <View style={styles.cardTopRow}>
-                      <View style={styles.iconBox}>
-                        <Wrench color={COLORS.primary} size={20} />
-                      </View>
+                      <Image
+                        source={getWorkshopImageSource(w)}
+                        style={styles.workshopThumb}
+                        resizeMode="contain"
+                      />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.wsName} numberOfLines={1}>
                           {w.name}
@@ -231,6 +345,12 @@ export default function CustomerWorkshopsScreen() {
                           </Text>
                         </View>
                       </View>
+                      {distKm !== null && (
+                        <View style={styles.distanceTag}>
+                          <Navigation color={COLORS.primary} size={11} />
+                          <Text style={styles.distanceTagText}>{formatDistance(distKm)}</Text>
+                        </View>
+                      )}
                     </View>
 
                     {/* Address */}
@@ -338,6 +458,53 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 10,
   },
+  gpsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 107, 0, 0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 0, 0.25)',
+    gap: 8,
+  },
+  gpsInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  gpsText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: '700',
+    flex: 1,
+  },
+  gpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 107, 0, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 0, 0.4)',
+  },
+  gpsBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  gpsBtnText: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  gpsBtnTextActive: {
+    color: '#000',
+  },
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -412,15 +579,29 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
   },
-  iconBox: {
-    width: 44,
-    height: 44,
+  workshopThumb: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.border,
+  },
+  distanceTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 107, 0, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 0, 0.3)',
+  },
+  distanceTagText: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '800',
   },
   wsName: {
     color: COLORS.textPrimary,

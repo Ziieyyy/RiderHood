@@ -229,10 +229,10 @@ export default function WorkshopProfileScreen() {
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
           <TouchableOpacity
             style={styles.presetPhotoBtn}
-            onPress={() => setCoverImageUrl('https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80')}
+            onPress={() => setCoverImageUrl('https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1200&q=80')}
           >
             <ImageIcon color={COLORS.primary} size={14} />
-            <Text style={styles.presetPhotoBtnText}>Use Sample Shop Banner</Text>
+            <Text style={styles.presetPhotoBtnText}>Use Official Shop Photo</Text>
           </TouchableOpacity>
         </View>
         {coverImageUrl ? (

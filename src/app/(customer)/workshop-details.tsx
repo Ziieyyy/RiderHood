@@ -38,6 +38,7 @@ import {
   Search,
 } from 'lucide-react-native';
 import { getWorkshop, getWorkshopServices, canBookWorkshop } from '../../services/workshopService';
+import { getWorkshopImageSource } from '../../utils/workshopImage';
 import { getWorkshopParts } from '../../services/partsService';
 import {
   getWorkshopReviews,
@@ -310,9 +311,9 @@ export default function WorkshopDetailsScreen() {
           {/* Banner / Workshop Image Header */}
         <View style={styles.photoContainer}>
           <Image
-            source={{ uri: workshop?.cover_image_url || 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1000&q=80' }}
+            source={getWorkshopImageSource(workshop ? { id: workshop.id, name: workshop.name, cover_image_url: workshop.cover_image_url } : { id: workshopId, name: name })}
             style={styles.workshopCoverImage}
-            resizeMode="cover"
+            resizeMode="contain"
           />
           <View style={[styles.statusBadge, { backgroundColor: openStatus.isOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
             <Text style={[styles.statusText, { color: openStatus.isOpen ? COLORS.success : COLORS.danger }]}>

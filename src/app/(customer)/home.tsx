@@ -16,6 +16,7 @@ import { getCustomerBookings } from '../../services/bookingService';
 import { getReminders, calculateHealthScore } from '../../services/maintenanceService';
 import { Header } from '../../components/Header';
 import { HealthGauge } from '../../components/HealthGauge';
+import { PromoCarousel } from '../../components/PromoCarousel';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { useResponsive } from '../../hooks/useResponsive';
 import {
@@ -146,43 +147,73 @@ export default function CustomerHomeScreen() {
   }
 
   // ─── Render Bike & Health Section ─────────────────────────
+  // ─── Render Bike & Health Section (Full-length bottom section) ──
   const renderMotorcycleSection = () => (
     <View style={styles.sectionCol}>
-      {selectedBike ? (
-        <View style={styles.bikeSelectorCard}>
-          <View style={styles.bikeHeaderRow}>
-            <View style={styles.bikeBadgeRow}>
-              <Bike color={COLORS.primary} size={18} />
-              <Text style={styles.activeLabel}>{t('motorcycle.primaryBadge').toUpperCase()}</Text>
-            </View>
-            {motorcycles.length > 1 && (
-              <TouchableOpacity
-                style={styles.switchBtn}
-                activeOpacity={0.7}
-                onPress={handleSwitchBike}
-                accessibilityLabel="Switch motorcycle"
-              >
-                <Text style={styles.switchBtnText}>{t('common.sort')} 🔄</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+      <Text style={styles.sectionTitle}>
+        🏍️ {t('motorcycle.primaryBadge').toUpperCase()} & {t('motorcycle.healthScore').toUpperCase()}
+      </Text>
 
-          <View style={styles.bikeInfoRow}>
-            <View style={styles.bikePlaceholderImg}>
-              <Bike color={COLORS.textMuted} size={28} />
+      {selectedBike ? (
+        <View style={isPhone ? styles.mobileBikeStack : styles.desktopBikeRow}>
+          <View style={[styles.bikeSelectorCard, !isPhone && { flex: 1.1 }]}>
+            <View style={styles.bikeHeaderRow}>
+              <View style={styles.bikeBadgeRow}>
+                <Bike color={COLORS.primary} size={18} />
+                <Text style={styles.activeLabel}>{t('motorcycle.primaryBadge').toUpperCase()}</Text>
+              </View>
+              {motorcycles.length > 1 && (
+                <TouchableOpacity
+                  style={styles.switchBtn}
+                  activeOpacity={0.7}
+                  onPress={handleSwitchBike}
+                  accessibilityLabel="Switch motorcycle"
+                >
+                  <Text style={styles.switchBtnText}>{t('common.sort')} 🔄</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.bikeDetails}>
-              <Text style={styles.bikeName}>
-                {selectedBike.nickname || `${selectedBike.brand} ${selectedBike.model}`}
-              </Text>
-              <Text style={styles.bikeEngine}>
-                {selectedBike.brand} {selectedBike.model} • {selectedBike.year}
-              </Text>
-              <Text style={styles.bikeMileage}>📍 {selectedBike.current_mileage.toLocaleString()} km</Text>
-              <View style={styles.plateTag}>
-                <Text style={styles.plateText}>{selectedBike.plate_number}</Text>
+
+            <View style={styles.bikeInfoRow}>
+              <View style={styles.bikePlaceholderImg}>
+                <Bike color={COLORS.textMuted} size={28} />
+              </View>
+              <View style={styles.bikeDetails}>
+                <Text style={styles.bikeName}>
+                  {selectedBike.nickname || `${selectedBike.brand} ${selectedBike.model}`}
+                </Text>
+                <Text style={styles.bikeEngine}>
+                  {selectedBike.brand} {selectedBike.model} • {selectedBike.year}
+                </Text>
+                <Text style={styles.bikeMileage}>📍 {selectedBike.current_mileage.toLocaleString()} km</Text>
+                <View style={styles.plateTag}>
+                  <Text style={styles.plateText}>{selectedBike.plate_number}</Text>
+                </View>
               </View>
             </View>
+          </View>
+
+          {/* Health Score Component */}
+          <View style={!isPhone ? { flex: 0.9 } : undefined}>
+            {healthScore !== null ? (
+              <HealthGauge
+                score={healthScore}
+                bikeName={selectedBike.nickname || `${selectedBike.brand} ${selectedBike.model}`}
+                status={
+                  healthScore >= 85
+                    ? t('motorcycle.healthExcellent')
+                    : healthScore >= 60
+                    ? t('motorcycle.healthGood')
+                    : t('motorcycle.healthPoor')
+                }
+              />
+            ) : (
+              <View style={styles.healthPlaceholder}>
+                <Wrench color={COLORS.textMuted} size={28} />
+                <Text style={styles.healthPlaceholderText}>{t('motorcycle.healthScore')}</Text>
+                <Text style={styles.healthPlaceholderSub}>{t('motorcycle.healthScoreDesc')}</Text>
+              </View>
+            )}
           </View>
         </View>
       ) : (
@@ -202,61 +233,38 @@ export default function CustomerHomeScreen() {
         </View>
       )}
 
-      {/* Health Score Component */}
-      {selectedBike && (
-        <>
-          {healthScore !== null ? (
-            <HealthGauge
-              score={healthScore}
-              bikeName={selectedBike.nickname || `${selectedBike.brand} ${selectedBike.model}`}
-              status={
-                healthScore >= 85
-                  ? t('motorcycle.healthExcellent')
-                  : healthScore >= 60
-                  ? t('motorcycle.healthGood')
-                  : t('motorcycle.healthPoor')
-              }
-            />
-          ) : (
-            <View style={styles.healthPlaceholder}>
-              <Wrench color={COLORS.textMuted} size={28} />
-              <Text style={styles.healthPlaceholderText}>{t('motorcycle.healthScore')}</Text>
-              <Text style={styles.healthPlaceholderSub}>{t('motorcycle.healthScoreDesc')}</Text>
-            </View>
-          )}
-        </>
-      )}
-
       {/* Due Reminders Alert Box */}
       {dueReminders.length > 0 && (
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 8 }}>
           <Text style={styles.sectionTitle}>⚠️ {t('common.warning').toUpperCase()}</Text>
-          {dueReminders.slice(0, 3).map((r) => (
-            <View key={r.id} style={styles.reminderAlert}>
-              <AlertTriangle color={COLORS.danger} size={16} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reminderAlertTitle}>{r.title}</Text>
-                <Text style={styles.reminderAlertSub}>
-                  {r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon').toUpperCase()}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { borderColor: r.status === 'overdue' ? COLORS.danger : '#f59e0b' },
-                ]}
-              >
-                <Text
+          <View style={!isPhone ? styles.remindersGridDesktop : undefined}>
+            {dueReminders.slice(0, 3).map((r) => (
+              <View key={r.id} style={[styles.reminderAlert, !isPhone && { flex: 1, minWidth: 260 }]}>
+                <AlertTriangle color={COLORS.danger} size={16} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reminderAlertTitle}>{r.title}</Text>
+                  <Text style={styles.reminderAlertSub}>
+                    {r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon').toUpperCase()}
+                  </Text>
+                </View>
+                <View
                   style={[
-                    styles.statusBadgeText,
-                    { color: r.status === 'overdue' ? COLORS.danger : '#f59e0b' },
+                    styles.statusBadge,
+                    { borderColor: r.status === 'overdue' ? COLORS.danger : '#f59e0b' },
                   ]}
                 >
-                  {(r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon')).toUpperCase()}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: r.status === 'overdue' ? COLORS.danger : '#f59e0b' },
+                    ]}
+                  >
+                    {(r.status === 'overdue' ? t('maintenance.overdue') : t('maintenance.dueSoon')).toUpperCase()}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -451,16 +459,29 @@ export default function CustomerHomeScreen() {
       >
         <ResponsiveContainer>
           {isPhone ? (
-            // Mobile: Stacked view
+            // Mobile: Stacked view (Promo Carousel -> Recent Activity & Bookings -> Motorcycle Status)
             <View style={styles.mobileStack}>
-              {renderMotorcycleSection()}
+              <PromoCarousel />
               {renderActionsAndActivitySection()}
+              {renderMotorcycleSection()}
             </View>
           ) : (
-            // Tablet & Desktop: 2-column side-by-side dashboard
-            <View style={styles.desktopGrid}>
-              <View style={styles.desktopLeftCol}>{renderMotorcycleSection()}</View>
-              <View style={styles.desktopRightCol}>{renderActionsAndActivitySection()}</View>
+            // Tablet & Desktop:
+            // Top Row (2 Columns): Left = Recent Activity & Bookings | Right = Promo Carousel
+            // Bottom Row (Full Length): Motorcycle Details & Live Health Gauge
+            <View style={styles.desktopLayoutWrapper}>
+              <View style={styles.desktopGrid}>
+                <View style={styles.desktopLeftCol}>
+                  {renderActionsAndActivitySection()}
+                </View>
+                <View style={styles.desktopRightCol}>
+                  <PromoCarousel />
+                </View>
+              </View>
+
+              <View style={styles.desktopBottomFull}>
+                {renderMotorcycleSection()}
+              </View>
             </View>
           )}
 
@@ -487,9 +508,14 @@ const styles = StyleSheet.create({
   retryText: { color: '#000', fontWeight: '800', fontSize: 13 },
 
   mobileStack: { gap: 16, width: '100%' },
+  desktopLayoutWrapper: { width: '100%', gap: 24 },
   desktopGrid: { flexDirection: 'row', gap: 24, width: '100%', alignItems: 'flex-start' },
-  desktopLeftCol: { flex: 1, minWidth: 320, gap: 16 },
-  desktopRightCol: { flex: 1.2, minWidth: 340, gap: 16 },
+  desktopLeftCol: { flex: 1.2, minWidth: 340, gap: 16 },
+  desktopRightCol: { flex: 1, minWidth: 320, gap: 16 },
+  desktopBottomFull: { width: '100%', marginTop: 8 },
+  desktopBikeRow: { flexDirection: 'row', gap: 16, width: '100%', alignItems: 'stretch' },
+  mobileBikeStack: { flexDirection: 'column', gap: 12, width: '100%' },
+  remindersGridDesktop: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   sectionCol: { width: '100%', gap: 12 },
 
   // Bike card
