@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { AppThemeColors } from '../../constants/theme';
 import { LAYOUT } from '../../constants/responsive';
 import {
   Home,
@@ -26,15 +26,17 @@ import {
   Bell,
   Settings,
   LogOut,
-  Zap,
   Globe,
+  Moon,
+  Sun,
+  Laptop,
   Layers,
   Menu,
   ChevronLeft,
-  ChevronRight,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation, SupportedLanguage } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 
 interface ResponsiveSidebarProps {
   role: 'customer' | 'workshop' | 'admin';
@@ -55,6 +57,8 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
   const pathname = usePathname();
   const { user, profile, logout } = useAuth();
   const { t, language, setLanguage } = useTranslation();
+  const { themeMode, activeTheme, isDark, colors, toggleTheme } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   // Navigation Items by Role
   const customerNav = [
@@ -111,7 +115,12 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
   };
 
   return (
-    <View style={[styles.sidebarContainer, isCollapsed && styles.sidebarContainerCollapsed]}>
+    <View
+      style={[
+        styles.sidebarContainer,
+        isCollapsed && styles.sidebarContainerCollapsed,
+      ]}
+    >
       {/* Brand Header */}
       <View style={[styles.brandHeader, isCollapsed && styles.brandHeaderCollapsed]}>
         <View style={[styles.logoRow, isCollapsed && styles.logoRowCollapsed]}>
@@ -133,9 +142,9 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
             accessibilityLabel={isCollapsed ? 'Open menu' : 'Close menu'}
           >
             {isCollapsed ? (
-              <Menu color={COLORS.primary} size={18} />
+              <Menu color={colors.primary} size={18} />
             ) : (
-              <ChevronLeft color={COLORS.textSecondary} size={18} />
+              <ChevronLeft color={colors.textSecondary} size={18} />
             )}
           </TouchableOpacity>
         </View>
@@ -154,7 +163,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
                 <View
                   style={[
                     styles.statusDot,
-                    { backgroundColor: isWorkshopOnline ? COLORS.success : COLORS.danger },
+                    { backgroundColor: isWorkshopOnline ? colors.success : colors.danger },
                   ]}
                 />
                 <Text style={styles.statusToggleText}>
@@ -193,7 +202,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
               accessibilityLabel={item.label}
             >
               <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
-                <Icon color={isActive ? COLORS.primary : COLORS.textSecondary} size={18} />
+                <Icon color={isActive ? colors.primary : colors.textSecondary} size={18} />
               </View>
               {!isCollapsed && (
                 <>
@@ -208,8 +217,33 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
         })}
       </ScrollView>
 
-      {/* Footer: Language Switcher & Profile & Logout */}
+      {/* Footer: Theme Toggle & Language Switcher & Profile & Logout */}
       <View style={[styles.footerContainer, isCollapsed && styles.footerContainerCollapsed]}>
+        {/* Theme Mode Toggle (Cycles Dark -> Light -> System) */}
+        <TouchableOpacity
+          style={[styles.langSwitchBtn, isCollapsed && styles.langSwitchBtnCollapsed, { marginBottom: 6 }]}
+          onPress={toggleTheme}
+          activeOpacity={0.7}
+          accessibilityLabel="Toggle Theme"
+        >
+          {themeMode === 'dark' ? (
+            <Moon color={colors.primary} size={16} />
+          ) : themeMode === 'light' ? (
+            <Sun color={colors.primary} size={16} />
+          ) : (
+            <Laptop color={colors.primary} size={16} />
+          )}
+          {!isCollapsed && (
+            <Text style={styles.langSwitchText}>
+              {themeMode === 'dark'
+                ? t('settings.darkMode')
+                : themeMode === 'light'
+                ? t('settings.lightMode')
+                : `${t('settings.systemMode')} (${activeTheme === 'dark' ? 'Dark' : 'Light'})`}
+            </Text>
+          )}
+        </TouchableOpacity>
+
         {/* Language Switcher */}
         <TouchableOpacity
           style={[styles.langSwitchBtn, isCollapsed && styles.langSwitchBtnCollapsed]}
@@ -217,7 +251,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
           activeOpacity={0.7}
           accessibilityLabel="Switch language"
         >
-          <Globe color={COLORS.primary} size={16} />
+          <Globe color={colors.primary} size={16} />
           {!isCollapsed && (
             <Text style={styles.langSwitchText}>
               {language === 'en-GB' ? '🇬🇧 English (UK)' : '🇲🇾 Bahasa Melayu'}
@@ -239,7 +273,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
               activeOpacity={0.7}
               accessibilityLabel={t('common.logout')}
             >
-              <LogOut color={COLORS.danger} size={16} />
+              <LogOut color={colors.danger} size={16} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -263,7 +297,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
               activeOpacity={0.7}
               accessibilityLabel={t('common.logout')}
             >
-              <LogOut color={COLORS.danger} size={16} />
+              <LogOut color={colors.danger} size={16} />
             </TouchableOpacity>
           </View>
         )}
@@ -272,252 +306,253 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  sidebarContainer: {
-    width: LAYOUT.SIDEBAR_WIDTH_EXPANDED,
-    backgroundColor: COLORS.secondaryBackground,
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border,
-    height: '100%',
-    flexDirection: 'column',
-  },
-  sidebarContainerCollapsed: {
-    width: 76,
-  },
-  brandHeader: {
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 12,
-  },
-  brandHeaderCollapsed: {
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 8,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoRowCollapsed: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 10,
-  },
-  sidebarLogoImg: {
-    width: 38,
-    height: 38,
-  },
-  sidebarLogoImgCollapsed: {
-    width: 34,
-    height: 34,
-  },
-  toggleMenuBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  logoBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  brandTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
-  brandSub: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  workshopStatusCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-    gap: 6,
-  },
-  workshopNameText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusToggleText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  navScroll: {
-    flex: 1,
-  },
-  navScrollContent: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  navScrollContentCollapsed: {
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  sectionHeader: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    paddingHorizontal: 10,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
-    gap: 12,
-    position: 'relative',
-  },
-  navItemCollapsed: {
-    paddingHorizontal: 0,
-    justifyContent: 'center',
-    width: 48,
-    height: 48,
-  },
-  navItemActive: {
-    backgroundColor: 'rgba(255, 107, 0, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 0, 0.3)',
-  },
-  iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconBoxActive: {
-    backgroundColor: 'rgba(255, 107, 0, 0.2)',
-  },
-  navLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  navLabelActive: {
-    color: COLORS.textPrimary,
-    fontWeight: '800',
-  },
-  activePill: {
-    position: 'absolute',
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.primary,
-  },
-  footerContainer: {
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    gap: 12,
-    backgroundColor: COLORS.surface,
-  },
-  footerContainerCollapsed: {
-    padding: 10,
-    alignItems: 'center',
-    gap: 10,
-  },
-  langSwitchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  langSwitchBtnCollapsed: {
-    width: 38,
-    height: 38,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    borderRadius: 10,
-  },
-  langSwitchText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  profileColumnCollapsed: {
-    alignItems: 'center',
-    gap: 10,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarText: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  profileName: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  profileRole: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  logoutBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: COLORS.dangerBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    sidebarContainer: {
+      width: LAYOUT.SIDEBAR_WIDTH_EXPANDED,
+      backgroundColor: colors.secondaryBackground,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+      height: '100%',
+      flexDirection: 'column',
+    },
+    sidebarContainerCollapsed: {
+      width: 76,
+    },
+    brandHeader: {
+      padding: 18,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 12,
+    },
+    brandHeaderCollapsed: {
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      alignItems: 'center',
+      gap: 8,
+    },
+    logoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    logoRowCollapsed: {
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 10,
+    },
+    sidebarLogoImg: {
+      width: 38,
+      height: 38,
+    },
+    sidebarLogoImgCollapsed: {
+      width: 34,
+      height: 34,
+    },
+    toggleMenuBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    logoBadge: {
+      width: 38,
+      height: 38,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    brandTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+    },
+    brandSub: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    workshopStatusCard: {
+      backgroundColor: colors.cards,
+      borderRadius: 10,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+      gap: 6,
+    },
+    workshopNameText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    statusToggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    statusToggleText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    navScroll: {
+      flex: 1,
+    },
+    navScrollContent: {
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+    },
+    navScrollContentCollapsed: {
+      paddingHorizontal: 8,
+      alignItems: 'center',
+    },
+    sectionHeader: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      paddingHorizontal: 10,
+      marginBottom: 8,
+      marginTop: 4,
+    },
+    navItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      marginBottom: 4,
+      gap: 12,
+      position: 'relative',
+    },
+    navItemCollapsed: {
+      paddingHorizontal: 0,
+      justifyContent: 'center',
+      width: 48,
+      height: 48,
+    },
+    navItemActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.3)' : 'rgba(255, 107, 0, 0.25)',
+    },
+    iconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconBoxActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.2)' : 'rgba(255, 107, 0, 0.12)',
+    },
+    navLabel: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    navLabelActive: {
+      color: colors.textPrimary,
+      fontWeight: '800',
+    },
+    activePill: {
+      position: 'absolute',
+      right: 8,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    footerContainer: {
+      padding: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 12,
+      backgroundColor: colors.surface,
+    },
+    footerContainerCollapsed: {
+      padding: 10,
+      alignItems: 'center',
+      gap: 10,
+    },
+    langSwitchBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.surfaceContainer,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    langSwitchBtnCollapsed: {
+      width: 38,
+      height: 38,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      borderRadius: 10,
+    },
+    langSwitchText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    profileColumnCollapsed: {
+      alignItems: 'center',
+      gap: 10,
+    },
+    profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    avatarCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.primaryDark,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    avatarText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    profileName: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    profileRole: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    logoutBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+      backgroundColor: colors.dangerBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.4)',
+    },
+  });

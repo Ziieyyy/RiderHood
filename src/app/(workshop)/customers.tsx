@@ -10,7 +10,7 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   Users,
   Phone,
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import { getWorkshopCustomers, WorkshopCustomerSummary } from '../../services/customerService';
 import { useTranslation } from '../../i18n';
@@ -33,6 +34,8 @@ import { useTranslation } from '../../i18n';
 export default function WorkshopCustomersScreen() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [customers, setCustomers] = useState<WorkshopCustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -320,60 +323,61 @@ export default function WorkshopCustomersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
-  searchBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
-  searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10, height: 44 },
-  searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: 13 },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40, gap: 14 },
-  emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: COLORS.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: COLORS.border },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  emptyDesc: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
-  customerCard: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
-  name: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '800' },
-  bikeText: { color: COLORS.primaryDim, fontSize: 12, fontWeight: '600' },
-  noBikeText: { color: COLORS.textMuted, fontSize: 11, fontStyle: 'italic' },
-  statsBar: { flexDirection: 'row', backgroundColor: COLORS.secondaryBackground, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'space-around', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  statItem: { alignItems: 'center' },
-  statVal: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' },
-  statLbl: { color: COLORS.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  statDivider: { width: 1, height: 24, backgroundColor: COLORS.border },
-  infoGrid: { gap: 6 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoText: { color: COLORS.textSecondary, fontSize: 12 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: COLORS.elevatedCards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.borderHighlight, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 12 },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
-  detailScroll: { gap: 14 },
-  detailProfileCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: COLORS.cards, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border },
-  detailAvatarBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
-  detailAvatarText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  detailName: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  detailSub: { color: COLORS.textSecondary, fontSize: 12 },
-  detailSection: { backgroundColor: COLORS.cards, padding: 14, borderRadius: 14, gap: 10, borderWidth: 1, borderColor: COLORS.border },
-  detailSectionLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  noneText: { color: COLORS.textMuted, fontSize: 12, fontStyle: 'italic' },
-  bikeDetailRow: { backgroundColor: COLORS.secondaryBackground, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, gap: 2 },
-  bikeDetailTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  bikeDetailSub: { color: COLORS.textSecondary, fontSize: 11 },
-  bkHistoryCard: { backgroundColor: COLORS.secondaryBackground, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, gap: 6 },
-  bkHistTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bkRef: { color: COLORS.primary, fontSize: 12, fontWeight: '900' },
-  histStatusBadge: { backgroundColor: 'rgba(255, 107, 0, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  histStatusText: { color: COLORS.primary, fontSize: 9, fontWeight: '800' },
-  bkDateText: { color: COLORS.textSecondary, fontSize: 11 },
-  bkSvcItem: { color: COLORS.textMuted, fontSize: 11 },
-  bkHistFooter: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 6, marginTop: 4 },
-  bkHistAmount: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
+    errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    searchBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+    searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, gap: 10, height: 44 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40, gap: 14 },
+    emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: colors.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border },
+    emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    emptyDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
+    customerCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
+    rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    avatarBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: isDark ? '#000000' : '#FFFFFF', fontSize: 15, fontWeight: '900' },
+    name: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
+    bikeText: { color: colors.primaryDim, fontSize: 12, fontWeight: '600' },
+    noBikeText: { color: colors.textMuted, fontSize: 11, fontStyle: 'italic' },
+    statsBar: { flexDirection: 'row', backgroundColor: colors.secondaryBackground, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, justifyContent: 'space-around', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+    statItem: { alignItems: 'center' },
+    statVal: { color: colors.textPrimary, fontSize: 15, fontWeight: '900' },
+    statLbl: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+    statDivider: { width: 1, height: 24, backgroundColor: colors.border },
+    infoGrid: { gap: 6 },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    infoText: { color: colors.textSecondary, fontSize: 12 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: colors.elevatedCards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: colors.borderHighlight, maxHeight: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 },
+    modalTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
+    detailScroll: { gap: 14 },
+    detailProfileCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.cards, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
+    detailAvatarBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+    detailAvatarText: { color: isDark ? '#000000' : '#FFFFFF', fontSize: 18, fontWeight: '900' },
+    detailName: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    detailSub: { color: colors.textSecondary, fontSize: 12 },
+    detailSection: { backgroundColor: colors.cards, padding: 14, borderRadius: 14, gap: 10, borderWidth: 1, borderColor: colors.border },
+    detailSectionLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+    noneText: { color: colors.textMuted, fontSize: 12, fontStyle: 'italic' },
+    bikeDetailRow: { backgroundColor: colors.secondaryBackground, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, gap: 2 },
+    bikeDetailTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+    bikeDetailSub: { color: colors.textSecondary, fontSize: 11 },
+    bkHistoryCard: { backgroundColor: colors.secondaryBackground, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, gap: 6 },
+    bkHistTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    bkRef: { color: colors.primary, fontSize: 12, fontWeight: '900' },
+    histStatusBadge: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    histStatusText: { color: colors.primary, fontSize: 9, fontWeight: '800' },
+    bkDateText: { color: colors.textSecondary, fontSize: 11 },
+    bkSvcItem: { color: colors.textMuted, fontSize: 11 },
+    bkHistFooter: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6, marginTop: 4 },
+    bkHistAmount: { color: colors.textPrimary, fontSize: 12, fontWeight: '800' },
+  });

@@ -10,7 +10,7 @@ import { useTheme } from '../../hooks/use-theme';
 
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const theme = useTheme();
+  const { colors } = useTheme();
 
   return (
     <ThemedView>
@@ -22,7 +22,7 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
             name="chevron.right"
             size={14}
             weight="bold"
-            tintColor={theme.text}
+            tintColor={colors.textPrimary}
             style={{ transform: [{ rotate: isOpen ? '-90deg' : '90deg' }] }}
           />
         </ThemedView>

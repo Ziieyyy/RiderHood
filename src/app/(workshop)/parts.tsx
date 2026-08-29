@@ -12,7 +12,7 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   Package,
   Plus,
@@ -35,6 +35,7 @@ import {
 import { CustomButton } from '../../components/CustomButton';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import {
   getWorkshopProducts,
@@ -63,6 +64,8 @@ export default function WorkshopPartsScreen() {
   const { t, language } = useTranslation();
   const { profile, user } = useAuth();
   const { isPhone, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [workshopProducts, setWorkshopProducts] = useState<WorkshopProduct[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -387,7 +390,7 @@ export default function WorkshopPartsScreen() {
           activeOpacity={0.85}
         >
           <Plus color="#FFFFFF" size={16} />
-          <Text style={styles.addBtnText}>+ {t('workshopAdmin.addProduct')}</Text>
+          <Text style={styles.addBtnText}>{t('workshopAdmin.addProduct')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -821,428 +824,429 @@ export default function WorkshopPartsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    gap: 12,
-  },
-  loadingText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 8,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  kpiLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.textMuted,
-    letterSpacing: 0.5,
-  },
-  kpiValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    marginTop: 2,
-  },
-  topBarContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-    alignItems: 'center',
-  },
-  searchWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 13,
-  },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 12,
-    gap: 6,
-  },
-  addBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  categoryScrollWrapper: {
-    paddingBottom: 8,
-  },
-  categoryScrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  categoryChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  categoryChipText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoryChipTextActive: {
-    color: '#FFFFFF',
-  },
-  filterChipRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  activeFilterChip: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  activeFilterChipText: {
-    color: COLORS.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 60,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 10,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  emptyDesc: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  productCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  disabledCard: {
-    opacity: 0.6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  productName: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  productMeta: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  skuText: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-    fontFamily: 'monospace',
-  },
-  disabledBadge: {
-    backgroundColor: COLORS.dangerBg,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  disabledBadgeText: {
-    color: COLORS.danger,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  priceLabel: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  priceValue: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  editPriceLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  editPriceText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  stockStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeIn: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: COLORS.success,
-  },
-  badgeLow: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: COLORS.warning,
-  },
-  badgeOut: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderColor: COLORS.danger,
-  },
-  stockStatusText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  actionBtnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  adjustStockBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    gap: 4,
-  },
-  adjustStockBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 480,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  modalProductHeader: {
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalProdName: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  modalProdMeta: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  actionSegmentRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 14,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  segmentBtnActive: {
-    backgroundColor: COLORS.primary,
-  },
-  segmentBtnText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  segmentBtnTextActive: {
-    color: '#FFFFFF',
-  },
-  inputGroup: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  auditItem: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  auditType: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  auditReason: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  auditDate: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    marginTop: 2,
-  },
-  auditQty: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  smallCatChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: 6,
-  },
-  smallCatChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  smallCatChipText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  smallCatChipTextActive: {
-    color: '#FFFFFF',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centeredContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      gap: 12,
+    },
+    loadingText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    kpiRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      gap: 8,
+    },
+    kpiCard: {
+      flex: 1,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    kpiLabel: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: colors.textMuted,
+      letterSpacing: 0.5,
+    },
+    kpiValue: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: colors.textPrimary,
+      marginTop: 2,
+    },
+    topBarContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 10,
+      alignItems: 'center',
+    },
+    searchWrapper: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      height: 44,
+      borderRadius: 12,
+      gap: 6,
+    },
+    addBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    categoryScrollWrapper: {
+      paddingBottom: 8,
+    },
+    categoryScrollContent: {
+      paddingHorizontal: 16,
+      gap: 8,
+    },
+    categoryChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryChipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    categoryChipTextActive: {
+      color: '#FFFFFF',
+    },
+    filterChipRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      gap: 8,
+    },
+    filterChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    activeFilterChip: {
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+      borderColor: colors.primary,
+    },
+    filterChipText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    activeFilterChipText: {
+      color: colors.primary,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 16,
+      gap: 12,
+      paddingBottom: 60,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 48,
+      gap: 10,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    emptyDesc: {
+      color: colors.textMuted,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    productCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    disabledCard: {
+      opacity: 0.6,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 12,
+    },
+    productName: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    productMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    skuText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+      fontFamily: 'monospace',
+    },
+    disabledBadge: {
+      backgroundColor: colors.dangerBg,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    disabledBadgeText: {
+      color: colors.danger,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    priceContainer: {
+      alignItems: 'flex-end',
+    },
+    priceLabel: {
+      color: colors.textMuted,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    priceValue: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    editPriceLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 4,
+    },
+    editPriceText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    stockStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    badgeIn: {
+      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+      borderColor: colors.success,
+    },
+    badgeLow: {
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.1)',
+      borderColor: colors.warning,
+    },
+    badgeOut: {
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.1)',
+      borderColor: colors.danger,
+    },
+    stockStatusText: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    actionBtnRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    iconBtn: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    adjustStockBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      gap: 4,
+    },
+    adjustStockBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      width: '100%',
+      maxWidth: 480,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    modalProductHeader: {
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalProdName: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    modalProdMeta: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    actionSegmentRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 3,
+      marginBottom: 14,
+      gap: 4,
+    },
+    segmentBtn: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    segmentBtnActive: {
+      backgroundColor: colors.primary,
+    },
+    segmentBtnText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    segmentBtnTextActive: {
+      color: isDark ? '#000000' : '#FFFFFF',
+    },
+    inputGroup: {
+      marginBottom: 14,
+    },
+    inputLabel: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+      marginBottom: 6,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 44,
+      color: colors.textPrimary,
+      fontSize: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    auditItem: {
+      flexDirection: 'row',
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    auditType: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    auditReason: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    auditDate: {
+      color: colors.textMuted,
+      fontSize: 9,
+      marginTop: 2,
+    },
+    auditQty: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    smallCatChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 6,
+    },
+    smallCatChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    smallCatChipText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    smallCatChipTextActive: {
+      color: isDark ? '#000000' : '#FFFFFF',
+    },
+  });

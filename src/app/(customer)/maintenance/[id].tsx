@@ -4,25 +4,20 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { COLORS } from '../../../constants/theme';
+import { AppThemeColors } from '../../../constants/theme';
 import { Header } from '../../../components/Header';
 import { CustomButton } from '../../../components/CustomButton';
 import {
   Wrench,
-  CheckCircle2,
-  Calendar,
-  AlertTriangle,
-  Clock,
-  Gauge,
 } from 'lucide-react-native';
 import { updateReminderStatus } from '../../../services/maintenanceService';
 import { supabase } from '../../../lib/supabase';
+import { useTheme, useThemedStyles } from '../../../context/ThemeContext';
 import type { MaintenanceReminder } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
 
@@ -30,6 +25,8 @@ export default function MaintenanceDetailScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [reminder, setReminder] = useState<MaintenanceReminder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,22 +56,27 @@ export default function MaintenanceDetailScreen() {
     if (!reminder) return;
     try {
       await updateReminderStatus(reminder.id, 'completed');
-      setReminder((prev: MaintenanceReminder | null) => (prev ? { ...prev, status: 'completed' } : null));
       Alert.alert(t('common.success'), t('maintenance.completed'));
+      router.back();
     } catch (err: any) {
-      Alert.alert(t('common.error'), err?.message || t('errors.updateFailed'));
+      Alert.alert(t('common.error'), err?.message || 'Failed to update reminder');
     }
   };
 
   const handleBookService = () => {
-    router.push('/(customer)/booking');
+    router.push({
+      pathname: '/(customer)/booking',
+      params: {
+        motorcycleId: reminder?.motorcycle_id || undefined,
+      },
+    });
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Maintenance Item" showBack />
-        <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+        <Header title={t('navigation.maintenance')} showBack />
+        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
@@ -82,69 +84,84 @@ export default function MaintenanceDetailScreen() {
   if (!reminder) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title={t('maintenance.title')} showBack />
+        <Header title={t('navigation.maintenance')} showBack />
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>{t('errors.notFound').toUpperCase()}</Text>
-          <CustomButton title={t('navigation.maintenance')} onPress={() => router.replace('/(customer)/maintenance' as any)} />
+          <Text style={styles.emptyTitle}>{t('empty.noMaintenanceLogs').toUpperCase()}</Text>
+          <CustomButton title={t('common.back').toUpperCase()} onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
   }
 
-  const isOverdue = reminder.status === 'overdue';
-  const isDue = reminder.status === 'due';
   const isCompleted = reminder.status === 'completed';
+  const isOverdue = reminder.status === 'overdue';
 
   return (
     <SafeAreaView style={styles.container}>
       <Header
         title={reminder.title}
-        subtitle={t('maintenance.subtitle')}
+        subtitle={`${t('common.status').toUpperCase()}: ${reminder.status.toUpperCase()}`}
         showBack
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Status Header */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.titleRow}>
-            <Wrench color={COLORS.primary} size={24} />
+            <Wrench color={isCompleted ? colors.success : isOverdue ? colors.danger : colors.primary} size={28} />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemTitle}>{reminder.title}</Text>
-              <Text style={styles.itemCat}>{t('maintenance.title')}</Text>
+              <Text style={styles.itemCat}>{reminder.service_category || reminder.type || 'General Maintenance'}</Text>
             </View>
             <View
               style={[
                 styles.statusBadge,
                 {
-                  backgroundColor: isOverdue ? COLORS.dangerBg : isDue ? '#fef3c7' : COLORS.successBg,
-                  borderColor: isOverdue ? COLORS.danger : isDue ? '#f59e0b' : COLORS.success,
+                  backgroundColor: isCompleted
+                    ? colors.successBg
+                    : isOverdue
+                    ? colors.dangerBg
+                    : isDark ? 'rgba(255,107,0,0.15)' : 'rgba(255,107,0,0.2)',
+                  borderColor: isCompleted
+                    ? colors.success
+                    : isOverdue
+                    ? colors.danger
+                    : colors.primary,
                 },
               ]}
             >
               <Text
                 style={[
                   styles.statusText,
-                  { color: isOverdue ? COLORS.danger : isDue ? '#d97706' : COLORS.success },
+                  {
+                    color: isCompleted
+                      ? colors.success
+                      : isOverdue
+                      ? colors.danger
+                      : colors.primary,
+                  },
                 ]}
               >
-                ● {reminder.status.toUpperCase()}
+                {reminder.status.toUpperCase()}
               </Text>
             </View>
           </View>
 
-          {reminder.notes ? <Text style={styles.notesText}>{reminder.notes}</Text> : null}
+          {reminder.notes ? (
+            <Text style={styles.notesText}>"{reminder.notes}"</Text>
+          ) : null}
         </View>
 
-        {/* Milestone Breakdown */}
+        {/* Schedule & Milestones */}
         <View style={styles.detailCard}>
-          <Text style={styles.detailCardTitle}>{t('motorcycle.specs').toUpperCase()}</Text>
+          <Text style={styles.detailCardTitle}>{t('maintenance.nextService').toUpperCase()}</Text>
 
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>{t('maintenance.dueInKm').toUpperCase()}</Text>
-            <Text style={[styles.metricVal, { color: COLORS.primary }]}>
-              {reminder.next_service_mileage ? `${reminder.next_service_mileage.toLocaleString()} km` : 'Scheduled'}
-            </Text>
-          </View>
+          {reminder.next_service_mileage ? (
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>{t('dashboard.currentMileage').toUpperCase()}</Text>
+              <Text style={styles.metricVal}>{reminder.next_service_mileage.toLocaleString()} km</Text>
+            </View>
+          ) : null}
 
           {reminder.next_service_date ? (
             <View style={styles.metricRow}>
@@ -160,7 +177,7 @@ export default function MaintenanceDetailScreen() {
             <CustomButton
               title={`✓ ${t('workshopAdmin.complete').toUpperCase()}`}
               onPress={handleMarkCompleted}
-              style={{ backgroundColor: COLORS.success }}
+              style={{ backgroundColor: colors.success }}
             />
           )}
 
@@ -175,99 +192,100 @@ export default function MaintenanceDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  statusCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  itemTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  itemCat: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  notesText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  detailCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  detailCardTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  metricLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  metricVal: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  actionColumn: {
-    gap: 10,
-    marginTop: 8,
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 14,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    statusCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    itemTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    itemCat: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    notesText: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontStyle: 'italic',
+    },
+    detailCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    detailCardTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    metricRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    metricLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    metricVal: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    actionColumn: {
+      gap: 10,
+      marginTop: 8,
+    },
+  });

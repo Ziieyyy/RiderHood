@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/theme';
 import { Activity, ShieldCheck, Wrench } from 'lucide-react-native';
 import { useTranslation } from '../i18n';
+import { useThemedStyles } from '../context/ThemeContext';
+import { DARK_COLORS } from '../constants/theme';
 
 interface HealthGaugeProps {
   score: number;
@@ -12,6 +13,7 @@ interface HealthGaugeProps {
 
 export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, status }) => {
   const { t } = useTranslation();
+  const styles = useThemedStyles(createStyles);
 
   const getStatusText = () => {
     if (score >= 80) return t('motorcycle.healthExcellent').toUpperCase();
@@ -24,14 +26,14 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, statu
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.iconBox}>
-          <Activity color={COLORS.primary} size={24} />
+          <Activity color={styles.iconActivity.color} size={24} />
         </View>
         <View style={styles.titleColumn}>
           <Text style={styles.label}>{t('motorcycle.healthScore').toUpperCase()}</Text>
           <Text style={styles.bikeTitle} numberOfLines={1}>{bikeName}</Text>
         </View>
         <View style={styles.badge}>
-          <ShieldCheck color={COLORS.success} size={14} />
+          <ShieldCheck color={styles.badgeText.color} size={14} />
           <Text style={styles.badgeText}>{getStatusText()}</Text>
         </View>
       </View>
@@ -70,140 +72,144 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({ score, bikeName, statu
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  titleColumn: {
-    flex: 1,
-  },
-  label: {
-    color: COLORS.primaryDim,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  bikeTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.successBg,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.success,
-  },
-  badgeText: {
-    color: COLORS.success,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    backgroundColor: COLORS.surface,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 16,
-  },
-  scoreValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  scoreNumber: {
-    color: COLORS.primary,
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: -1,
-  },
-  scoreUnit: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 2,
-  },
-  progressContainer: {
-    flex: 1,
-    gap: 6,
-  },
-  track: {
-    height: 8,
-    backgroundColor: COLORS.surfaceHighest,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 4,
-  },
-  statusDescription: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metricGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  metricItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  divider: {
-    width: 1,
-    height: 24,
-    backgroundColor: COLORS.border,
-  },
-  metricLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  metricValue: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  metricSub: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 20,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+    iconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: isDark ? colors.primaryDark : 'rgba(255, 107, 0, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    iconActivity: {
+      color: colors.primary,
+    },
+    titleColumn: {
+      flex: 1,
+    },
+    label: {
+      color: colors.primaryDim,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+    },
+    bikeTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.successBg,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.success,
+    },
+    badgeText: {
+      color: colors.success,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    scoreRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      backgroundColor: colors.surface,
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 16,
+    },
+    scoreValueContainer: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+    },
+    scoreNumber: {
+      color: colors.primary,
+      fontSize: 36,
+      fontWeight: '900',
+      letterSpacing: -1,
+    },
+    scoreUnit: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 2,
+    },
+    progressContainer: {
+      flex: 1,
+      gap: 6,
+    },
+    track: {
+      height: 8,
+      backgroundColor: isDark ? colors.surfaceHighest : '#E2E8F0',
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: 4,
+    },
+    statusDescription: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    metricGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 4,
+    },
+    metricItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    divider: {
+      width: 1,
+      height: 24,
+      backgroundColor: colors.border,
+    },
+    metricLabel: {
+      color: colors.textSecondary,
+      fontSize: 9,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      marginBottom: 2,
+    },
+    metricValue: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    metricSub: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '600',
+    },
+  });

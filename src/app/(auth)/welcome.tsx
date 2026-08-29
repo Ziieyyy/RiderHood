@@ -13,9 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Cpu, Mail, ArrowRight, Wrench, ShieldCheck } from 'lucide-react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { PasswordInput } from '../../components/PasswordInput';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
@@ -25,11 +26,12 @@ import {
 } from '../../components/PasswordSecurityModal';
 import { resendConfirmationEmail } from '../../services/authService';
 
-
 export default function WelcomeScreen() {
   const router = useRouter();
   const { login, isLoading: authLoading } = useAuth();
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -211,7 +213,7 @@ export default function WelcomeScreen() {
             resizeMode="contain"
           />
           <Text style={styles.brandTitle}>RIDERHOOD</Text>
-          <Text style={styles.brandSubtitle}>Premium Moto Care</Text>
+          <Text style={styles.brandSubtitle}>Premium Motor Care</Text>
 
           <View style={styles.subHeaderBox}>
             <Text style={styles.welcomeTitle}>{t('auth.welcomeTitle')}</Text>
@@ -320,181 +322,182 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 24,
-    minHeight: '100%',
-    justifyContent: 'center',
-  },
-  brandHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  brandLogoImg: {
-    width: 84,
-    height: 84,
-    marginBottom: 12,
-  },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    marginBottom: 14,
-  },
-  brandTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  brandSubtitle: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  subHeaderBox: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  welcomeTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  welcomeSub: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  formCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginTop: -4,
-  },
-  forgotText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  signInBtn: {
-    flexDirection: 'row',
-    height: 52,
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  disabledBtn: {
-    opacity: 0.6,
-  },
-  signInBtnText: {
-    color: COLORS.primaryDark,
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
-  footerLinks: {
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 20,
-  },
-  registerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  noAccountText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-  createAccountText: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  workshopRegBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#261e0b',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d97706',
-  },
-  workshopRegText: {
-    color: '#f59e0b',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  securityBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  securityText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 24,
+      minHeight: '100%',
+      justifyContent: 'center',
+    },
+    brandHeader: {
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    brandLogoImg: {
+      width: 84,
+      height: 84,
+      marginBottom: 12,
+    },
+    logoBadge: {
+      width: 64,
+      height: 64,
+      borderRadius: 20,
+      backgroundColor: colors.primaryDark,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.primary,
+      marginBottom: 14,
+    },
+    brandTitle: {
+      color: colors.textPrimary,
+      fontSize: 28,
+      fontWeight: '900',
+      letterSpacing: 2,
+    },
+    brandSubtitle: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '700',
+      marginTop: 2,
+      letterSpacing: 0.5,
+    },
+    subHeaderBox: {
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    welcomeTitle: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    welcomeSub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    formCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 16,
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.4 : 0.08,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      height: 52,
+    },
+    inputIcon: {
+      marginRight: 10,
+    },
+    textInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    forgotBtn: {
+      alignSelf: 'flex-end',
+      marginTop: -4,
+    },
+    forgotText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    signInBtn: {
+      flexDirection: 'row',
+      height: 52,
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    disabledBtn: {
+      opacity: 0.6,
+    },
+    signInBtnText: {
+      color: isDark ? colors.primaryDark : '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+    },
+    footerLinks: {
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 20,
+    },
+    registerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    noAccountText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    createAccountText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    workshopRegBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: isDark ? '#261e0b' : '#FEF3C7',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#d97706' : '#F59E0B',
+    },
+    workshopRegText: {
+      color: isDark ? '#f59e0b' : '#B45309',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    securityBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    securityText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+  });

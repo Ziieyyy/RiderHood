@@ -1,9 +1,2 @@
-import { Colors } from '../constants/theme';
-import { useColorScheme } from './use-color-scheme';
-
-export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = (scheme === 'dark' ? 'dark' : 'light') as keyof typeof Colors;
-
-  return Colors[theme] || Colors.dark;
-}
+export { useTheme, useThemedStyles, ThemeProvider } from '../context/ThemeContext';
+export type { ThemeMode, ActiveTheme, ThemeContextType } from '../context/ThemeContext';

@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { COLORS } from '../../../constants/theme';
+import { COLORS, AppThemeColors } from '../../../constants/theme';
 import { Header } from '../../../components/Header';
 import { CustomButton } from '../../../components/CustomButton';
 import {
@@ -83,6 +83,7 @@ import {
 } from '../../../services/documentViewerService';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../../context/ThemeContext';
 import type {
   Motorcycle,
   MaintenanceReminder,
@@ -101,6 +102,8 @@ export default function MotorcycleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   // Core Motorcycle Data State (Single Source of Truth)
   const [bike, setBike] = useState<Motorcycle | null>(null);
@@ -1181,7 +1184,7 @@ export default function MotorcycleDetailScreen() {
                   <Text style={styles.sectionTitleHeader}>{t('motorcycle.documents').toUpperCase()} ({documents.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowUploadDocModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ {t('motorcycle.uploadDocument')}</Text>
+                    <Text style={styles.actionHeaderBtnText}>{t('motorcycle.uploadDocument')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1287,7 +1290,7 @@ export default function MotorcycleDetailScreen() {
                   <Text style={styles.sectionTitleHeader}>{t('maintenance.reminder').toUpperCase()} ({reminders.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowAddReminderModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ {t('common.add')} {t('maintenance.reminder')}</Text>
+                    <Text style={styles.actionHeaderBtnText}>{t('common.add')} {t('maintenance.reminder')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1296,7 +1299,7 @@ export default function MotorcycleDetailScreen() {
                     <CheckCircle2 color={COLORS.success} size={40} />
                     <Text style={styles.emptyTitle}>{t('maintenance.upToDate').toUpperCase()}</Text>
                     <Text style={styles.emptySub}>{t('motorcycle.healthScoreDesc')}</Text>
-                    <CustomButton title={`+ ${t('common.add')} ${t('maintenance.reminder')}`} onPress={() => setShowAddReminderModal(true)} style={{ marginTop: 12 }} />
+                    <CustomButton title={`${t('common.add')} ${t('maintenance.reminder')}`} onPress={() => setShowAddReminderModal(true)} style={{ marginTop: 12 }} />
                   </View>
                 ) : (
                   reminders.map(rem => (
@@ -1344,7 +1347,7 @@ export default function MotorcycleDetailScreen() {
                   <Text style={styles.sectionTitleHeader}>{t('maintenance.serviceHistory').toUpperCase()} ({records.length})</Text>
                   <TouchableOpacity style={styles.actionHeaderBtn} onPress={() => setShowAddRecordModal(true)}>
                     <Plus color={COLORS.primary} size={14} />
-                    <Text style={styles.actionHeaderBtnText}>+ {t('maintenance.addLog')}</Text>
+                    <Text style={styles.actionHeaderBtnText}>{t('maintenance.addLog')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1719,113 +1722,114 @@ export default function MotorcycleDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: 16, paddingBottom: 40, gap: 14 },
   loadingBox: { padding: 40, alignItems: 'center', gap: 12 },
-  loadingText: { color: COLORS.textSecondary, fontSize: 13 },
-  iconHeaderEditBtn: { padding: 8, backgroundColor: COLORS.surfaceContainer, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primaryGlow },
-  tabBar: { flexDirection: 'row', backgroundColor: COLORS.surfaceContainer, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingHorizontal: 12 },
+  loadingText: { color: colors.textSecondary, fontSize: 13 },
+  iconHeaderEditBtn: { padding: 8, backgroundColor: colors.surfaceContainer, borderRadius: 10, borderWidth: 1, borderColor: colors.primaryGlow },
+  tabBar: { flexDirection: 'row', backgroundColor: colors.surfaceContainer, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 12 },
   tabItem: { paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: COLORS.primary },
-  tabText: { color: COLORS.textMuted, fontSize: 10, fontWeight: '800' },
-  tabTextActive: { color: COLORS.primary },
-  card: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 14 },
-  bikeImagePlaceholder: { height: 170, backgroundColor: COLORS.surface, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', position: 'relative' },
-  plateOverlayTag: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.85)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: COLORS.primary },
-  plateOverlayText: { color: COLORS.primary, fontSize: 12, fontWeight: '900' },
+  tabItemActive: { borderBottomColor: colors.primary },
+  tabText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
+  tabTextActive: { color: colors.primary },
+  card: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 14 },
+  bikeImagePlaceholder: { height: 170, backgroundColor: colors.surface, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border, overflow: 'hidden', position: 'relative' },
+  plateOverlayTag: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.85)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: colors.primary },
+  plateOverlayText: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   headerInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bikeTitleText: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900' },
-  bikeSubtitleText: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
-  editSpecsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primaryDark, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
-  editSpecsBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
-  healthScoreBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.primaryGlow, gap: 12 },
-  scoreCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.primaryDark, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary },
-  scoreVal: { color: COLORS.primary, fontSize: 18, fontWeight: '900' },
-  scoreUnit: { color: COLORS.textMuted, fontSize: 8, fontWeight: '800' },
+  bikeTitleText: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
+  bikeSubtitleText: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  editSpecsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryDark, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.primary },
+  editSpecsBtnText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
+  healthScoreBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.primaryGlow, gap: 12 },
+  scoreCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.primaryDark, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primary },
+  scoreVal: { color: colors.primary, fontSize: 18, fontWeight: '900' },
+  scoreUnit: { color: colors.textMuted, fontSize: 8, fontWeight: '800' },
   healthHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  scoreTitle: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '900' },
+  scoreTitle: { color: colors.textPrimary, fontSize: 11, fontWeight: '900' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   statusBadgeText: { fontSize: 9, fontWeight: '900' },
-  scoreSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
+  scoreSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
   telemetryGrid: { flexDirection: 'row', gap: 10 },
-  telemetryCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.surface, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
-  telemetryLabel: { color: COLORS.textMuted, fontSize: 8, fontWeight: '800' },
-  telemetryVal: { color: COLORS.primary, fontSize: 12, fontWeight: '900', marginTop: 2 },
-  sectionTitleHeader: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  telemetryCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  telemetryLabel: { color: colors.textMuted, fontSize: 8, fontWeight: '800' },
+  telemetryVal: { color: colors.primary, fontSize: 12, fontWeight: '900', marginTop: 2 },
+  sectionTitleHeader: { color: colors.textSecondary, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
   specsGrid: { gap: 10 },
-  specBox: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  specLabel: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  specVal: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' },
+  specBox: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+  specLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  specVal: { color: colors.textPrimary, fontSize: 12, fontWeight: '800' },
   section: { gap: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  actionHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
-  actionHeaderBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
+  actionHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryDark, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.primary },
+  actionHeaderBtnText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photoGridItem: { width: (SCREEN_WIDTH - 52) / 3, height: (SCREEN_WIDTH - 52) / 3, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, position: 'relative' },
+  photoGridItem: { width: (SCREEN_WIDTH - 52) / 3, height: (SCREEN_WIDTH - 52) / 3, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, position: 'relative' },
   photoThumbImg: { width: '100%', height: '100%' },
-  mainPhotoTag: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.85)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 2, borderWidth: 1, borderColor: COLORS.primary },
-  mainPhotoTagText: { color: COLORS.primary, fontSize: 8, fontWeight: '900' },
+  mainPhotoTag: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.85)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.primary },
+  mainPhotoTagText: { color: colors.primary, fontSize: 8, fontWeight: '900' },
   filterPillsRow: { flexDirection: 'row', marginVertical: 4 },
-  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: COLORS.surfaceContainer, marginRight: 8, borderWidth: 1, borderColor: COLORS.border },
-  pillActive: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primary },
-  pillText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  pillTextActive: { color: COLORS.primary, fontWeight: '900' },
-  docCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
+  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.surfaceContainer, marginRight: 8, borderWidth: 1, borderColor: colors.border },
+  pillActive: { backgroundColor: colors.primaryDark, borderColor: colors.primary },
+  pillText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+  pillTextActive: { color: colors.primary, fontWeight: '900' },
+  docCard: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 12 },
   docCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  docCardTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  docCardSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
-  docCardExpiry: { color: COLORS.primary, fontSize: 10, fontWeight: '700', marginTop: 2 },
-  docActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
-  viewDocBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primaryDark, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
-  viewDocBtnText: { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
+  docCardTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+  docCardSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+  docCardExpiry: { color: colors.primary, fontSize: 10, fontWeight: '700', marginTop: 2 },
+  docActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  viewDocBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primaryDark, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: colors.primary },
+  viewDocBtnText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
   expBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
-  expBadgeValid: { backgroundColor: COLORS.successBg, borderColor: COLORS.success },
+  expBadgeValid: { backgroundColor: colors.successBg, borderColor: colors.success },
   expBadgeSoon: { backgroundColor: '#fef3c7', borderColor: '#d97706' },
-  expBadgeExpired: { backgroundColor: COLORS.dangerBg, borderColor: COLORS.danger },
+  expBadgeExpired: { backgroundColor: colors.dangerBg, borderColor: colors.danger },
   expBadgeText: { fontSize: 8, fontWeight: '900' },
-  expTextValid: { color: COLORS.success },
+  expTextValid: { color: colors.success },
   expTextSoon: { color: '#d97706' },
-  expTextExpired: { color: COLORS.danger },
+  expTextExpired: { color: colors.danger },
   docActionGroup: { flexDirection: 'row', gap: 4 },
-  docIconBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: COLORS.surface, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border },
-  remCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  remTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  remSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
-  doneBtn: { backgroundColor: COLORS.successBg, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: COLORS.success },
-  doneBtnText: { color: COLORS.success, fontSize: 10, fontWeight: '900' },
-  costText: { color: COLORS.primary, fontSize: 13, fontWeight: '900' },
-  emptyCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, gap: 8 },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  emptySub: { color: COLORS.textSecondary, fontSize: 11, textAlign: 'center' },
-  dangerZoneCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.dangerBg, gap: 6, marginTop: 12 },
-  dangerTitle: { color: COLORS.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  dangerSub: { color: COLORS.textSecondary, fontSize: 11 },
-  deleteBikeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: COLORS.dangerBg, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: COLORS.danger, marginTop: 6 },
-  deleteBikeBtnText: { color: COLORS.danger, fontSize: 12, fontWeight: '900' },
+  docIconBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+  remCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 12 },
+  remTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+  remSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+  doneBtn: { backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.success },
+  doneBtnText: { color: colors.success, fontSize: 10, fontWeight: '900' },
+  costText: { color: colors.primary, fontSize: 13, fontWeight: '900' },
+  emptyCard: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: colors.border, gap: 8 },
+  emptyTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  emptySub: { color: colors.textSecondary, fontSize: 11, textAlign: 'center' },
+  dangerZoneCard: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.dangerBg, gap: 6, marginTop: 12 },
+  dangerTitle: { color: colors.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  dangerSub: { color: colors.textSecondary, fontSize: 11 },
+  deleteBikeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.dangerBg, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.danger, marginTop: 6 },
+  deleteBikeBtnText: { color: colors.danger, fontSize: 12, fontWeight: '900' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  editModalCard: { width: '100%', backgroundColor: COLORS.surfaceContainer, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: COLORS.border, gap: 14 },
+  editModalCard: { width: '100%', backgroundColor: colors.surfaceContainer, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: colors.border, gap: 14 },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
+  modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
   modalInputGroup: { gap: 10 },
-  inputCategoryHeader: { color: COLORS.primary, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  inputLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '800' },
-  modalInput: { backgroundColor: COLORS.surface, borderRadius: 12, paddingHorizontal: 12, height: 42, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, fontSize: 13 },
+  inputCategoryHeader: { color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  inputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
+  modalInput: { backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 12, height: 42, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, fontSize: 13 },
   twoColRow: { flexDirection: 'row', gap: 10 },
   modalBtnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' },
-  cancelBtnText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '800' },
+  cancelBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
+  cancelBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
   lightboxOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
   lightboxCloseBtn: { position: 'absolute', top: 44, right: 20, zIndex: 10, padding: 8 },
   lightboxMainContainer: { width: SCREEN_WIDTH, height: '80%', justifyContent: 'center', alignItems: 'center', position: 'relative' },
   lightboxImg: { width: SCREEN_WIDTH * 0.9, height: '80%' },
-  lightboxMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, position: 'absolute', bottom: 20, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  lightboxMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, position: 'absolute', bottom: 20, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
   lightboxCounter: { color: '#FFF', fontSize: 12, fontWeight: '800' },
   lightboxActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   lightboxActionText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
   navLeft: { position: 'absolute', left: 10, top: '45%', padding: 12 },
   navRight: { position: 'absolute', right: 10, top: '45%', padding: 12 },
-  docEditBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, gap: 10, marginBottom: 6 },
-  docItemTitle: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' },
-  docItemMeta: { color: COLORS.textSecondary, fontSize: 10, marginTop: 2 },
+  docEditBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, gap: 10, marginBottom: 6 },
+  docItemTitle: { color: colors.textPrimary, fontSize: 12, fontWeight: '800' },
+  docItemMeta: { color: colors.textSecondary, fontSize: 10, marginTop: 2 },
 });

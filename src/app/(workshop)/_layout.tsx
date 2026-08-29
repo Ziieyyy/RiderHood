@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -29,16 +29,18 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import { useResponsive } from '../../hooks/useResponsive';
 import type { Workshop } from '../../types/database';
-
 
 function CustomWorkshopDrawerContent(props: any) {
   const router = useRouter();
   const pathname = usePathname();
   const { logout, profile } = useAuth();
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const sidebarStyles = useThemedStyles(createSidebarStyles);
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
 
   useEffect(() => {
@@ -159,6 +161,7 @@ export default function WorkshopDrawerLayout() {
   const router = useRouter();
   const { user, profile, isLoading } = useAuth();
   const { isPhone } = useResponsive();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -171,8 +174,8 @@ export default function WorkshopDrawerLayout() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.primary} size="large" />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -188,10 +191,10 @@ export default function WorkshopDrawerLayout() {
         headerShown: false,
         drawerType: isPhone ? 'front' : 'permanent',
         drawerStyle: {
-          backgroundColor: COLORS.secondaryBackground,
+          backgroundColor: colors.surfaceContainer,
           width: 270,
         },
-        sceneStyle: { backgroundColor: COLORS.background },
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
 
@@ -209,179 +212,180 @@ export default function WorkshopDrawerLayout() {
   );
 }
 
-const sidebarStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.secondaryBackground,
-    paddingTop: 16,
-    paddingHorizontal: 14,
-    paddingBottom: 16,
-  },
-  brandCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-    marginBottom: 12,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  drawerLogoImg: {
-    width: 36,
-    height: 36,
-  },
-  logoBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  brandTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
-  brandSub: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  workshopInfoCard: {
-    backgroundColor: COLORS.elevatedCards,
-    borderRadius: 10,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-    gap: 4,
-  },
-  wsName: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  navScroll: {
-    flex: 1,
-  },
-  navSectionTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-    marginTop: 4,
-    paddingLeft: 6,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginBottom: 4,
-    gap: 12,
-  },
-  navItemActive: {
-    backgroundColor: 'rgba(255, 107, 0, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 0, 0.3)',
-  },
-  iconContainer: {
-    width: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconActive: {
-    // highlighted
-  },
-  navLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  navLabelActive: {
-    color: COLORS.textPrimary,
-    fontWeight: '800',
-  },
-  activeIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.primary,
-  },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 12,
-    gap: 10,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 6,
-  },
-  profileAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitials: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  profileName: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  profileEmail: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerBg,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  logoutText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-});
+const createSidebarStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surfaceContainer,
+      paddingTop: 16,
+      paddingHorizontal: 14,
+      paddingBottom: 16,
+    },
+    brandCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+      marginBottom: 12,
+    },
+    logoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    drawerLogoImg: {
+      width: 36,
+      height: 36,
+    },
+    logoBadge: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    brandTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+    },
+    brandSub: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    workshopInfoCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 10,
+      padding: 8,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+      gap: 4,
+    },
+    wsName: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    statusText: {
+      color: colors.textSecondary,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    navScroll: {
+      flex: 1,
+    },
+    navSectionTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginBottom: 8,
+      marginTop: 4,
+      paddingLeft: 6,
+    },
+    navItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      marginBottom: 4,
+      gap: 12,
+    },
+    navItemActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.3)' : 'rgba(255, 107, 0, 0.2)',
+    },
+    iconContainer: {
+      width: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconActive: {
+      // highlighted
+    },
+    navLabel: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    navLabelActive: {
+      color: colors.textPrimary,
+      fontWeight: '800',
+    },
+    activeIndicator: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    footer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 12,
+      gap: 10,
+    },
+    profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 6,
+    },
+    profileAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarInitials: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    profileName: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    profileEmail: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    logoutBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerBg,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    logoutText: {
+      color: colors.danger,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+  });

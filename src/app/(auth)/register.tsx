@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, AppThemeColors } from '../../constants/theme';
 import { User, Mail, Phone, Bike, ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { PasswordInput } from '../../components/PasswordInput';
@@ -21,13 +21,15 @@ import { PasswordSecurityModal, PasswordModalMode } from '../../components/Passw
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { signUp } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useTranslation } from '../../i18n';
-
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useAuth();
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -135,7 +137,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -148,7 +150,7 @@ export default function RegisterScreen() {
               style={styles.backBtn}
               onPress={() => router.back()}
             >
-              <ArrowLeft color={COLORS.textPrimary} size={20} />
+              <ArrowLeft color={colors.textPrimary} size={20} />
               <Text style={styles.backText}>{t('navigation.backToLogin')}</Text>
             </TouchableOpacity>
 
@@ -164,13 +166,13 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>{t('auth.fullName').toUpperCase()}</Text>
                 <View style={styles.inputBox}>
-                  <User color={COLORS.textSecondary} size={18} />
+                  <User color={colors.textSecondary} size={18} />
                   <TextInput
                     style={styles.input}
                     value={name}
                     onChangeText={setName}
                     placeholder={t('auth.fullNamePlaceholder')}
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     editable={!loading}
                   />
                 </View>
@@ -180,13 +182,13 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
                 <View style={styles.inputBox}>
-                  <Mail color={COLORS.textSecondary} size={18} />
+                  <Mail color={colors.textSecondary} size={18} />
                   <TextInput
                     style={styles.input}
                     value={email}
                     onChangeText={setEmail}
                     placeholder={t('auth.emailPlaceholder')}
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     editable={!loading}
@@ -198,13 +200,13 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>{`${t('auth.phone').toUpperCase()} (${t('common.optional').toUpperCase()})`}</Text>
                 <View style={styles.inputBox}>
-                  <Phone color={COLORS.textSecondary} size={18} />
+                  <Phone color={colors.textSecondary} size={18} />
                   <TextInput
                     style={styles.input}
                     value={phone}
                     onChangeText={setPhone}
                     placeholder={t('auth.phonePlaceholder')}
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     keyboardType="phone-pad"
                     editable={!loading}
                   />
@@ -235,7 +237,7 @@ export default function RegisterScreen() {
               <CustomButton
                 title={loading ? t('auth.creatingAccount') : t('auth.createAndEnter')}
                 onPress={handleRegister}
-                icon={<ArrowRight color="#000" size={18} />}
+                icon={<ArrowRight color={isDark ? '#000' : '#FFF'} size={18} />}
                 disabled={loading}
                 style={{ marginTop: 10 }}
               />
@@ -267,91 +269,92 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 24,
-    minHeight: '100%',
-    justifyContent: 'center',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-  },
-  backText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  brandHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  brandTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  brandSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 14,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 48,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  input: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bottomActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    gap: 8,
-  },
-  existingText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-  loginText: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 24,
+      minHeight: '100%',
+      justifyContent: 'center',
+    },
+    backBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      alignSelf: 'flex-start',
+      marginBottom: 20,
+    },
+    backText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    brandHeader: {
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    brandTitle: {
+      color: colors.textPrimary,
+      fontSize: 26,
+      fontWeight: '900',
+    },
+    brandSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '500',
+      marginTop: 4,
+    },
+    card: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+    },
+    inputBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      height: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    input: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    bottomActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 20,
+      gap: 8,
+    },
+    existingText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    loginText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+  });

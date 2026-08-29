@@ -7,29 +7,33 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { DARK_COLORS } from '../../constants/theme';
 import { getWorkshops, getWorkshopServices } from '../../services/workshopService';
 import { createBooking } from '../../services/bookingService';
-import { getMotorcycles } from '../../services/motorcycleService';
+import { getMotorcycles, createMotorcycle } from '../../services/motorcycleService';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveModal } from '../../components/responsive/ResponsiveModal';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import {
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
   Wrench,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
   Zap,
   Bike,
+  Plus,
   MapPin,
   Check,
   CalendarDays,
@@ -44,6 +48,8 @@ export default function CustomerBookingScreen() {
   const { user } = useAuth();
   const { t, formatDate, formatCurrency, language } = useTranslation();
   const { isPhone, isDesktop, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams();
 
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
@@ -53,6 +59,7 @@ export default function CustomerBookingScreen() {
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState<Motorcycle | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [showMobileSummaryExpanded, setShowMobileSummaryExpanded] = useState(false);
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All');
   const [serviceSearch, setServiceSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -65,6 +72,13 @@ export default function CustomerBookingScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Quick Add Motorcycle State
+  const [showAddBikeModal, setShowAddBikeModal] = useState(false);
+  const [newBikeBrand, setNewBikeBrand] = useState('');
+  const [newBikeModel, setNewBikeModel] = useState('');
+  const [newBikePlate, setNewBikePlate] = useState('');
+  const [savingBike, setSavingBike] = useState(false);
 
   // Category Filter Navigation
   const categoryScrollRef = useRef<ScrollView>(null);
@@ -272,6 +286,38 @@ export default function CustomerBookingScreen() {
   const selectedServiceItems = services.filter((s) => selectedServices.includes(s.id));
   const totalPrice = selectedServiceItems.reduce((acc, curr) => acc + (curr.price || 0), 0);
 
+  const handleQuickAddBike = async () => {
+    if (!user?.id) {
+      Alert.alert('Login Required', 'Please log in to add a motorcycle.');
+      return;
+    }
+    if (!newBikeBrand.trim() || !newBikeModel.trim() || !newBikePlate.trim()) {
+      Alert.alert('Incomplete Form', 'Please provide motorcycle brand, model, and plate number.');
+      return;
+    }
+    setSavingBike(true);
+    try {
+      const bike = await createMotorcycle({
+        owner_id: user.id,
+        brand: newBikeBrand.trim(),
+        model: newBikeModel.trim(),
+        plate_number: newBikePlate.trim().toUpperCase(),
+        nickname: `${newBikeBrand.trim()} ${newBikeModel.trim()}`,
+      });
+      setMotorcycles((prev) => [bike, ...prev]);
+      setSelectedMotorcycle(bike);
+      setShowAddBikeModal(false);
+      setNewBikeBrand('');
+      setNewBikeModel('');
+      setNewBikePlate('');
+      Alert.alert('Motorcycle Added', `${bike.brand} ${bike.model} (${bike.plate_number}) has been registered and selected.`);
+    } catch (err: any) {
+      Alert.alert('Failed to Add Motorcycle', err.message || 'Could not save motorcycle.');
+    } finally {
+      setSavingBike(false);
+    }
+  };
+
   const handleConfirmBooking = async () => {
     if (!user?.id) {
       Alert.alert('Login Required', 'Please log in to submit a booking.');
@@ -282,7 +328,14 @@ export default function CustomerBookingScreen() {
       return;
     }
     if (!selectedMotorcycle) {
-      Alert.alert('No Motorcycle Selected', 'Please select a motorcycle from your garage.');
+      Alert.alert(
+        'No Motorcycle Selected',
+        'Please select or add a motorcycle from your garage to proceed with this booking.',
+        [
+          { text: 'Add Motorcycle', onPress: () => setShowAddBikeModal(true) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
       return;
     }
     if (selectedServices.length === 0) {
@@ -300,7 +353,17 @@ export default function CustomerBookingScreen() {
 
     setSubmitting(true);
     try {
-      await createBooking({
+      console.log('[Booking] Submitting service booking to database...', {
+        customer_id: user.id,
+        workshop_id: selectedWorkshop.id,
+        workshop_name: selectedWorkshop.name,
+        motorcycle_id: selectedMotorcycle.id,
+        booking_date: selectedDate,
+        booking_time: selectedTime,
+        services_count: selectedServices.length,
+      });
+
+      const res = await createBooking({
         customer_id: user.id,
         workshop_id: selectedWorkshop.id,
         motorcycle_id: selectedMotorcycle.id,
@@ -308,8 +371,11 @@ export default function CustomerBookingScreen() {
         booking_time: selectedTime,
         services: selectedServices.map((id) => ({ service_id: id, quantity: 1 })),
       });
+
+      console.log('[Booking] Successfully created booking record in Supabase:', res.id);
       setShowSuccessModal(true);
     } catch (err: any) {
+      console.error('[Booking] Booking submission error:', err);
       Alert.alert('Booking Failed', err.message ?? 'Unable to complete booking. Please try again.');
     } finally {
       setSubmitting(false);
@@ -321,7 +387,7 @@ export default function CustomerBookingScreen() {
       <SafeAreaView style={styles.container}>
         <Header title={t('booking.title')} subtitle={t('booking.subtitle')} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
@@ -332,9 +398,22 @@ export default function CustomerBookingScreen() {
   const renderBookingStepsForm = () => (
     <View style={styles.stepsFormWrapper}>
       {/* Step 0: Motorcycle Selection */}
-      {motorcycles.length > 0 && (
-        <View style={styles.stepSection}>
+      <View style={styles.stepSection}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <Text style={styles.stepTitle}>{t('booking.step0')}</Text>
+          {motorcycles.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setShowAddBikeModal(true)}
+              style={styles.addBikeQuickBtn}
+              activeOpacity={0.7}
+            >
+              <Plus color={colors.primary} size={13} />
+              <Text style={styles.addBikeQuickText}>Add Bike</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {motorcycles.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.dateRow}>
               {motorcycles.map((bike) => {
@@ -346,17 +425,45 @@ export default function CustomerBookingScreen() {
                     onPress={() => setSelectedMotorcycle(bike)}
                     activeOpacity={0.8}
                   >
-                    <Bike color={isSelected ? COLORS.primary : COLORS.textSecondary} size={14} />
+                    <Bike color={isSelected ? colors.primary : colors.textSecondary} size={14} />
                     <Text style={[styles.dateChipText, isSelected && styles.activeDateText]}>
                       {bike.nickname || `${bike.brand} ${bike.model}`}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
+              <TouchableOpacity
+                style={[styles.dateChip, { borderStyle: 'dashed' }]}
+                onPress={() => setShowAddBikeModal(true)}
+                activeOpacity={0.8}
+              >
+                <Plus color={colors.primary} size={14} />
+                <Text style={[styles.dateChipText, { color: colors.primary }]}>New</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
-      )}
+        ) : (
+          <TouchableOpacity
+            style={styles.emptyBikeCard}
+            onPress={() => setShowAddBikeModal(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.emptyBikeIconBox}>
+              <Bike color={colors.primary} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.emptyBikeTitle}>No Motorcycle in Garage</Text>
+              <Text style={styles.emptyBikeSubtitle}>
+                Add your motorcycle to proceed with workshop booking
+              </Text>
+            </View>
+            <View style={styles.emptyBikeAddBtn}>
+              <Plus color="#000" size={14} />
+              <Text style={styles.emptyBikeAddText}>Add Bike</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Step 1: Workshop Selection */}
       <View style={styles.stepSection}>
@@ -366,154 +473,18 @@ export default function CustomerBookingScreen() {
           onPress={() => setShowWorkshopModal(true)}
           activeOpacity={0.8}
         >
-          <Wrench color={COLORS.primary} size={18} />
+          <Wrench color={colors.primary} size={18} />
           <View style={{ flex: 1 }}>
             <Text style={styles.dropdownLabel}>{t('booking.selectWorkshop').toUpperCase()}</Text>
             <Text style={styles.dropdownValue}>{selectedWorkshop?.name ?? t('booking.selectWorkshop')}</Text>
           </View>
-          <ChevronDown color={COLORS.textSecondary} size={18} />
+          <ChevronDown color={colors.textSecondary} size={18} />
         </TouchableOpacity>
       </View>
 
-      {/* Step 2 (Langkah 3): Services Selection */}
+      {/* Step 2 (Langkah 3): Date Picker & Time Slot */}
       <View style={styles.stepSection}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={styles.stepTitle}>{t('booking.step2')}</Text>
-          <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
-            {services.length} {t('booking.servicesAvailable')}
-          </Text>
-        </View>
-
-        {/* Category Navigation Bar with Prev & Next buttons */}
-        <View style={styles.categoryNavRow}>
-          <TouchableOpacity
-            style={[
-              styles.catNavBtn,
-              categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0 && styles.catNavBtnDisabled,
-            ]}
-            onPress={handlePrevCategory}
-            disabled={categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0}
-            activeOpacity={0.7}
-            accessibilityLabel="Previous Category"
-          >
-            <ChevronLeft
-              color={
-                categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0
-                  ? COLORS.textMuted
-                  : COLORS.primary
-              }
-              size={18}
-            />
-          </TouchableOpacity>
-
-          <ScrollView
-            ref={categoryScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScrollTrack}
-          >
-            {categoryList.map((cat) => (
-              <TouchableOpacity
-                key={cat.key}
-                style={[
-                  styles.categoryChip,
-                  serviceCategoryFilter === cat.key && styles.activeCategoryChip,
-                ]}
-                onPress={() => setServiceCategoryFilter(cat.key)}
-              >
-                <Text
-                  style={[
-                    styles.categoryChipText,
-                    serviceCategoryFilter === cat.key && styles.activeCategoryChipText,
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity
-            style={[
-              styles.catNavBtn,
-              categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1 &&
-                styles.catNavBtnDisabled,
-            ]}
-            onPress={handleNextCategory}
-            disabled={
-              categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1
-            }
-            activeOpacity={0.7}
-            accessibilityLabel="Next Category"
-          >
-            <ChevronRight
-              color={
-                categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1
-                  ? COLORS.textMuted
-                  : COLORS.primary
-              }
-              size={18}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {loadingServices ? (
-          <View style={styles.noServicesCard}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.noServicesText}>{t('common.loading')}</Text>
-          </View>
-        ) : services.length === 0 ? (
-          <View style={styles.noServicesCard}>
-            <Text style={styles.noServicesText}>{t('services.noServicesConfigured')}</Text>
-          </View>
-        ) : (
-          <View style={styles.servicesGridList}>
-            {services
-              .filter((srv) => {
-                if (!matchesCategoryFilter(srv.category, serviceCategoryFilter)) {
-                  return false;
-                }
-                if (serviceSearch.trim()) {
-                  const q = serviceSearch.toLowerCase();
-                  const n = (srv.name || '').toLowerCase();
-                  const d = (srv.description || '').toLowerCase();
-                  if (!n.includes(q) && !d.includes(q)) return false;
-                }
-                return true;
-              })
-              .map((srv) => {
-                const isSelected = selectedServices.includes(srv.id);
-                return (
-                  <TouchableOpacity
-                    key={srv.id}
-                    style={[styles.serviceCard, isSelected && styles.activeServiceCard]}
-                    onPress={() => toggleService(srv.id)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.checkboxRow}>
-                      <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
-                        {isSelected && <Check color="#000" size={14} />}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.serviceTitle}>{srv.name}</Text>
-                        <Text style={styles.serviceMeta}>
-                          {formatCategoryName(srv.category || 'General', language)} • ~
-                          {srv.estimated_duration_minutes || 30} mins
-                        </Text>
-                      </View>
-                      <Text style={styles.servicePrice}>RM {Number(srv.price).toFixed(2)}</Text>
-                    </View>
-                    {srv.description ? <Text style={styles.serviceDesc}>{srv.description}</Text> : null}
-                  </TouchableOpacity>
-                );
-              })}
-          </View>
-        )}
-      </View>
-
-      {/* Step 3 (Langkah 4): Date Picker & Time Slot */}
-      <View style={styles.stepSection}>
-        <Text style={styles.stepTitle}>{t('booking.step3')}</Text>
+        <Text style={styles.stepTitle}>{t('booking.step2')}</Text>
 
         {/* Interactive Calendar Date Picker Card */}
         <View style={styles.calendarCard}>
@@ -525,11 +496,11 @@ export default function CustomerBookingScreen() {
               activeOpacity={0.7}
               accessibilityLabel="Previous Month"
             >
-              <ChevronLeft color={COLORS.textPrimary} size={18} />
+              <ChevronLeft color={colors.textPrimary} size={18} />
             </TouchableOpacity>
 
             <View style={styles.calMonthTitleWrapper}>
-              <CalendarDays color={COLORS.primary} size={16} />
+              <CalendarDays color={colors.primary} size={16} />
               <Text style={styles.calMonthTitle}>
                 {(MONTH_NAMES[language] || MONTH_NAMES['en-GB'])[calendarMonth.getMonth()]}{' '}
                 {calendarMonth.getFullYear()}
@@ -542,7 +513,7 @@ export default function CustomerBookingScreen() {
               activeOpacity={0.7}
               accessibilityLabel="Next Month"
             >
-              <ChevronRight color={COLORS.textPrimary} size={18} />
+              <ChevronRight color={colors.textPrimary} size={18} />
             </TouchableOpacity>
           </View>
 
@@ -596,9 +567,9 @@ export default function CustomerBookingScreen() {
 
           {/* Selected Date Summary Indicator */}
           <View style={styles.selectedDateBadge}>
-            <CalendarIcon color={COLORS.primary} size={15} />
+            <CalendarIcon color={colors.primary} size={15} />
             <Text style={styles.selectedDateText}>
-              {t('common.date')}: <Text style={{ color: COLORS.textPrimary, fontWeight: '900' }}>{selectedDate || t('booking.title')}</Text>
+              {t('common.date')}: <Text style={{ color: isDark ? colors.textPrimary : '#000000', fontWeight: '900' }}>{selectedDate || t('booking.title')}</Text>
             </Text>
           </View>
         </View>
@@ -617,12 +588,148 @@ export default function CustomerBookingScreen() {
                 onPress={() => setSelectedTime(time)}
                 activeOpacity={0.8}
               >
-                <Clock color={isSelected ? '#000000' : COLORS.textSecondary} size={14} />
+                <Clock color={isSelected ? '#000000' : colors.textSecondary} size={14} />
                 <Text style={[styles.timeChipText, isSelected && styles.activeTimeText]}>{time}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
+      </View>
+
+      {/* Step 3 (Langkah 4): Services Selection */}
+      <View style={styles.stepSection}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={styles.stepTitle}>{t('booking.step3')}</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
+            {services.length} {t('booking.servicesAvailable')}
+          </Text>
+        </View>
+
+        {/* Category Navigation Bar with Prev & Next buttons */}
+        <View style={styles.categoryNavRow}>
+          <TouchableOpacity
+            style={[
+              styles.catNavBtn,
+              categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0 && styles.catNavBtnDisabled,
+            ]}
+            onPress={handlePrevCategory}
+            disabled={categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0}
+            activeOpacity={0.7}
+            accessibilityLabel="Previous Category"
+          >
+            <ChevronLeft
+              color={
+                categoryList.findIndex((c) => c.key === serviceCategoryFilter) <= 0
+                  ? colors.textMuted
+                  : colors.primary
+              }
+              size={18}
+            />
+          </TouchableOpacity>
+
+          <ScrollView
+            ref={categoryScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScrollTrack}
+          >
+            {categoryList.map((cat) => (
+              <TouchableOpacity
+                key={cat.key}
+                style={[
+                  styles.categoryChip,
+                  serviceCategoryFilter === cat.key && styles.activeCategoryChip,
+                ]}
+                onPress={() => setServiceCategoryFilter(cat.key)}
+              >
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    serviceCategoryFilter === cat.key && styles.activeCategoryChipText,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[
+              styles.catNavBtn,
+              categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1 &&
+                styles.catNavBtnDisabled,
+            ]}
+            onPress={handleNextCategory}
+            disabled={
+              categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1
+            }
+            activeOpacity={0.7}
+            accessibilityLabel="Next Category"
+          >
+            <ChevronRight
+              color={
+                categoryList.findIndex((c) => c.key === serviceCategoryFilter) >= categoryList.length - 1
+                  ? colors.textMuted
+                  : colors.primary
+              }
+              size={18}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {loadingServices ? (
+          <View style={styles.noServicesCard}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.noServicesText}>{t('common.loading')}</Text>
+          </View>
+        ) : services.length === 0 ? (
+          <View style={styles.noServicesCard}>
+            <Text style={styles.noServicesText}>{t('services.noServicesConfigured')}</Text>
+          </View>
+        ) : (
+          <View style={styles.servicesGridList}>
+            {services
+              .filter((srv) => {
+                if (!matchesCategoryFilter(srv.category, serviceCategoryFilter)) {
+                  return false;
+                }
+                if (serviceSearch.trim()) {
+                  const q = serviceSearch.toLowerCase();
+                  const n = (srv.name || '').toLowerCase();
+                  const d = (srv.description || '').toLowerCase();
+                  if (!n.includes(q) && !d.includes(q)) return false;
+                }
+                return true;
+              })
+              .map((srv) => {
+                const isSelected = selectedServices.includes(srv.id);
+                return (
+                  <TouchableOpacity
+                    key={srv.id}
+                    style={[styles.serviceCard, isSelected && styles.activeServiceCard]}
+                    onPress={() => toggleService(srv.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.checkboxRow}>
+                      <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
+                        {isSelected && <Check color="#000" size={14} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.serviceTitle}>{srv.name}</Text>
+                        <Text style={styles.serviceMeta}>
+                          {formatCategoryName(srv.category || 'General', language)} • ~
+                          {srv.estimated_duration_minutes || 30} mins
+                        </Text>
+                      </View>
+                      <Text style={styles.servicePrice}>RM {Number(srv.price).toFixed(2)}</Text>
+                    </View>
+                    {srv.description ? <Text style={styles.serviceDesc}>{srv.description}</Text> : null}
+                  </TouchableOpacity>
+                );
+              })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -683,13 +790,13 @@ export default function CustomerBookingScreen() {
       <View
         style={[
           styles.summaryRow,
-          { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, marginTop: 4 },
+          { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 4 },
         ]}
       >
-        <Text style={[styles.summaryLabel, { fontWeight: '900', color: COLORS.textPrimary }]}>
+        <Text style={[styles.summaryLabel, { fontWeight: '900', color: colors.textPrimary }]}>
           {t('common.total')}:
         </Text>
-        <Text style={[styles.summaryValue, { color: COLORS.primary, fontSize: 18, fontWeight: '900' }]}>
+        <Text style={[styles.summaryValue, { color: colors.primary, fontSize: 18, fontWeight: '900' }]}>
           {formatCurrency(totalPrice)}
         </Text>
       </View>
@@ -721,15 +828,26 @@ export default function CustomerBookingScreen() {
       <Header title={t('booking.title')} subtitle={t('booking.subtitle')} />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: contentPadding,
+            paddingBottom:
+              isPhone && selectedServices.length > 0
+                ? showMobileSummaryExpanded
+                  ? 340
+                  : 150
+                : 40,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <ResponsiveContainer>
           {isPhone ? (
-            // Mobile: Stacked steps + summary card at bottom
+            // Mobile: Stacked steps (Summary floats at bottom when items selected)
             <View style={{ gap: 16 }}>
               {renderBookingStepsForm()}
-              {renderSummaryCard()}
+              {selectedServices.length === 0 && renderSummaryCard()}
             </View>
           ) : (
             // Tablet & Desktop: 2-column layout (Steps on Left, Summary on Right)
@@ -740,6 +858,110 @@ export default function CustomerBookingScreen() {
           )}
         </ResponsiveContainer>
       </ScrollView>
+
+      {/* Floating Summary Bar for Mobile View when items are added */}
+      {isPhone && selectedServices.length > 0 && (
+        <View style={styles.floatingMobileSummary}>
+          {/* Header Row: Tap to expand / collapse full breakdown */}
+          <TouchableOpacity
+            style={styles.floatingSummaryHeader}
+            onPress={() => setShowMobileSummaryExpanded(!showMobileSummaryExpanded)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+              <View style={styles.floatingBadge}>
+                <Text style={styles.floatingBadgeText}>{selectedServices.length}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.floatingTitle}>{t('booking.bookingSummary').toUpperCase()}</Text>
+                <Text style={styles.floatingItemsSub} numberOfLines={1}>
+                  {selectedServices.length} {t('common.selected')} • {selectedWorkshop ? selectedWorkshop.name : t('booking.selectWorkshop')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.floatingTotalPrice}>{formatCurrency(totalPrice)}</Text>
+              {showMobileSummaryExpanded ? (
+                <ChevronDown color={colors.textSecondary} size={20} />
+              ) : (
+                <ChevronUp color={colors.textSecondary} size={20} />
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* Expanded Breakdown Drawer if opened */}
+          {showMobileSummaryExpanded && (
+            <ScrollView
+              style={styles.floatingExpandedContent}
+              contentContainerStyle={{ gap: 6, paddingBottom: 6 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {selectedMotorcycle && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{t('motorcycle.details')}:</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedMotorcycle.nickname || `${selectedMotorcycle.brand} ${selectedMotorcycle.model}`}
+                  </Text>
+                </View>
+              )}
+
+              {selectedWorkshop && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{t('booking.selectWorkshop')}:</Text>
+                  <Text style={styles.summaryValue} numberOfLines={1}>
+                    {selectedWorkshop.name}
+                  </Text>
+                </View>
+              )}
+
+              {selectedDate && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{t('common.date')}:</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedDate} {selectedTime ? `at ${selectedTime}` : ''}
+                  </Text>
+                </View>
+              )}
+
+              {/* Itemized list */}
+              {selectedServiceItems.length > 0 && (
+                <View style={styles.itemizedList}>
+                  {selectedServiceItems.map((item) => (
+                    <View key={item.id} style={styles.itemizedRow}>
+                      <Text style={styles.itemizedName} numberOfLines={1}>
+                        • {item.name}
+                      </Text>
+                      <Text style={styles.itemizedPrice}>RM {Number(item.price).toFixed(2)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          )}
+
+          {/* Main Action Button */}
+          <CustomButton
+            title={submitting ? t('booking.submittingBooking') : t('booking.confirmBooking')}
+            onPress={handleConfirmBooking}
+            icon={
+              submitting ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <Zap color="#000" size={18} />
+              )
+            }
+            disabled={
+              submitting ||
+              !selectedDate ||
+              !selectedTime ||
+              !selectedWorkshop ||
+              selectedServices.length === 0
+            }
+            style={{ marginTop: 8 }}
+          />
+        </View>
+      )}
 
       {/* Workshop Selector Modal */}
       <ResponsiveModal
@@ -763,14 +985,14 @@ export default function CustomerBookingScreen() {
                   </Text>
                   {ws.address ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <MapPin color={COLORS.textMuted} size={12} />
+                      <MapPin color={colors.textMuted} size={12} />
                       <Text style={styles.workshopItemAddress} numberOfLines={1}>
                         {ws.address}
                       </Text>
                     </View>
                   ) : null}
                 </View>
-                {isSelected && <Check color={COLORS.primary} size={18} />}
+                {isSelected && <Check color={colors.primary} size={18} />}
               </TouchableOpacity>
             );
           })}
@@ -786,7 +1008,7 @@ export default function CustomerBookingScreen() {
       >
         <View style={{ alignItems: 'center', gap: 12 }}>
           <View style={styles.modalIconBox}>
-            <ShieldCheck color={COLORS.success} size={36} />
+            <ShieldCheck color={colors.success} size={36} />
           </View>
           <Text style={styles.modalSub}>{t('booking.bookingSubmittedSub')}</Text>
           <View style={styles.ticketBox}>
@@ -807,338 +1029,574 @@ export default function CustomerBookingScreen() {
           />
         </View>
       </ResponsiveModal>
+
+      {/* Quick Add Motorcycle Modal */}
+      <ResponsiveModal
+        visible={showAddBikeModal}
+        onClose={() => setShowAddBikeModal(false)}
+        title="Add Motorcycle to Garage"
+      >
+        <View style={{ gap: 14 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+            Register your motorcycle details to select it for this booking.
+          </Text>
+
+          <View style={{ gap: 6 }}>
+            <Text style={styles.inputLabel}>BRAND (E.G. YAMAHA, HONDA)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Yamaha"
+              placeholderTextColor={colors.textMuted}
+              value={newBikeBrand}
+              onChangeText={setNewBikeBrand}
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Text style={styles.inputLabel}>MODEL (E.G. Y15ZR, RS150R, MT-09)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Y15ZR"
+              placeholderTextColor={colors.textMuted}
+              value={newBikeModel}
+              onChangeText={setNewBikeModel}
+            />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Text style={styles.inputLabel}>PLATE NUMBER</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. WAA 1234"
+              placeholderTextColor={colors.textMuted}
+              value={newBikePlate}
+              onChangeText={setNewBikePlate}
+              autoCapitalize="characters"
+            />
+          </View>
+
+          <CustomButton
+            title={savingBike ? 'Saving Motorcycle...' : 'Save & Select Motorcycle'}
+            onPress={handleQuickAddBike}
+            disabled={savingBike || !newBikeBrand.trim() || !newBikeModel.trim() || !newBikePlate.trim()}
+            style={{ marginTop: 8 }}
+          />
+        </View>
+      </ResponsiveModal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { paddingVertical: 16, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingVertical: 16, paddingBottom: 40 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
 
-  desktopLayoutRow: {
-    flexDirection: 'row',
-    gap: 24,
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  desktopLeftStepsCol: {
-    flex: 1.2,
-    minWidth: 360,
-  },
-  desktopRightSummaryCol: {
-    flex: 0.8,
-    minWidth: 280,
-    position: 'relative',
-  },
+    desktopLayoutRow: {
+      flexDirection: 'row',
+      gap: 24,
+      width: '100%',
+      alignItems: 'flex-start',
+    },
+    desktopLeftStepsCol: {
+      flex: 1.2,
+      minWidth: 360,
+    },
+    desktopRightSummaryCol: {
+      flex: 0.8,
+      minWidth: 280,
+      position: 'relative',
+    },
 
-  stepsFormWrapper: {
-    gap: 16,
-    width: '100%',
-  },
-  stepSection: {
-    gap: 8,
-  },
-  stepTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 6,
-    marginBottom: 4,
-  },
-  dropdownBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  dropdownLabel: { color: COLORS.primaryDim, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  dropdownValue: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', marginTop: 2 },
-  dateRow: { flexDirection: 'row', gap: 8 },
-  dateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surfaceContainer,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  activeDateChip: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
-  dateChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  activeDateText: { color: COLORS.textPrimary },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  timeChip: {
-    flex: 1,
-    minWidth: '30%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surfaceContainer,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  activeTimeChip: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  timeChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  activeTimeText: { color: '#000000', fontWeight: '800' },
-  categoryNavRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  categoryScrollTrack: {
-    gap: 8,
-    alignItems: 'center',
-  },
-  catNavBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: COLORS.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  catNavBtnDisabled: {
-    opacity: 0.35,
-    borderColor: 'transparent',
-  },
-  categoryChip: {
-    backgroundColor: COLORS.surfaceContainer,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  activeCategoryChip: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
-  categoryChipText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  activeCategoryChipText: { color: COLORS.primary, fontWeight: '800' },
-  noServicesCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    gap: 8,
-  },
-  noServicesText: { color: COLORS.textSecondary, fontSize: 13 },
-  servicesGridList: {
-    gap: 8,
-  },
-  calendarCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  calNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  calMonthTitleWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  calMonthTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  weekDaysRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  weekDayCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  weekDayText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCellBlank: {
-    width: '14.28%',
-    height: 38,
-  },
-  dayCell: {
-    width: '14.28%',
-    height: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
-    marginVertical: 2,
-  },
-  dayCellToday: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  dayCellSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  dayCellDisabled: {
-    opacity: 0.25,
-  },
-  dayText: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dayTextToday: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  dayTextSelected: {
-    color: '#000000',
-    fontWeight: '900',
-  },
-  dayTextDisabled: {
-    color: COLORS.textMuted,
-  },
-  selectedDot: {
-    position: 'absolute',
-    bottom: 3,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#000000',
-  },
-  selectedDateBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  selectedDateText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  stepSubHeading: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  serviceCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 8,
-    gap: 6,
-  },
-  activeServiceCard: { borderColor: COLORS.primary, backgroundColor: 'rgba(255, 107, 0, 0.08)' },
-  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.borderHighlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkedBox: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  serviceTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  serviceMeta: { color: COLORS.primaryDim, fontSize: 11, fontWeight: '600', marginTop: 2 },
-  servicePrice: { color: COLORS.primary, fontSize: 15, fontWeight: '900' },
-  serviceDesc: { color: COLORS.textSecondary, fontSize: 12, paddingLeft: 34 },
+    stepsFormWrapper: {
+      gap: 16,
+      width: '100%',
+    },
+    stepSection: {
+      gap: 8,
+    },
+    stepTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginTop: 6,
+      marginBottom: 4,
+    },
+    addBikeQuickBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.1)' : 'rgba(255, 107, 0, 0.08)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.3)' : 'rgba(255, 107, 0, 0.2)',
+    },
+    addBikeQuickText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    emptyBikeCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderStyle: 'dashed',
+    },
+    emptyBikeIconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyBikeTitle: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    emptyBikeSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    emptyBikeAddBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    emptyBikeAddText: {
+      color: isDark ? '#000' : '#FFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+    },
+    textInput: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.textPrimary,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+    },
+    dropdownBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    dropdownLabel: { color: colors.primaryDim, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+    dropdownValue: { color: colors.textPrimary, fontSize: 14, fontWeight: '700', marginTop: 2 },
+    dateRow: { flexDirection: 'row', gap: 8 },
+    dateChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surfaceContainer,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    activeDateChip: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
+    dateChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+    activeDateText: { color: colors.textPrimary },
+    timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+    timeChip: {
+      flex: 1,
+      minWidth: '30%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: colors.surfaceContainer,
+      paddingVertical: 11,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    activeTimeChip: { backgroundColor: colors.primary, borderColor: colors.primary },
+    timeChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+    activeTimeText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800' },
+    categoryNavRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 12,
+    },
+    catNavBtn: {
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      width: 32,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    catNavBtnDisabled: {
+      opacity: 0.35,
+    },
+    categoryScrollTrack: {
+      gap: 8,
+      alignItems: 'center',
+    },
+    categoryChip: {
+      backgroundColor: colors.surfaceContainer,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    activeCategoryChip: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
+    categoryChipText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+    activeCategoryChipText: { color: colors.primary, fontWeight: '800' },
+    noServicesCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 14,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      gap: 8,
+    },
+    noServicesText: { color: colors.textSecondary, fontSize: 13 },
+    servicesGridList: {
+      gap: 8,
+    },
+    searchInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginBottom: 10,
+    },
+    searchField: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+      padding: 0,
+    },
+    calendarCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    calendarHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    calNavBtn: {
+      backgroundColor: colors.surface,
+      padding: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    calMonthTitleWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    calMonthTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    weekDaysRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 2,
+    },
+    weekDayCol: {
+      width: '14.28%',
+      alignItems: 'center',
+    },
+    weekDayText: {
+      color: colors.primaryDim,
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    daysGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    dayCellBlank: {
+      width: '14.28%',
+      height: 38,
+    },
+    dayCell: {
+      width: '14.28%',
+      height: 38,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 10,
+      marginVertical: 2,
+      position: 'relative',
+    },
+    dayCellToday: {
+      borderWidth: 1,
+      borderColor: 'rgba(255, 107, 0, 0.5)',
+    },
+    dayCellSelected: {
+      backgroundColor: colors.primary,
+    },
+    dayCellDisabled: {
+      opacity: 0.25,
+    },
+    dayText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    dayTextToday: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    dayTextSelected: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontWeight: '900',
+    },
+    dayTextDisabled: {
+      color: colors.textMuted,
+    },
+    selectedDot: {
+      position: 'absolute',
+      bottom: 3,
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+    },
+    selectedDateBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.1)' : 'rgba(255, 107, 0, 0.08)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.25)' : 'rgba(255, 107, 0, 0.2)',
+      alignSelf: 'flex-start',
+      marginTop: 2,
+    },
+    selectedDateText: {
+      color: colors.primaryDim,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    stepSubHeading: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    servicesGrid: { gap: 10 },
+    emptyServices: {
+      padding: 24,
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    serviceCard: {
+      backgroundColor: colors.surfaceContainer,
+      padding: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6,
+    },
+    activeServiceCard: { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(255, 107, 0, 0.08)' : 'rgba(255, 107, 0, 0.06)' },
+    selectedServiceCard: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.1)' : 'rgba(255, 107, 0, 0.08)', borderColor: colors.primary },
+    checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    serviceCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+    },
+    activeCheckbox: { backgroundColor: colors.primary, borderColor: colors.primary },
+    checkedBox: { backgroundColor: colors.primary, borderColor: colors.primary },
+    serviceTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+    serviceName: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+    serviceMeta: { color: colors.primaryDim, fontSize: 11, fontWeight: '600', marginTop: 2 },
+    servicePrice: { color: colors.primary, fontSize: 15, fontWeight: '900' },
+    serviceDesc: { color: colors.textSecondary, fontSize: 12, paddingLeft: 34 },
 
-  summaryCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 8,
-    width: '100%',
-  },
-  summaryTitle: { color: COLORS.primary, fontSize: 12, fontWeight: '900', letterSpacing: 0.8, marginBottom: 4 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  summaryLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
-  summaryValue: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700', flex: 1, textAlign: 'right' },
-  itemizedList: {
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    gap: 4,
-    marginVertical: 4,
-  },
-  itemizedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  itemizedName: { color: COLORS.textSecondary, fontSize: 12, flex: 1 },
-  itemizedPrice: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
+    summaryCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      gap: 8,
+      width: '100%',
+    },
+    summaryTitle: { color: colors.primary, fontSize: 12, fontWeight: '900', letterSpacing: 0.8, marginBottom: 4 },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    summaryLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
+    summaryValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '700', flex: 1, textAlign: 'right' },
+    itemizedList: {
+      paddingVertical: 6,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      gap: 4,
+      marginVertical: 4,
+    },
+    itemizedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    itemizedName: { color: colors.textSecondary, fontSize: 12, flex: 1 },
+    itemizedPrice: { color: colors.textPrimary, fontSize: 12, fontWeight: '700' },
 
-  modalIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.success,
-  },
-  modalSub: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 18 },
-  ticketBox: {
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '100%',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 4,
-  },
-  ticketDetail: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
-  workshopItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  selectedWorkshopItem: { backgroundColor: 'rgba(255, 107, 0, 0.12)', borderColor: COLORS.primary },
-  workshopItemName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  selectedWorkshopItemText: { color: COLORS.primary, fontWeight: '800' },
-  workshopItemAddress: { color: COLORS.textMuted, fontSize: 11 },
-});
+    modalIconBox: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.successBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.success,
+    },
+    modalSub: { color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 18 },
+    ticketBox: {
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 4,
+    },
+    ticketDetail: { color: colors.textPrimary, fontSize: 12, fontWeight: '700' },
+    workshopItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    selectedWorkshopItem: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.1)', borderColor: colors.primary },
+    workshopItemName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+    selectedWorkshopItemText: { color: colors.primary, fontWeight: '800' },
+    workshopItemAddress: { color: colors.textMuted, fontSize: 11 },
+
+    // Floating Mobile Booking Summary Card
+    floatingMobileSummary: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: colors.surfaceContainer,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      borderWidth: 1.5,
+      borderBottomWidth: 0,
+      borderColor: isDark ? 'rgba(255, 122, 0, 0.5)' : 'rgba(255, 122, 0, 0.3)',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -6 },
+      shadowOpacity: isDark ? 0.6 : 0.15,
+      shadowRadius: 14,
+      elevation: 24,
+      zIndex: 999,
+    },
+    floatingSummaryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 2,
+    },
+    floatingBadge: {
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      width: 22,
+      height: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    floatingBadgeText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    floatingTitle: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+    },
+    floatingItemsSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
+      marginTop: 1,
+    },
+    floatingTotalPrice: {
+      color: colors.primary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    floatingExpandedContent: {
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      maxHeight: 180,
+    },
+  });

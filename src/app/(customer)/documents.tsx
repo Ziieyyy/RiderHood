@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
@@ -58,7 +59,8 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { isPhone, contentPadding } = useResponsive();
-
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [documents, setDocuments] = useState<RiderDoc[]>([]);
   const [selectedType, setSelectedType] = useState<DocumentType | 'ALL'>('ALL');
@@ -504,211 +506,212 @@ export default function DocumentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 10,
-  },
-  addBtnHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  addBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  chipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
-  },
-  chipText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  chipTextActive: {
-    color: COLORS.primary,
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginTop: 20,
-    gap: 8,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  emptySub: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  docCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  docIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-  },
-  docTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  docMeta: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  iconBtn: {
-    padding: 8,
-    backgroundColor: COLORS.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  label: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 12,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filePickerBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-  },
-  filePickerText: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-  catRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  catChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  catChipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
-  },
-  catChipText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  catChipTextActive: {
-    color: COLORS.primary,
-  },
-  viewDocBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: COLORS.primaryDark,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  viewDocBtnText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 10,
+    },
+    addBtnHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    addBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '900',
+    },
+    filterScroll: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    chipTextActive: {
+      color: colors.primary,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginTop: 20,
+      gap: 8,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    emptySub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    docCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    docIconBox: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.primaryGlow,
+    },
+    docTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    docMeta: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    cardActions: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    iconBtn: {
+      padding: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surfaceContainer,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    label: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      marginTop: 4,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+      color: colors.textPrimary,
+      fontSize: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    filePickerBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+    },
+    filePickerText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+      flex: 1,
+    },
+    catRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    catChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    catChipActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    catChipText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    catChipTextActive: {
+      color: colors.primary,
+    },
+    viewDocBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: colors.primaryDark,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    viewDocBtnText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+  });

@@ -12,7 +12,7 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Service } from '../../types/database';
 import { Wrench, Plus, Edit2, Trash2, Clock, RefreshCw, ChevronDown, Check, X, Search, ShieldCheck } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { formatCategoryName } from '../../utils/categoryUtils';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 
@@ -44,6 +45,8 @@ export default function WorkshopServicesScreen() {
   const { t, language } = useTranslation();
   const { profile } = useAuth();
   const { isPhone, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
 
   const [services, setServices] = useState<Service[]>([]);
@@ -502,61 +505,62 @@ export default function WorkshopServicesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  topBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, flexDirection: 'row', gap: 10 },
-  searchInputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10, height: 44 },
-  searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: 13 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingHorizontal: 14, height: 44, borderRadius: 12 },
-  addBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  categoryScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
-  categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: COLORS.cards, borderWidth: 1, borderColor: COLORS.border },
-  activeCategoryChip: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
-  categoryChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  activeCategoryChipText: { color: COLORS.primary, fontWeight: '800' },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40, gap: 14 },
-  emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: COLORS.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: COLORS.border },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  emptyDesc: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
-  serviceCard: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  disabledCard: { opacity: 0.6 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  srvTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  activeStatusChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  activeStatusText: { fontSize: 9, fontWeight: '900' },
-  metaRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.secondaryBackground, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
-  metaText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '700' },
-  srvPrice: { color: COLORS.primary, fontSize: 20, fontWeight: '900' },
-  srvDesc: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 16 },
-  cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
-  toggleActiveContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  toggleLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: '700' },
-  rightActionBtns: { flexDirection: 'row', gap: 8 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.elevatedCards, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: COLORS.borderHighlight },
-  deleteBtn: { borderColor: COLORS.dangerBg, backgroundColor: COLORS.dangerBg },
-  actionText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { backgroundColor: COLORS.elevatedCards, borderRadius: 24, padding: 20, width: '100%', borderWidth: 1, borderColor: COLORS.borderHighlight, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10 },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  inputGroup: { gap: 6 },
-  inputLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-  input: { backgroundColor: COLORS.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, fontSize: 13 },
-  miniCatChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: COLORS.cards, borderWidth: 1, borderColor: COLORS.border },
-  activeMiniCatChip: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  miniCatText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  activeMiniCatText: { color: '#FFFFFF', fontWeight: '800' },
-  dropdownTrigger: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
-  dropdownTriggerText: { flex: 1, color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
-  dropdownContainer: { backgroundColor: COLORS.cards, borderRadius: 12, borderWidth: 1, borderColor: COLORS.primary, overflow: 'hidden', marginTop: 2 },
-  dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  selectedDropdownItem: { backgroundColor: 'rgba(255, 107, 0, 0.15)' },
-  dropdownItemText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
-  selectedDropdownItemText: { color: COLORS.primary, fontWeight: '800' },
-  activeSwitchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    topBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, flexDirection: 'row', gap: 10 },
+    searchInputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, gap: 10, height: 44 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 14, height: 44, borderRadius: 12 },
+    addBtnText: { color: isDark ? '#000000' : '#FFFFFF', fontSize: 12, fontWeight: '800' },
+    categoryScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
+    categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.cards, borderWidth: 1, borderColor: colors.border },
+    activeCategoryChip: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
+    categoryChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+    activeCategoryChipText: { color: colors.primary, fontWeight: '800' },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40, gap: 14 },
+    emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: colors.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border },
+    emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    emptyDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
+    serviceCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
+    disabledCard: { opacity: 0.6 },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+    srvTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    activeStatusChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    activeStatusText: { fontSize: 9, fontWeight: '900' },
+    metaRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.secondaryBackground, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: colors.border },
+    metaText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+    srvPrice: { color: colors.primary, fontSize: 20, fontWeight: '900' },
+    srvDesc: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
+    cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+    toggleActiveContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    toggleLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+    rightActionBtns: { flexDirection: 'row', gap: 8 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.elevatedCards, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.borderHighlight },
+    deleteBtn: { borderColor: colors.dangerBg, backgroundColor: colors.dangerBg },
+    actionText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalContent: { backgroundColor: colors.elevatedCards, borderRadius: 24, padding: 20, width: '100%', borderWidth: 1, borderColor: colors.borderHighlight, maxHeight: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10 },
+    modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    inputGroup: { gap: 6 },
+    inputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+    input: { backgroundColor: colors.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, fontSize: 13 },
+    miniCatChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.cards, borderWidth: 1, borderColor: colors.border },
+    activeMiniCatChip: { backgroundColor: colors.primary, borderColor: colors.primary },
+    miniCatText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+    activeMiniCatText: { color: '#FFFFFF', fontWeight: '800' },
+    dropdownTrigger: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: colors.border, gap: 10 },
+    dropdownTriggerText: { flex: 1, color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+    dropdownContainer: { backgroundColor: colors.cards, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, overflow: 'hidden', marginTop: 2 },
+    dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+    selectedDropdownItem: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)' },
+    dropdownItemText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+    selectedDropdownItemText: { color: colors.primary, fontWeight: '800' },
+    activeSwitchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  });

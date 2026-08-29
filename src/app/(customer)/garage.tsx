@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { AppThemeColors } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import { ResponsiveModal } from '../../components/responsive/ResponsiveModal';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import {
   Bike,
   Plus,
@@ -40,6 +41,8 @@ export default function MyGarageScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [bikes, setBikes] = useState<Motorcycle[]>([]);
   const [healthScores, setHealthScores] = useState<Record<string, number>>({});
@@ -115,11 +118,13 @@ export default function MyGarageScreen() {
         photo_url: editPhotoUrl.trim() || null,
       });
 
-      setBikes((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-      setEditingBike(null);
-      Alert.alert(t('common.success'), t('motorcycle.updateMotorcycle'));
+      if (updated) {
+        setBikes((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+        setEditingBike(null);
+        Alert.alert(t('common.success'), t('motorcycle.edit'));
+      }
     } catch (err: any) {
-      Alert.alert(t('errors.updateFailed'), err?.message || t('errors.updateFailed'));
+      Alert.alert(t('common.error'), err?.message || t('errors.updateFailed'));
     } finally {
       setSavingEdit(false);
     }
@@ -159,8 +164,8 @@ export default function MyGarageScreen() {
             onPress={() => router.push('/(customer)/setup-motorcycle')}
             activeOpacity={0.8}
           >
-            <Plus color={COLORS.primary} size={16} />
-            <Text style={styles.addBtnText}>+ {t('motorcycle.registerNew')}</Text>
+            <Plus color={colors.primary} size={16} />
+            <Text style={styles.addBtnText}>{t('motorcycle.registerNew')}</Text>
           </TouchableOpacity>
         }
       />
@@ -175,16 +180,16 @@ export default function MyGarageScreen() {
               setRefreshing(true);
               fetchGarage();
             }}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
       >
         <ResponsiveContainer>
           {loading ? (
-            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+            <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 40 }} />
           ) : bikes.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Bike color={COLORS.textMuted} size={56} />
+              <Bike color={colors.textMuted} size={56} />
               <Text style={styles.emptyTitle}>{t('empty.noMotorcycles').toUpperCase()}</Text>
               <Text style={styles.emptySub}>{t('empty.noMotorcyclesSub')}</Text>
               <CustomButton
@@ -212,7 +217,7 @@ export default function MyGarageScreen() {
                             resizeMode="cover"
                           />
                         ) : (
-                          <Bike color={COLORS.primary} size={32} />
+                          <Bike color={colors.primary} size={32} />
                         )}
                       </View>
 
@@ -240,7 +245,7 @@ export default function MyGarageScreen() {
                     <View style={styles.infoBar}>
                       <View style={styles.infoCol}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Gauge color={COLORS.primary} size={12} />
+                          <Gauge color={colors.primary} size={12} />
                           <Text style={styles.infoLabel} numberOfLines={1}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                         </View>
                         <Text style={styles.infoVal} numberOfLines={1}>{bike.current_mileage.toLocaleString()} km</Text>
@@ -248,7 +253,7 @@ export default function MyGarageScreen() {
 
                       <View style={styles.infoCol}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Zap color={COLORS.primary} size={12} />
+                          <Zap color={colors.primary} size={12} />
                           <Text style={styles.infoLabel} numberOfLines={1}>{t('motorcycle.engineOil').toUpperCase()}</Text>
                         </View>
                         <Text style={styles.infoVal} numberOfLines={1}>
@@ -258,7 +263,7 @@ export default function MyGarageScreen() {
 
                       <View style={styles.infoCol}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Disc color={COLORS.primary} size={12} />
+                          <Disc color={colors.primary} size={12} />
                           <Text style={styles.infoLabel} numberOfLines={1}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
                         </View>
                         <Text style={styles.infoVal} numberOfLines={1}>
@@ -273,13 +278,13 @@ export default function MyGarageScreen() {
                         <View
                           style={[
                             styles.healthDot,
-                            { backgroundColor: isHealthy ? COLORS.success : '#f59e0b' },
+                            { backgroundColor: isHealthy ? colors.success : '#f59e0b' },
                           ]}
                         />
                         <Text
                           style={[
                             styles.healthText,
-                            { color: isHealthy ? COLORS.success : '#f59e0b' },
+                            { color: isHealthy ? colors.success : '#f59e0b' },
                           ]}
                         >
                           {isHealthy ? t('motorcycle.healthGood') : t('motorcycle.healthPoor')} ({score}%)
@@ -295,17 +300,17 @@ export default function MyGarageScreen() {
                         onPress={() => router.push(`/(customer)/motorcycle/${bike.id}` as any)}
                         activeOpacity={0.8}
                       >
-                        <Eye color={COLORS.textPrimary} size={14} />
+                        <Eye color={colors.textPrimary} size={14} />
                         <Text style={styles.actionBtnText}>{t('common.view')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: COLORS.dangerBg }]}
+                        style={[styles.actionBtn, { borderColor: colors.dangerBg }]}
                         onPress={() => handleDelete(bike.id, bike.nickname || bike.model)}
                         activeOpacity={0.8}
                       >
-                        <Trash2 color={COLORS.danger} size={14} />
-                        <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
+                        <Trash2 color={colors.danger} size={14} />
+                        <Text style={[styles.actionBtnText, { color: colors.danger }]}>{t('common.delete')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -330,7 +335,7 @@ export default function MyGarageScreen() {
             value={editNickname}
             onChangeText={setEditNickname}
             placeholder={t('motorcycle.nicknamePlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
           />
 
           <View style={styles.twoColRow}>
@@ -341,7 +346,7 @@ export default function MyGarageScreen() {
                 value={editBrand}
                 onChangeText={setEditBrand}
                 placeholder={t('motorcycle.selectBrand')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -351,7 +356,7 @@ export default function MyGarageScreen() {
                 value={editModel}
                 onChangeText={setEditModel}
                 placeholder={t('motorcycle.selectModel')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
           </View>
@@ -364,7 +369,7 @@ export default function MyGarageScreen() {
                 value={editYear}
                 onChangeText={setEditYear}
                 placeholder={t('motorcycle.yearPlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
@@ -375,7 +380,7 @@ export default function MyGarageScreen() {
                 value={editPlate}
                 onChangeText={setEditPlate}
                 placeholder={t('motorcycle.plateNumberPlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 autoCapitalize="characters"
               />
             </View>
@@ -390,7 +395,7 @@ export default function MyGarageScreen() {
                 value={editEngineCc}
                 onChangeText={setEditEngineCc}
                 placeholder="e.g. 155"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
@@ -401,7 +406,7 @@ export default function MyGarageScreen() {
                 value={editMileage}
                 onChangeText={setEditMileage}
                 placeholder="e.g. 28000"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
@@ -415,7 +420,7 @@ export default function MyGarageScreen() {
                 value={editFuelType}
                 onChangeText={setEditFuelType}
                 placeholder={t('motorcycle.selectFuelType')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -425,7 +430,7 @@ export default function MyGarageScreen() {
                 value={editTransmission}
                 onChangeText={setEditTransmission}
                 placeholder={t('motorcycle.selectTransmission')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
           </View>
@@ -436,7 +441,7 @@ export default function MyGarageScreen() {
             value={editEngineOil}
             onChangeText={setEditEngineOil}
             placeholder="e.g. Fully Synthetic 10W-40"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
           />
 
           <View style={styles.twoColRow}>
@@ -447,7 +452,7 @@ export default function MyGarageScreen() {
                 value={editFrontTyre}
                 onChangeText={setEditFrontTyre}
                 placeholder="e.g. 90/80-17"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -457,7 +462,7 @@ export default function MyGarageScreen() {
                 value={editRearTyre}
                 onChangeText={setEditRearTyre}
                 placeholder="e.g. 120/70-17"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
           </View>
@@ -468,7 +473,7 @@ export default function MyGarageScreen() {
             value={editPhotoUrl}
             onChangeText={setEditPhotoUrl}
             placeholder="https://images.unsplash.com/..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
           />
         </View>
 
@@ -497,248 +502,251 @@ export default function MyGarageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  addBtnHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255, 107, 0, 0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 0, 0.3)',
-  },
-  addBtnText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  scrollContent: {
-    paddingVertical: 16,
-    paddingBottom: 40,
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 20,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  emptySub: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 320,
-  },
-  bikeCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-    width: '100%',
-  },
-  bikeCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  bikePhotoPlaceholder: {
-    width: 68,
-    height: 68,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-  },
-  titleBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  bikeNickname: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-    flex: 1,
-  },
-  primaryTag: {
-    backgroundColor: 'rgba(255, 107, 0, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 0, 0.4)',
-  },
-  primaryTagText: {
-    color: COLORS.primary,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  bikeModelSub: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  bikePlateText: {
-    color: COLORS.primaryDim,
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  infoBar: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'space-between',
-  },
-  infoCol: {
-    flex: 1,
-    gap: 2,
-    paddingHorizontal: 4,
-  },
-  infoLabel: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  infoVal: {
-    color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  healthScoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-  },
-  healthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  healthDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  healthText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  healthDetailSub: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surface,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  actionBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  modalInputGroup: {
-    gap: 10,
-  },
-  inputCategoryHeader: {
-    color: COLORS.primaryDim,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
-  modalInput: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  twoColRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 18,
-  },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cancelBtnText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  saveBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  saveBtnText: {
-    color: '#000',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    addBtnHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.3)' : 'rgba(255, 107, 0, 0.2)',
+    },
+    addBtnText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    scrollContent: {
+      paddingVertical: 16,
+      paddingBottom: 40,
+      flexGrow: 1,
+      backgroundColor: colors.background,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 20,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    emptySub: {
+      color: colors.textMuted,
+      fontSize: 12,
+      textAlign: 'center',
+      lineHeight: 18,
+      maxWidth: 320,
+    },
+    bikeCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+      width: '100%',
+    },
+    bikeCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    bikePhotoPlaceholder: {
+      width: 68,
+      height: 68,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    titleBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 6,
+    },
+    bikeNickname: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+      flex: 1,
+    },
+    primaryTag: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.1)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 107, 0, 0.4)' : 'rgba(255, 107, 0, 0.25)',
+    },
+    primaryTagText: {
+      color: colors.primary,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    bikeModelSub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    bikePlateText: {
+      color: colors.primaryDim,
+      fontSize: 11,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    infoBar: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'space-between',
+    },
+    infoCol: {
+      flex: 1,
+      gap: 2,
+      paddingHorizontal: 4,
+    },
+    infoLabel: {
+      color: colors.textMuted,
+      fontSize: 9,
+      fontWeight: '700',
+    },
+    infoVal: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    healthScoreRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 2,
+    },
+    healthRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    healthDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    healthText: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    healthDetailSub: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+    },
+    cardActionsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 10,
+    },
+    actionBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    actionBtnText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    modalInputGroup: {
+      gap: 10,
+    },
+    inputCategoryHeader: {
+      color: colors.primaryDim,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      marginTop: 2,
+    },
+    modalInput: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.textPrimary,
+      fontSize: 13,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+    twoColRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    modalActionRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 10,
+      marginTop: 18,
+    },
+    cancelBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelBtnText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    saveBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      minWidth: 80,
+      alignItems: 'center',
+    },
+    saveBtnText: {
+      color: isDark ? '#000' : '#FFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+  });

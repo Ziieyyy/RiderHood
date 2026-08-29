@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   Bell,
   Shield,
@@ -29,6 +29,7 @@ import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { CustomButton } from '../../components/CustomButton';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useTranslation } from '../../i18n';
 import { getMyWorkshop, updateWorkshopStatus } from '../../services/workshopService';
 import { supabase } from '../../lib/supabase';
@@ -37,6 +38,8 @@ import type { Workshop } from '../../types/database';
 export default function WorkshopSettingsScreen() {
   const { profile, logout } = useAuth();
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -296,27 +299,28 @@ export default function WorkshopSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40, gap: 16 },
-  statusCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.cards, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
-  statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  statusDot: { width: 12, height: 12, borderRadius: 6 },
-  statusTitle: { color: COLORS.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  statusSub: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', marginTop: 2 },
-  sectionTitle: { color: COLORS.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  card: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 14 },
-  inputGroup: { gap: 6 },
-  inputLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-  input: { backgroundColor: COLORS.secondaryBackground, borderRadius: 12, paddingHorizontal: 14, height: 44, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowText: { flex: 1 },
-  rowTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  rowSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
-  divider: { height: 1, backgroundColor: COLORS.border },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.dangerBg, borderRadius: 14, paddingVertical: 14, marginTop: 8, borderWidth: 1, borderColor: COLORS.danger },
-  logoutBtnText: { color: COLORS.danger, fontSize: 13, fontWeight: '800' },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40, gap: 16 },
+    statusCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.cards, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+    statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    statusDot: { width: 12, height: 12, borderRadius: 6 },
+    statusTitle: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+    statusSub: { color: colors.textPrimary, fontSize: 13, fontWeight: '800', marginTop: 2 },
+    sectionTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+    card: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 14 },
+    inputGroup: { gap: 6 },
+    inputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+    input: { backgroundColor: colors.secondaryBackground, borderRadius: 12, paddingHorizontal: 14, height: 44, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, fontSize: 13 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    rowText: { flex: 1 },
+    rowTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+    rowSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+    divider: { height: 1, backgroundColor: colors.border },
+    logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.dangerBg, borderRadius: 14, paddingVertical: 14, marginTop: 8, borderWidth: 1, borderColor: colors.danger },
+    logoutBtnText: { color: colors.danger, fontSize: 13, fontWeight: '800' },
+  });

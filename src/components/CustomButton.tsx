@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { DARK_COLORS } from '../constants/theme';
 
 interface CustomButtonProps {
   title: string;
@@ -21,6 +22,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   textStyle,
   disabled = false,
 }) => {
+  const styles = useThemedStyles(createStyles);
+
   const getContainerStyle = () => {
     switch (variant) {
       case 'secondary':
@@ -60,56 +63,57 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  baseButton: {
-    height: 52,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  primaryContainer: {
-    backgroundColor: COLORS.primary,
-  },
-  primaryText: {
-    color: '#000000',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  secondaryContainer: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  secondaryText: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  outlineContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  outlineText: {
-    color: COLORS.primary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  dangerContainer: {
-    backgroundColor: COLORS.dangerBg,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-  },
-  dangerText: {
-    color: COLORS.danger,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    baseButton: {
+      height: 52,
+      borderRadius: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+      gap: 8,
+    },
+    primaryContainer: {
+      backgroundColor: colors.primary,
+    },
+    primaryText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    secondaryContainer: {
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    secondaryText: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    outlineContainer: {
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    outlineText: {
+      color: colors.primary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    dangerContainer: {
+      backgroundColor: colors.dangerBg,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
+    dangerText: {
+      color: colors.danger,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+  });

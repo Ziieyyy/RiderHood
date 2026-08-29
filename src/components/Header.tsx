@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../constants/theme';
-import { ChevronLeft, Bell } from 'lucide-react-native';
+import { ChevronLeft, Bell, Sun, Moon, Laptop } from 'lucide-react-native';
 import { useTranslation } from '../i18n';
+import { useTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 
 interface HeaderProps {
   title?: string;
@@ -24,14 +25,34 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const { colors, themeMode, toggleTheme } = useTheme();
+  const { isPhone } = useResponsive();
   const handleBackPress = onBack || (() => router.back());
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          borderBottomColor: colors.border,
+        },
+      ]}
+    >
       <View style={styles.leftRow}>
         {showBack ? (
-          <TouchableOpacity onPress={handleBackPress} style={styles.iconButton} activeOpacity={0.7}>
-            <ChevronLeft color={COLORS.textPrimary} size={24} />
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={[
+              styles.iconButton,
+              {
+                backgroundColor: colors.surfaceContainer,
+                borderColor: colors.border,
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft color={colors.textPrimary} size={24} />
           </TouchableOpacity>
         ) : (
           <Image
@@ -42,32 +63,67 @@ export const Header: React.FC<HeaderProps> = ({
         )}
         
         <View style={styles.textContainer}>
-          <Text style={styles.titleText}>{title}</Text>
+          <Text style={[styles.titleText, { color: colors.textPrimary }]}>{title}</Text>
           {subtitle ? (
-            <Text style={styles.subtitleText}>{subtitle}</Text>
+            <Text style={[styles.subtitleText, { color: colors.textSecondary }]}>{subtitle}</Text>
           ) : (
             showTelemetryBadge && (
               <View style={styles.telemetryTag}>
-                <View style={styles.liveDot} />
-                <Text style={styles.telemetryText}>{t('common.telemetryLive')}</Text>
+                <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
+                <Text style={[styles.telemetryText, { color: colors.primaryDim }]}>
+                  {t('common.telemetryLive')}
+                </Text>
               </View>
             )
           )}
         </View>
       </View>
 
-      {rightElement ? (
-        rightElement
-      ) : (
-        <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => router.push('/(customer)/notifications')}
-          activeOpacity={0.7}
-        >
-          <Bell color={COLORS.textPrimary} size={20} />
-          <View style={styles.notificationBadge} />
-        </TouchableOpacity>
-      )}
+      <View style={styles.rightRow}>
+        {/* Theme Toggle Button for Mobile View */}
+        {isPhone && (
+          <TouchableOpacity
+            style={[
+              styles.themeToggleButton,
+              {
+                backgroundColor: colors.surfaceContainer,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+            accessibilityLabel="Switch color theme mode"
+          >
+            {themeMode === 'dark' ? (
+              <Moon color={colors.textPrimary} size={18} />
+            ) : themeMode === 'light' ? (
+              <Sun color={colors.textPrimary} size={18} />
+            ) : (
+              <Laptop color={colors.textPrimary} size={18} />
+            )}
+          </TouchableOpacity>
+        )}
+
+        {rightElement ? (
+          rightElement
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.notificationButton,
+              {
+                backgroundColor: colors.surfaceContainer,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={() => router.push('/(customer)/notifications')}
+            activeOpacity={0.7}
+            accessibilityLabel="View notifications"
+          >
+            <Bell color={colors.textPrimary} size={20} />
+            <View style={[styles.notificationBadge, { backgroundColor: colors.primary }]} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -80,50 +136,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   leftRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  rightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   iconButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   headerLogoImg: {
     width: 38,
     height: 38,
   },
-  brandIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
   textContainer: {
     gap: 2,
   },
   titleText: {
-    color: COLORS.textPrimary,
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
   subtitleText: {
-    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -136,23 +181,27 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.success,
   },
   telemetryText: {
-    color: COLORS.primaryDim,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
+  },
+  themeToggleButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   notificationButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
     position: 'relative',
   },
   notificationBadge: {
@@ -162,6 +211,5 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
   },
 });

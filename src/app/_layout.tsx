@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'react-native';
-import { COLORS } from '../constants/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { LanguageProvider } from '../i18n';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 function RouteGuard() {
   const { user, isLoading, isInitialized } = useAuth();
@@ -16,6 +16,15 @@ function RouteGuard() {
     if (!isInitialized || isLoading) return;
 
     const currentGroup = segments[0];
+    const currentScreen = segments[1];
+
+    // Do not redirect away if the user is in the middle of a password reset flow
+    if (
+      currentGroup === '(auth)' &&
+      (currentScreen === 'forgot-password' || currentScreen === 'reset-password')
+    ) {
+      return;
+    }
 
     if (!user) {
       if (currentGroup !== '(auth)') {
@@ -35,27 +44,42 @@ function RouteGuard() {
   return null;
 }
 
+function ThemedAppContainer() {
+  const { isDark, colors } = useTheme();
+
+  return (
+    <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+      <RouteGuard />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'fade',
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
+        <Stack.Screen name="(workshop)" options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LanguageProvider>
-        <AuthProvider>
-          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-          <RouteGuard />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: COLORS.background },
-              animation: 'fade',
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-            <Stack.Screen name="(workshop)" options={{ headerShown: false }} />
-            <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-          </Stack>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ThemedAppContainer />
+          </AuthProvider>
+        </ThemeProvider>
       </LanguageProvider>
     </GestureHandlerRootView>
   );

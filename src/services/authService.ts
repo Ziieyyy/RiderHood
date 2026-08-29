@@ -69,7 +69,14 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
 
 // ─── Request Password Reset ────────────────────────────────────
 export async function resetPassword(email: string) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  let redirectTo: string | undefined;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    redirectTo = `${window.location.origin}/reset-password`;
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    ...(redirectTo ? { redirectTo } : {}),
+  });
   if (error) throw error;
 }
 

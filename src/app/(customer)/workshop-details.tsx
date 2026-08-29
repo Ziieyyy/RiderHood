@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, AppThemeColors } from '../../constants/theme';
 import { CustomButton } from '../../components/CustomButton';
 import {
   MapPin,
@@ -50,6 +50,7 @@ import {
   type ReviewStats,
 } from '../../services/reviewService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useTranslation } from '../../i18n';
 import { fetchGooglePlaceDetails, type GooglePlaceDetailsResult } from '../../services/googlePlacesService';
 import { getWorkshopOpenStatus } from '../../utils/operatingHours';
@@ -66,6 +67,8 @@ export default function WorkshopDetailsScreen() {
   const { user } = useAuth();
   const { t, formatDate, language } = useTranslation();
   const { isPhone, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
@@ -300,7 +303,7 @@ export default function WorkshopDetailsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.topHeaderNav}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft color={COLORS.textPrimary} size={20} />
+          <ArrowLeft color={colors.textPrimary} size={20} />
         </TouchableOpacity>
         <Text style={styles.topTitle} numberOfLines={1}>{name}</Text>
         <View style={{ width: 40 }} />
@@ -316,7 +319,7 @@ export default function WorkshopDetailsScreen() {
             resizeMode="contain"
           />
           <View style={[styles.statusBadge, { backgroundColor: openStatus.isOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
-            <Text style={[styles.statusText, { color: openStatus.isOpen ? COLORS.success : COLORS.danger }]}>
+            <Text style={[styles.statusText, { color: openStatus.isOpen ? colors.success : colors.danger }]}>
               {openStatus.statusText.toUpperCase()}
             </Text>
           </View>
@@ -345,21 +348,21 @@ export default function WorkshopDetailsScreen() {
 
           {workshop?.address ? (
             <View style={styles.detailRow}>
-              <MapPin color={COLORS.primary} size={16} />
+              <MapPin color={colors.primary} size={16} />
               <Text style={styles.detailText}>{t('workshop.address')}: {workshop.address}</Text>
             </View>
           ) : null}
 
           {workshop?.phone ? (
             <View style={styles.detailRow}>
-              <Phone color={COLORS.primary} size={16} />
+              <Phone color={colors.primary} size={16} />
               <Text style={styles.detailText}>{t('workshop.phone')}: {workshop.phone}</Text>
             </View>
           ) : null}
 
           {openStatus.scheduleText ? (
             <View style={styles.detailRow}>
-              <Clock color={COLORS.primary} size={16} />
+              <Clock color={colors.primary} size={16} />
               <Text style={styles.detailText}>{t('workshop.operatingHours')}: {openStatus.scheduleText}</Text>
             </View>
           ) : null}
@@ -367,38 +370,38 @@ export default function WorkshopDetailsScreen() {
 
         {/* ─── EXPLICIT BOOKING SECTION (SECTION 8 OF SPEC) ──────── */}
         {isPartner ? (
-          <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.primary, marginBottom: 16, gap: 8 }}>
+          <View style={{ backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.primary, marginBottom: 16, gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <CheckCircle2 color={COLORS.primary} size={18} />
-              <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.onlineBookingAvailable').toUpperCase()}</Text>
+              <CheckCircle2 color={colors.primary} size={18} />
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.onlineBookingAvailable').toUpperCase()}</Text>
             </View>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 12, lineHeight: 16 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>
               {t('workshop.onlineBookingAvailDesc')}
             </Text>
             <TouchableOpacity
-              style={{ backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4 }}
+              style={{ backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4 }}
               onPress={() => handleBookNow()}
             >
-              <Calendar color="#FFFFFF" size={15} />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{t('common.bookNow')}</Text>
+              <Calendar color={isDark ? "#000" : "#FFF"} size={15} />
+              <Text style={{ color: isDark ? "#000" : "#FFF", fontSize: 13, fontWeight: '800' }}>{t('common.bookNow')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={{ backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, gap: 8 }}>
+          <View style={{ backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 16, gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Info color={COLORS.textMuted} size={18} />
-              <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.directoryListing').toUpperCase()}</Text>
+              <Info color={colors.textMuted} size={18} />
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '900' }}>{t('workshop.directoryListing').toUpperCase()}</Text>
             </View>
-            <Text style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 16 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 16 }}>
               {t('workshop.directoryListingDesc')}
             </Text>
             {phone && (
               <TouchableOpacity
-                style={{ backgroundColor: COLORS.surface, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border, marginTop: 4 }}
+                style={{ backgroundColor: colors.surface, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, marginTop: 4 }}
                 onPress={() => Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`)}
               >
-                <Phone color={COLORS.textPrimary} size={14} />
-                <Text style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' }}>{t('workshop.callWorkshop')} ({phone})</Text>
+                <Phone color={colors.textPrimary} size={14} />
+                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '800' }}>{t('workshop.callWorkshop')} ({phone})</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -408,29 +411,29 @@ export default function WorkshopDetailsScreen() {
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Wrench color={COLORS.primary} size={18} />
-              <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' }}>
+              <Wrench color={colors.primary} size={18} />
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '900' }}>
                 {t('services.title').toUpperCase()} ({services.length})
               </Text>
             </View>
-            <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
               {t('workshop.standardRates')}
             </Text>
           </View>
 
           {/* Quick Search within Workshop Services */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, height: 38, marginBottom: 10 }}>
-            <Search color={COLORS.textMuted} size={16} style={{ marginRight: 8 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainer, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, height: 38, marginBottom: 10 }}>
+            <Search color={colors.textMuted} size={16} style={{ marginRight: 8 }} />
             <TextInput
-              style={{ flex: 1, color: COLORS.textPrimary, fontSize: 12 }}
+              style={{ flex: 1, color: colors.textPrimary, fontSize: 12 }}
               value={searchService}
               onChangeText={setSearchService}
               placeholder={t('workshop.searchPlaceholder')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
             {searchService ? (
               <TouchableOpacity onPress={() => setSearchService('')}>
-                <X color={COLORS.textMuted} size={15} />
+                <X color={colors.textMuted} size={15} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -463,7 +466,7 @@ export default function WorkshopDetailsScreen() {
           </ScrollView>
 
           {loading ? (
-            <ActivityIndicator color={COLORS.primary} size="large" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 20 }} />
           ) : services.length === 0 ? (
             <View style={styles.emptyServiceBox}>
               <Text style={styles.emptyServiceText}>
@@ -491,7 +494,7 @@ export default function WorkshopDetailsScreen() {
                   <View key={serv.id} style={styles.serviceItem}>
                     <View style={{ flex: 1 }}>
                       <View style={styles.servNameRow}>
-                        <CheckCircle2 color={COLORS.primary} size={16} />
+                        <CheckCircle2 color={colors.primary} size={16} />
                         <Text style={styles.serviceName}>{serv.name}</Text>
                       </View>
                       {serv.description ? (
@@ -499,12 +502,12 @@ export default function WorkshopDetailsScreen() {
                       ) : null}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                         <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                          <Text style={{ color: COLORS.primary, fontSize: 9, fontWeight: '800' }}>
+                          <Text style={{ color: colors.primary, fontSize: 9, fontWeight: '800' }}>
                             {formatCategoryName(serv.category || 'SERVICE', language).toUpperCase()}
                           </Text>
                         </View>
                         {serv.estimated_duration_minutes ? (
-                          <Text style={{ color: COLORS.textMuted, fontSize: 11 }}>
+                          <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                             ⏱ ~{serv.estimated_duration_minutes} mins
                           </Text>
                         ) : null}
@@ -562,7 +565,7 @@ export default function WorkshopDetailsScreen() {
         {/* Write Review Button (if eligible) */}
         {canReview && (
           <TouchableOpacity style={styles.writeReviewBtn} onPress={handleOpenWriteReviewModal}>
-            <Edit2 color="#000" size={16} />
+            <Edit2 color={isDark ? "#000" : "#FFF"} size={16} />
             <Text style={styles.writeReviewBtnText}>{t('reviews.writeReview')}</Text>
           </TouchableOpacity>
         )}
@@ -570,7 +573,7 @@ export default function WorkshopDetailsScreen() {
         {/* Reviews List */}
         {reviews.length === 0 ? (
           <View style={styles.emptyServiceBox}>
-            <Star color={COLORS.textMuted} size={28} />
+            <Star color={colors.textMuted} size={28} />
             <Text style={styles.emptyReviewTitle}>{t('reviews.noReviewsYet')}</Text>
             <Text style={styles.emptyReviewSub}>{t('reviews.noReviewsDesc')}</Text>
           </View>
@@ -581,7 +584,7 @@ export default function WorkshopDetailsScreen() {
                 <View style={styles.revHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={styles.avatarCircle}>
-                      <User color={COLORS.textMuted} size={14} />
+                      <User color={colors.textMuted} size={14} />
                     </View>
                     <View>
                       <Text style={styles.revName}>{rev.customer?.full_name || 'Rider'}</Text>
@@ -631,7 +634,7 @@ export default function WorkshopDetailsScreen() {
                 <Text style={styles.viewAllBtnText}>
                   {showAllReviews ? t('common.showLess') : `${t('common.viewAll')} (${reviews.length})`}
                 </Text>
-                <ChevronRight color={COLORS.primary} size={14} />
+                <ChevronRight color={colors.primary} size={14} />
               </TouchableOpacity>
             )}
           </>
@@ -643,7 +646,7 @@ export default function WorkshopDetailsScreen() {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitleHeader}>{t('reviews.googleReviewsTitle').toUpperCase()}</Text>
-          <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>Powered by Google Maps</Text>
+          <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '700' }}>Powered by Google Maps</Text>
         </View>
 
         <View style={styles.googleReviewCard}>
@@ -659,12 +662,12 @@ export default function WorkshopDetailsScreen() {
                   <Text style={styles.googleRatingText}>
                     {Number(googlePlaceDetails?.rating ?? workshop?.google_rating ?? 0).toFixed(1)}
                   </Text>
-                  <Text style={{ color: COLORS.textMuted, fontSize: 12, fontWeight: '600' }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '600' }}>
                     ({googlePlaceDetails?.userRatingCount ?? workshop?.google_review_count ?? 0} Google reviews)
                   </Text>
                 </View>
               ) : (
-                <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 2 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
                   {t('reviews.noReviewsYet')}
                 </Text>
               )}
@@ -675,21 +678,21 @@ export default function WorkshopDetailsScreen() {
           {googleLoading ? (
             <View style={{ paddingVertical: 16, alignItems: 'center' }}>
               <ActivityIndicator color="#4285F4" size="small" />
-              <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 8 }}>{t('common.loading')}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>{t('common.loading')}</Text>
             </View>
           ) : null}
 
           {/* 2. Error State */}
           {!googleLoading && googlePlaceDetails?.status === 'error' ? (
             <View style={{ paddingVertical: 12, alignItems: 'center', gap: 8 }}>
-              <Text style={{ color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
                 {t('reviews.noReviewsYet')}
               </Text>
               <TouchableOpacity
-                style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: COLORS.surfaceContainer, borderWidth: 1, borderColor: COLORS.border }}
+                style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.surfaceContainer, borderWidth: 1, borderColor: colors.border }}
                 onPress={() => loadGoogleDetails(workshop)}
               >
-                <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>{t('common.retry')}</Text>
+                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{t('common.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -697,7 +700,7 @@ export default function WorkshopDetailsScreen() {
           {/* 3. Missing Google Place ID / Information Unavailable State */}
           {!googleLoading && !workshop?.google_place_id && !googlePlaceDetails ? (
             <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-              <Text style={{ color: COLORS.textMuted, fontSize: 13, textAlign: 'center' }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
                 {t('workshop.directoryListingDesc')}
               </Text>
             </View>
@@ -706,7 +709,7 @@ export default function WorkshopDetailsScreen() {
           {/* 4. Zero Reviews State */}
           {!googleLoading && (googlePlaceDetails?.status === 'no_reviews' || (googlePlaceDetails && googlePlaceDetails.reviews.length === 0)) ? (
             <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-              <Text style={{ color: COLORS.textMuted, fontSize: 13, textAlign: 'center' }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
                 {t('reviews.noReviewsYet')}
               </Text>
             </View>
@@ -723,7 +726,7 @@ export default function WorkshopDetailsScreen() {
                         <Image source={{ uri: gRev.authorPhoto }} style={{ width: 22, height: 22, borderRadius: 11 }} />
                       ) : (
                         <View style={styles.avatarCircleSmall}>
-                          <User color={COLORS.textMuted} size={12} />
+                          <User color={colors.textMuted} size={12} />
                         </View>
                       )}
                       <Text style={styles.gRevAuthor}>{gRev.authorName}</Text>
@@ -731,7 +734,7 @@ export default function WorkshopDetailsScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       {renderStarRow(gRev.rating, 10)}
                       {gRev.relativeTime ? (
-                        <Text style={{ color: COLORS.textMuted, fontSize: 10, marginLeft: 4 }}>{gRev.relativeTime}</Text>
+                        <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: 4 }}>{gRev.relativeTime}</Text>
                       ) : null}
                     </View>
                   </View>
@@ -747,7 +750,7 @@ export default function WorkshopDetailsScreen() {
                   <Text style={styles.viewAllBtnText}>
                     {showAllGoogleReviews ? t('common.showLess') : `${t('common.viewAll')} (${googlePlaceDetails.reviews.length})`}
                   </Text>
-                  <ChevronRight color={COLORS.primary} size={14} />
+                  <ChevronRight color={colors.primary} size={14} />
                 </TouchableOpacity>
               )}
             </View>
@@ -775,7 +778,7 @@ export default function WorkshopDetailsScreen() {
           />
         ) : (
           <View style={styles.unavailableBannerBox}>
-            <Info color={COLORS.textMuted} size={18} />
+            <Info color={colors.textMuted} size={18} />
             <Text style={styles.unavailableBannerText}>
               {t('workshop.directoryListingDesc')}
             </Text>
@@ -796,7 +799,7 @@ export default function WorkshopDetailsScreen() {
           {/* Completed Booking Selector */}
           {completedBookings.length > 0 && (
             <View style={{ gap: 6 }}>
-              <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>
+              <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '800' }}>
                 {t('reviews.selectBookingToReview').toUpperCase()}
               </Text>
               {completedBookings.map((bk) => (
@@ -809,18 +812,18 @@ export default function WorkshopDetailsScreen() {
                   onPress={() => setSelectedBookingForReview(bk)}
                 >
                   <Bike
-                    color={selectedBookingForReview?.id === bk.id ? COLORS.primary : COLORS.textMuted}
+                    color={selectedBookingForReview?.id === bk.id ? colors.primary : colors.textMuted}
                     size={16}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '800' }}>
                       {bk.motorcycle?.nickname || bk.motorcycle?.brand || 'Motorcycle'} ({bk.motorcycle?.plate_number})
                     </Text>
-                    <Text style={{ color: COLORS.textMuted, fontSize: 10 }}>
+                    <Text style={{ color: isDark ? colors.textMuted : '#000000', fontSize: 10 }}>
                       {t('common.date')}: {bk.booking_date}
                     </Text>
                   </View>
-                  {selectedBookingForReview?.id === bk.id && <Check color={COLORS.primary} size={16} />}
+                  {selectedBookingForReview?.id === bk.id && <Check color={colors.primary} size={16} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -828,7 +831,7 @@ export default function WorkshopDetailsScreen() {
 
           {/* Rating Stars */}
           <View style={{ alignItems: 'center', gap: 6, marginVertical: 8 }}>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '800' }}>
               {t('reviews.yourRating').toUpperCase()}
             </Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -845,7 +848,7 @@ export default function WorkshopDetailsScreen() {
           </View>
 
           {/* Comment Text Area */}
-          <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: '800' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '800' }}>
             {t('reviews.yourComment').toUpperCase()} ({t('common.optional').toUpperCase()})
           </Text>
           <TextInput
@@ -853,7 +856,7 @@ export default function WorkshopDetailsScreen() {
             value={newComment}
             onChangeText={setNewComment}
             placeholder={t('reviews.commentPlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
@@ -863,7 +866,7 @@ export default function WorkshopDetailsScreen() {
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
           <TouchableOpacity style={styles.cancelReviewBtn} onPress={() => setWriteReviewModalVisible(false)}>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '800' }}>
               {t('common.cancel')}
             </Text>
           </TouchableOpacity>
@@ -879,60 +882,61 @@ export default function WorkshopDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  topHeaderNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  topTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  topHeaderNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  topTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  photoContainer: { height: 180, borderRadius: 20, overflow: 'hidden', marginBottom: 16, position: 'relative', backgroundColor: COLORS.surfaceContainer, borderWidth: 1, borderColor: COLORS.border },
+  photoContainer: { height: 180, borderRadius: 20, overflow: 'hidden', marginBottom: 16, position: 'relative', backgroundColor: colors.surfaceContainer, borderWidth: 1, borderColor: colors.border },
   workshopCoverImage: { width: '100%', height: '100%' },
-  photoPlaceholder: { flex: 1, backgroundColor: COLORS.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.primaryGlow, gap: 8 },
-  photoPlaceholderText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
+  photoPlaceholder: { flex: 1, backgroundColor: colors.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primaryGlow, gap: 8 },
+  photoPlaceholderText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
   statusBadge: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 11, fontWeight: '800' },
   partnerTag: { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
-  partnerTagActive: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: COLORS.primary },
-  partnerTagDir: { backgroundColor: 'rgba(113,113,122,0.15)', borderColor: COLORS.border },
+  partnerTagActive: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: colors.primary },
+  partnerTagDir: { backgroundColor: 'rgba(113,113,122,0.15)', borderColor: colors.border },
   partnerTagText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
-  partnerTagTextActive: { color: COLORS.primary },
-  partnerTagTextDir: { color: COLORS.textMuted },
-  unavailableBannerBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginTop: 10 },
-  unavailableBannerText: { color: COLORS.textMuted, fontSize: 12, flex: 1, lineHeight: 16, fontWeight: '600' },
-  infoCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 10, marginBottom: 16 },
+  partnerTagTextActive: { color: colors.primary },
+  partnerTagTextDir: { color: colors.textMuted },
+  unavailableBannerBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border, marginTop: 10 },
+  unavailableBannerText: { color: colors.textMuted, fontSize: 12, flex: 1, lineHeight: 16, fontWeight: '600' },
+  infoCard: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 10, marginBottom: 16 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  workshopName: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', flex: 1 },
-  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surface, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  ratingText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
+  workshopName: { color: colors.textPrimary, fontSize: 20, fontWeight: '900', flex: 1 },
+  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  ratingText: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  detailText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600', flex: 1 },
-  categoryFilterChip: { backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, marginRight: 8 },
-  activeCategoryFilterChip: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: COLORS.primary },
-  categoryFilterChipText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  activeCategoryFilterChipText: { color: COLORS.primary, fontWeight: '800' },
-  emptyServiceBox: { backgroundColor: COLORS.surfaceContainer, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6 },
-  emptyServiceText: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
+  detailText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', flex: 1 },
+  categoryFilterChip: { backgroundColor: colors.surfaceContainer, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginRight: 8 },
+  activeCategoryFilterChip: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.primary },
+  categoryFilterChipText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+  activeCategoryFilterChipText: { color: colors.primary, fontWeight: '800' },
+  emptyServiceBox: { backgroundColor: colors.surfaceContainer, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 6 },
+  emptyServiceText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+  serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 12 },
   servNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  serviceName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800' },
-  serviceDesc: { color: COLORS.textMuted, fontSize: 11 },
+  serviceName: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  serviceDesc: { color: colors.textMuted, fontSize: 11 },
   priceActionCol: { alignItems: 'flex-end', gap: 6 },
-  servicePrice: { color: COLORS.primary, fontSize: 15, fontWeight: '900' },
-  selectServBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  selectServBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  servicePrice: { color: colors.primary, fontSize: 15, fontWeight: '900' },
+  selectServBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  selectServBtnText: { color: isDark ? '#000' : '#FFFFFF', fontSize: 11, fontWeight: '800' },
 
   // ─── Section Headers ────────────────────────────────────────
   sectionHeaderRow: { marginTop: 20, marginBottom: 8 },
-  sectionTitleHeader: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+  sectionTitleHeader: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
 
   // ─── Rating Summary Card ────────────────────────────────────
   ratingSummaryCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 16,
     marginBottom: 12,
   },
@@ -943,12 +947,12 @@ const styles = StyleSheet.create({
     minWidth: 90,
   },
   ratingBigNum: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 26,
     fontWeight: '900',
   },
   ratingCountText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
@@ -964,7 +968,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   barLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: '800',
     width: 22,
@@ -972,7 +976,7 @@ const styles = StyleSheet.create({
   barTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -982,7 +986,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   barPct: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     fontWeight: '800',
     width: 20,
@@ -995,26 +999,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     marginBottom: 12,
   },
   writeReviewBtnText: {
-    color: '#000',
+    color: isDark ? '#000' : '#FFF',
     fontSize: 14,
     fontWeight: '900',
   },
 
   // ─── Review Items ───────────────────────────────────────────
-  emptyReviewTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  emptyReviewSub: { color: COLORS.textMuted, fontSize: 11, textAlign: 'center' },
+  emptyReviewTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+  emptyReviewSub: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },
   reviewCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 6,
     marginBottom: 8,
   },
@@ -1027,24 +1031,24 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   revName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   revTimeAgo: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     marginTop: 1,
   },
   revComment: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 18,
@@ -1055,36 +1059,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   workshopReplyBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 8,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
     marginTop: 4,
   },
   replyHeader: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 10,
     fontWeight: '800',
   },
   replyText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
   sourceBadge: {
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: colors.primaryDark,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   sourceBadgeText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 8,
     fontWeight: '900',
   },
@@ -1094,25 +1098,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 10,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     marginBottom: 8,
   },
   viewAllBtnText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
   },
 
   // ─── Google Reviews Card ────────────────────────────────────
   googleReviewCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
     marginBottom: 12,
   },
@@ -1124,25 +1128,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   avatarCircleSmall: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   googleTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   googleRatingText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1161,19 +1165,19 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   googleReviewItemBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   gRevAuthor: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: '800',
   },
   gRevText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontStyle: 'italic',
     lineHeight: 15,
@@ -1184,53 +1188,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   bookingSelectBoxActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryDark,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryDark,
   },
   reviewCommentInput: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     minHeight: 80,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   cancelReviewBtn: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     justifyContent: 'center',
   },
 
   // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { backgroundColor: COLORS.surfaceContainer, borderRadius: 24, padding: 20, width: '100%', borderWidth: 1, borderColor: COLORS.primary, gap: 12 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10 },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  modalSub: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 18 },
-  partNameModal: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  partShopModal: { color: COLORS.textMuted, fontSize: 12 },
+  modalContent: { backgroundColor: colors.surfaceContainer, borderRadius: 24, padding: 20, width: '100%', borderWidth: 1, borderColor: colors.primary, gap: 12 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10 },
+  modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  modalSub: { color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  partNameModal: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  partShopModal: { color: colors.textMuted, fontSize: 12 },
   qtyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 },
-  qtyLabel: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  qtyBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.surface, borderRadius: 10, padding: 4, borderWidth: 1, borderColor: COLORS.border },
-  qtyBtn: { width: 32, height: 32, backgroundColor: COLORS.surfaceContainer, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  qtyBtnText: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
-  qtyValue: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
+  qtyLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  qtyBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 10, padding: 4, borderWidth: 1, borderColor: colors.border },
+  qtyBtn: { width: 32, height: 32, backgroundColor: colors.surfaceContainer, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  qtyBtnText: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
+  qtyValue: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 },
-  totalLabel: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800' },
-  totalVal: { color: COLORS.primary, fontSize: 20, fontWeight: '900' },
-  successIconBox: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.successBg, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', borderWidth: 1, borderColor: COLORS.success },
-  ticketDetail: { color: COLORS.textMuted, fontSize: 12, textAlign: 'center' },
+  totalLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  totalVal: { color: colors.primary, fontSize: 20, fontWeight: '900' },
+  successIconBox: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.successBg, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', borderWidth: 1, borderColor: colors.success },
+  ticketDetail: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
 });

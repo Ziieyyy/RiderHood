@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -24,10 +24,13 @@ import {
   Mail,
 } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 
 export default function HelpSupportScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
@@ -158,128 +161,129 @@ export default function HelpSupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 48,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-  },
-  sectionTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 4,
-  },
-  topicsList: {
-    gap: 8,
-  },
-  topicCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-  },
-  topicHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  topicQuestion: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  topicAnswer: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  contactCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-    gap: 10,
-  },
-  contactTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  contactSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  contactBtnsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-  },
-  contactBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surface,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  contactBtnText: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  reportCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.dangerBg,
-    gap: 12,
-    marginTop: 4,
-  },
-  reportTitle: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  reportSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 14,
+    },
+    searchBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      height: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    searchInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 14,
+    },
+    sectionTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginTop: 4,
+    },
+    topicsList: {
+      gap: 8,
+    },
+    topicCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    topicHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    topicQuestion: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    topicAnswer: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      paddingTop: 6,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    contactCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.primaryGlow,
+      gap: 10,
+    },
+    contactTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '900',
+    },
+    contactSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      lineHeight: 16,
+    },
+    contactBtnsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 6,
+    },
+    contactBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    contactBtnText: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    reportCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.dangerBg,
+      gap: 12,
+      marginTop: 4,
+    },
+    reportTitle: {
+      color: colors.danger,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    reportSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+  });

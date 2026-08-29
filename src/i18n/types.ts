@@ -46,6 +46,7 @@ export interface TranslationSchema {
     reset: string;
     clear: string;
     sort: string;
+    switch: string;
     ascending: string;
     descending: string;
     noResults: string;
@@ -220,6 +221,38 @@ export interface TranslationSchema {
     generalErrorTitle: string;
     generalErrorMsg: string;
     email: string;
+    verifyCodeTitle: string;
+    verifyCodeSub: string;
+    codeSentTo: string;
+    enter6Digits: string;
+    verifyCode: string;
+    verifyingCode: string;
+    resendCode: string;
+    resendIn: string;
+    codeExpiresIn: string;
+    codeExpired: string;
+    tooManyAttempts: string;
+    tooManyRequests: string;
+    tryAgainInMinutes: string;
+    requestsRemaining: string;
+    createNewPassword: string;
+    createNewPasswordSub: string;
+    newPasswordPlaceholder: string;
+    saveNewPassword: string;
+    savingNewPassword: string;
+    passwordUpdatedSuccess: string;
+    passwordUpdatedSuccessDesc: string;
+    backToLogin: string;
+    ruleMinLength: string;
+    ruleUppercase: string;
+    ruleLowercase: string;
+    ruleNumber: string;
+    ruleSpecial: string;
+    ruleMatch: string;
+    strengthWeak: string;
+    strengthFair: string;
+    strengthStrong: string;
+    strengthVeryStrong: string;
   };
 
   dashboard: {
@@ -240,6 +273,7 @@ export interface TranslationSchema {
     maintenanceSchedule: string;
     addMotorcyclePrompt: string;
     revenue: string;
+    promotionsAndOffers: string;
   };
 
   motorcycle: {
@@ -674,6 +708,12 @@ export interface TranslationSchema {
     notifications: string;
     appearance: string;
     darkMode: string;
+    lightMode: string;
+    systemMode: string;
+    darkModeDesc: string;
+    lightModeDesc: string;
+    systemModeDesc: string;
+    themePreference: string;
     about: string;
     termsOfService: string;
     privacyPolicy: string;

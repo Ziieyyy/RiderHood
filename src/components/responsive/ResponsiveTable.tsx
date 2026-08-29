@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ViewStyle,
   StyleProp,
 } from 'react-native';
-import { COLORS, RADIUS } from '../../constants/theme';
+import { AppThemeColors, RADIUS } from '../../constants/theme';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 
 export interface ColumnDef<T> {
   key: string;
@@ -46,6 +46,8 @@ export function ResponsiveTable<T>({
   style,
 }: ResponsiveTableProps<T>) {
   const { isPhone } = useResponsive();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   if (!data || data.length === 0) {
     return <View style={[styles.emptyContainer, style]}>{emptyState || <Text style={styles.emptyText}>No records found</Text>}</View>;
@@ -148,89 +150,88 @@ export function ResponsiveTable<T>({
   );
 }
 
-const styles = StyleSheet.create({
-  tableContainer: {
-    backgroundColor: COLORS.cards,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainer,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderHighlight,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  headerCell: {
-    paddingHorizontal: 8,
-  },
-  headerText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  evenRow: {
-    backgroundColor: COLORS.cards,
-  },
-  oddRow: {
-    backgroundColor: COLORS.surfaceContainer,
-  },
-  clickableRow: {
-    // Hover / tap indication
-  },
-  cell: {
-    paddingHorizontal: 8,
-  },
-  mobileListContainer: {
-    gap: 12,
-    width: '100%',
-  },
-  defaultMobileCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
-    gap: 8,
-  },
-  mobileCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  mobileCardHeader: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    flex: 1,
-  },
-  mobileCardValue: {
-    flex: 1.5,
-    alignItems: 'flex-end',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    tableContainer: {
+      backgroundColor: colors.cards,
+      borderRadius: RADIUS.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      width: '100%',
+    },
+    tableHeaderRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceContainer,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderHighlight,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+    },
+    headerCell: {
+      paddingHorizontal: 8,
+    },
+    headerText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    evenRow: {
+      backgroundColor: colors.cards,
+    },
+    oddRow: {
+      backgroundColor: colors.surfaceContainer,
+    },
+    clickableRow: {},
+    cell: {
+      paddingHorizontal: 8,
+    },
+    mobileListContainer: {
+      gap: 12,
+      width: '100%',
+    },
+    defaultMobileCard: {
+      backgroundColor: colors.cards,
+      borderRadius: RADIUS.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      gap: 8,
+    },
+    mobileCardRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+      borderBottomWidth: 0.5,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    },
+    mobileCardHeader: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      flex: 1,
+    },
+    mobileCardValue: {
+      flex: 1.5,
+      alignItems: 'flex-end',
+    },
+    emptyContainer: {
+      padding: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+  });

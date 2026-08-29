@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '../constants/theme';
 import { MaintenanceReminder } from '../types/database';
 import { Droplet, Disc, Link2, ShieldAlert, CheckCircle2 } from 'lucide-react-native';
-
 import { useTranslation } from '../i18n';
+import { useThemedStyles } from '../context/ThemeContext';
+import { DARK_COLORS } from '../constants/theme';
 
 interface ReminderItemProps {
   item: MaintenanceReminder;
@@ -12,36 +12,37 @@ interface ReminderItemProps {
 
 export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
   const { t } = useTranslation();
+  const styles = useThemedStyles(createStyles);
 
   const getIcon = () => {
     switch ((item.type || '').toLowerCase()) {
       case 'oil':
       case 'engine oil & filter':
-        return <Droplet color={COLORS.primary} size={18} />;
+        return <Droplet color={styles.iconPrimary.color} size={18} />;
       case 'brake':
       case 'front & rear brake pads':
-        return <Disc color={item.status === 'due' || item.status === 'overdue' ? COLORS.warning : COLORS.primary} size={18} />;
+        return <Disc color={item.status === 'due' || item.status === 'overdue' ? styles.badgeWarning.borderColor : styles.iconPrimary.color} size={18} />;
       case 'chain':
       case 'drive chain & sprocket':
-        return <Link2 color={COLORS.primary} size={18} />;
+        return <Link2 color={styles.iconPrimary.color} size={18} />;
       default:
-        return <CheckCircle2 color={COLORS.primary} size={18} />;
+        return <CheckCircle2 color={styles.iconPrimary.color} size={18} />;
     }
   };
 
   const getStatusBadge = () => {
     if (item.status === 'due' || item.status === 'overdue') {
       return (
-        <View style={[styles.badge, { backgroundColor: COLORS.warningBg, borderColor: COLORS.warning }]}>
-          <ShieldAlert color={COLORS.warning} size={12} />
-          <Text style={[styles.badgeText, { color: COLORS.warning }]}>{t('maintenance.dueSoon').toUpperCase()}</Text>
+        <View style={[styles.badge, styles.badgeWarning]}>
+          <ShieldAlert color={styles.badgeWarningText.color} size={12} />
+          <Text style={[styles.badgeText, styles.badgeWarningText]}>{t('maintenance.dueSoon').toUpperCase()}</Text>
         </View>
       );
     }
     return (
-      <View style={[styles.badge, { backgroundColor: COLORS.successBg, borderColor: COLORS.success }]}>
-        <CheckCircle2 color={COLORS.success} size={12} />
-        <Text style={[styles.badgeText, { color: COLORS.success }]}>{t('maintenance.upToDate').toUpperCase()}</Text>
+      <View style={[styles.badge, styles.badgeSuccess]}>
+        <CheckCircle2 color={styles.badgeSuccessText.color} size={12} />
+        <Text style={[styles.badgeText, styles.badgeSuccessText]}>{t('maintenance.upToDate').toUpperCase()}</Text>
       </View>
     );
   };
@@ -70,7 +71,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
               styles.fill,
               {
                 width: `${percentage}%`,
-                backgroundColor: item.status === 'due' || item.status === 'overdue' ? COLORS.warning : COLORS.primary,
+                backgroundColor: item.status === 'due' || item.status === 'overdue' ? styles.badgeWarning.borderColor : styles.iconPrimary.color,
               },
             ]}
           />
@@ -81,86 +82,104 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ item }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 10,
-    gap: 12,
-  },
-  topLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  nameText: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  categoryText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  track: {
-    flex: 1,
-    height: 6,
-    backgroundColor: COLORS.surfaceHighest,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  percentText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-    width: 36,
-    textAlign: 'right',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 10,
+      gap: 12,
+    },
+    topLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    iconTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    iconPrimary: {
+      color: colors.primary,
+    },
+    textContainer: {
+      flex: 1,
+    },
+    nameText: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    categoryText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '500',
+      marginTop: 2,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    badgeWarning: {
+      backgroundColor: colors.warningBg,
+      borderColor: colors.warning,
+    },
+    badgeWarningText: {
+      color: colors.warning,
+    },
+    badgeSuccess: {
+      backgroundColor: colors.successBg,
+      borderColor: colors.success,
+    },
+    badgeSuccessText: {
+      color: colors.success,
+    },
+    badgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    progressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    track: {
+      flex: 1,
+      height: 6,
+      backgroundColor: isDark ? colors.surfaceHighest : '#E2E8F0',
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    percentText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+      width: 36,
+      textAlign: 'right',
+    },
+  });

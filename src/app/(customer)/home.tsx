@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { getMotorcycles } from '../../services/motorcycleService';
 import { getCustomerBookings } from '../../services/bookingService';
 import { getReminders, calculateHealthScore } from '../../services/maintenanceService';
@@ -27,7 +27,6 @@ import {
   Bike,
   AlertTriangle,
   Plus,
-  LogOut,
   RefreshCw,
   ChevronRight,
   ShieldCheck,
@@ -35,12 +34,15 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import type { Motorcycle, Booking, MaintenanceReminder } from '../../types/database';
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { t, formatDate } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { isPhone, isTablet, isDesktop, contentPadding } = useResponsive();
 
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
@@ -169,7 +171,7 @@ export default function CustomerHomeScreen() {
                   onPress={handleSwitchBike}
                   accessibilityLabel="Switch motorcycle"
                 >
-                  <Text style={styles.switchBtnText}>{t('common.sort')} 🔄</Text>
+                  <Text style={styles.switchBtnText}>{t('common.switch')} 🔄</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -344,7 +346,7 @@ export default function CustomerHomeScreen() {
                       </Text>
                     )}
                     {r.next_service_date && (
-                      <Text style={styles.reminderSubText}>
+                      <Text style={[styles.reminderSubText, !isDark && { color: '#000000' }]}>
                         {t('common.date')}: {formatDate(r.next_service_date)}
                       </Text>
                     )}
@@ -459,11 +461,11 @@ export default function CustomerHomeScreen() {
       >
         <ResponsiveContainer>
           {isPhone ? (
-            // Mobile: Stacked view (Promo Carousel -> Recent Activity & Bookings -> Motorcycle Status)
+            // Mobile: Stacked view (Motorcycle Status & Health Gauge on Top -> Quick Actions & Activity -> Promo Carousel at Bottom)
             <View style={styles.mobileStack}>
-              <PromoCarousel />
-              {renderActionsAndActivitySection()}
               {renderMotorcycleSection()}
+              {renderActionsAndActivitySection()}
+              <PromoCarousel />
             </View>
           ) : (
             // Tablet & Desktop:
@@ -484,114 +486,105 @@ export default function CustomerHomeScreen() {
               </View>
             </View>
           )}
-
-          {isPhone && (
-            <TouchableOpacity style={styles.logoutBtn} onPress={logout} accessibilityLabel="Logout">
-              <LogOut color={COLORS.danger} size={18} />
-              <Text style={styles.logoutBtnText}>{t('common.logout')}</Text>
-            </TouchableOpacity>
-          )}
         </ResponsiveContainer>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { paddingVertical: 16, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 12 },
-  errorText: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#000', fontWeight: '800', fontSize: 13 },
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingVertical: 16, paddingBottom: 40 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 12 },
+    errorText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000' : '#FFF', fontWeight: '800', fontSize: 13 },
 
-  mobileStack: { gap: 16, width: '100%' },
-  desktopLayoutWrapper: { width: '100%', gap: 24 },
-  desktopGrid: { flexDirection: 'row', gap: 24, width: '100%', alignItems: 'flex-start' },
-  desktopLeftCol: { flex: 1.2, minWidth: 340, gap: 16 },
-  desktopRightCol: { flex: 1, minWidth: 320, gap: 16 },
-  desktopBottomFull: { width: '100%', marginTop: 8 },
-  desktopBikeRow: { flexDirection: 'row', gap: 16, width: '100%', alignItems: 'stretch' },
-  mobileBikeStack: { flexDirection: 'column', gap: 12, width: '100%' },
-  remindersGridDesktop: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  sectionCol: { width: '100%', gap: 12 },
+    mobileStack: { gap: 16, width: '100%' },
+    desktopLayoutWrapper: { width: '100%', gap: 24 },
+    desktopGrid: { flexDirection: 'row', gap: 24, width: '100%', alignItems: 'flex-start' },
+    desktopLeftCol: { flex: 1.2, minWidth: 340, gap: 16 },
+    desktopRightCol: { flex: 1, minWidth: 320, gap: 16 },
+    desktopBottomFull: { width: '100%', marginTop: 8 },
+    desktopBikeRow: { flexDirection: 'row', gap: 16, width: '100%', alignItems: 'stretch' },
+    mobileBikeStack: { flexDirection: 'column', gap: 12, width: '100%' },
+    remindersGridDesktop: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    sectionCol: { width: '100%', gap: 12 },
 
-  // Bike card
-  bikeSelectorCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  bikeHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bikeBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  activeLabel: { color: COLORS.primaryDim, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-  switchBtn: { backgroundColor: COLORS.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
-  switchBtnText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '700' },
-  bikeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  bikePlaceholderImg: { width: 80, height: 60, borderRadius: 12, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  bikeDetails: { flex: 1, gap: 2 },
-  bikeName: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '800' },
-  bikeEngine: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '500' },
-  bikeMileage: { color: COLORS.primaryDim, fontSize: 12, fontWeight: '600' },
-  plateTag: { alignSelf: 'flex-start', backgroundColor: COLORS.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
-  plateText: { color: COLORS.textPrimary, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+    // Bike card
+    bikeSelectorCard: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
+    bikeHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    bikeBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    activeLabel: { color: colors.primaryDim, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+    switchBtn: { backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+    switchBtnText: { color: colors.textPrimary, fontSize: 11, fontWeight: '700' },
+    bikeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    bikePlaceholderImg: { width: 80, height: 60, borderRadius: 12, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+    bikeDetails: { flex: 1, gap: 2 },
+    bikeName: { color: colors.textPrimary, fontSize: 17, fontWeight: '800' },
+    bikeEngine: { color: colors.textSecondary, fontSize: 12, fontWeight: '500' },
+    bikeMileage: { color: colors.primaryDim, fontSize: 12, fontWeight: '600' },
+    plateTag: { alignSelf: 'flex-start', backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+    plateText: { color: colors.textPrimary, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 
-  // Empty bike
-  emptyBikeCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 28, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 8 },
-  emptyBikeTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
-  emptyBikeDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  addBikeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  addBikeBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
+    // Empty bike
+    emptyBikeCard: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 28, borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 8 },
+    emptyBikeTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
+    emptyBikeDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    addBikeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    addBikeBtnText: { color: isDark ? '#000' : '#FFF', fontSize: 13, fontWeight: '800' },
 
-  // Health placeholder
-  healthPlaceholder: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 8 },
-  healthPlaceholderText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  healthPlaceholderSub: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' },
+    // Health placeholder
+    healthPlaceholder: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 8 },
+    healthPlaceholderText: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    healthPlaceholderSub: { color: colors.textSecondary, fontSize: 12, textAlign: 'center' },
 
-  // Sections
-  sectionTitle: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  viewAllText: { color: COLORS.primary, fontSize: 12, fontWeight: '700' },
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  actionBtn: { flex: 1, minWidth: 70, backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 12, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.border },
-  actionIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
-  actionText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+    // Sections
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+    sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    viewAllText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+    quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    actionBtn: { flex: 1, minWidth: 70, backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 12, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border },
+    actionIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+    actionText: { color: colors.textPrimary, fontSize: 11, fontWeight: '700', textAlign: 'center' },
 
-  // Reminders
-  reminderCardBox: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
-  reminderItemRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  reminderIconText: { fontSize: 18 },
-  reminderItemText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700' },
-  reminderSubText: { color: COLORS.textMuted, fontSize: 11 },
+    // Reminders
+    reminderCardBox: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 10 },
+    reminderItemRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    reminderIconText: { fontSize: 18 },
+    reminderItemText: { color: colors.textPrimary, fontSize: 13, fontWeight: '700' },
+    reminderSubText: { color: colors.textMuted, fontSize: 11 },
 
-  // Banner
-  bookingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255, 107, 0, 0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.3)', marginTop: 8 },
-  bookingBannerTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  bookingBannerSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
-  bookingBannerBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  bookingBannerBtnText: { color: '#000', fontSize: 11, fontWeight: '800' },
+    // Banner
+    bookingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: isDark ? 'rgba(255, 107, 0, 0.3)' : 'rgba(255, 107, 0, 0.2)', marginTop: 8 },
+    bookingBannerTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+    bookingBannerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+    bookingBannerBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+    bookingBannerBtnText: { color: isDark ? '#000' : '#FFF', fontSize: 11, fontWeight: '800' },
 
-  // Warning Alerts
-  reminderAlert: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.25)', marginBottom: 8 },
-  reminderAlertTitle: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
-  reminderAlertSub: { color: COLORS.danger, fontSize: 10, fontWeight: '800' },
-  statusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  statusBadgeText: { fontSize: 9, fontWeight: '800' },
+    // Warning Alerts
+    reminderAlert: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.25)', marginBottom: 8 },
+    reminderAlertTitle: { color: colors.textPrimary, fontSize: 12, fontWeight: '700' },
+    reminderAlertSub: { color: colors.danger, fontSize: 10, fontWeight: '800' },
+    statusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+    statusBadgeText: { fontSize: 9, fontWeight: '800' },
 
-  // Activity Bookings
-  emptyCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 8 },
-  emptyCardTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '800' },
-  emptyCardDesc: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' },
-  emptyCardBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, marginTop: 6 },
-  emptyCardBtnText: { color: '#000', fontSize: 12, fontWeight: '800' },
-  activityCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, gap: 4 },
-  activityBadgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  completedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(16, 185, 129, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  completedText: { color: COLORS.success, fontSize: 9, fontWeight: '800' },
-  upcomingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255, 107, 0, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  upcomingText: { color: COLORS.primary, fontSize: 9, fontWeight: '800' },
-  activityTime: { color: COLORS.textMuted, fontSize: 11 },
-  activityTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 2 },
-  activityAmount: { color: COLORS.primaryDim, fontSize: 12, fontWeight: '800' },
-
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(239, 68, 68, 0.12)', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: 20 },
-  logoutBtnText: { color: COLORS.danger, fontSize: 13, fontWeight: '800' },
-});
+    // Activity Bookings
+    emptyCard: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 8 },
+    emptyCardTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
+    emptyCardDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center' },
+    emptyCardBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, marginTop: 6 },
+    emptyCardBtnText: { color: isDark ? '#000' : '#FFF', fontSize: 12, fontWeight: '800' },
+    activityCard: { backgroundColor: colors.surfaceContainer, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 10, gap: 4 },
+    activityBadgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    completedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.successBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    completedText: { color: colors.success, fontSize: 9, fontWeight: '800' },
+    upcomingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    upcomingText: { color: colors.primary, fontSize: 9, fontWeight: '800' },
+    activityTime: { color: colors.textMuted, fontSize: 11 },
+    activityTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 2 },
+    activityAmount: { color: colors.primaryDim, fontSize: 12, fontWeight: '800' },
+  });

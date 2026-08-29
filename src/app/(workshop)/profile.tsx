@@ -12,10 +12,11 @@ import {
   Switch,
   Image,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Building2, CheckCircle2, RefreshCw, Clock, MapPin, Phone, Mail, Image as ImageIcon } from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop, updateWorkshop } from '../../services/workshopService';
 import type { Workshop } from '../../types/database';
 import { useTranslation } from '../../i18n';
@@ -40,6 +41,8 @@ const DEFAULT_WEEKLY_SCHEDULE: DaySchedule[] = [
 export default function WorkshopProfileScreen() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -289,33 +292,34 @@ export default function WorkshopProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: '#f59e0b', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#000', fontWeight: '800', fontSize: 13 },
-  scrollContent: { padding: 16, paddingBottom: 32, gap: 14 },
-  bannerCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 20, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#3b2f10', gap: 8 },
-  bannerTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900' },
-  bannerSub: { color: '#f59e0b', fontSize: 12, fontWeight: '700' },
-  savedAlert: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.successBg, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.success },
-  savedText: { color: COLORS.success, fontSize: 12, fontWeight: '700' },
-  sectionTitle: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  inputGroup: { gap: 6 },
-  inputLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  input: { backgroundColor: COLORS.surfaceContainer, borderRadius: 12, paddingHorizontal: 14, height: 46, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, fontSize: 14 },
-  scheduleCard: { backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  dayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dayLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dayName: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', width: 80 },
-  timeInputsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeInput: { backgroundColor: COLORS.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, color: COLORS.textPrimary, fontSize: 11, fontWeight: '700', borderWidth: 1, borderColor: COLORS.border, width: 75, textAlign: 'center' },
-  closedTag: { color: COLORS.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
-  presetPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.primary },
-  presetPhotoBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
-  coverPreviewBox: { marginTop: 8, height: 120, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-  coverPreviewImage: { width: '100%', height: '100%' },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
+    errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    scrollContent: { padding: 16, paddingBottom: 32, gap: 14 },
+    bannerCard: { backgroundColor: colors.surfaceContainer, borderRadius: 20, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: isDark ? '#3b2f10' : colors.border, gap: 8 },
+    bannerTitle: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+    bannerSub: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+    savedAlert: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.successBg, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.success },
+    savedText: { color: colors.success, fontSize: 12, fontWeight: '700' },
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+    inputGroup: { gap: 6 },
+    inputLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
+    input: { backgroundColor: colors.surfaceContainer, borderRadius: 12, paddingHorizontal: 14, height: 46, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, fontSize: 14 },
+    scheduleCard: { backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 12 },
+    dayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    dayLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    dayName: { color: colors.textPrimary, fontSize: 13, fontWeight: '800', width: 80 },
+    timeInputsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    timeInput: { backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, color: colors.textPrimary, fontSize: 11, fontWeight: '700', borderWidth: 1, borderColor: colors.border, width: 75, textAlign: 'center' },
+    closedTag: { color: colors.danger, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+    presetPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceContainer, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.primary },
+    presetPhotoBtnText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
+    coverPreviewBox: { marginTop: 8, height: 120, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+    coverPreviewImage: { width: '100%', height: '100%' },
+  });

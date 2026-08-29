@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { getMotorcycles, updateMotorcycle, deleteMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
@@ -43,6 +44,8 @@ export default function CustomerProfileScreen() {
   const { user, profile, logout, refreshProfile } = useAuth();
   const { t, language } = useTranslation();
   const { isPhone, contentPadding } = useResponsive();
+  const { colors, themeMode, setThemeMode } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
 
   // Garage State
@@ -584,7 +587,9 @@ export default function CustomerProfileScreen() {
             onPress={() => router.push('/(customer)/setup-motorcycle')}
           >
             <Plus color={COLORS.primary} size={14} />
-            <Text style={styles.addBikeText}>+ {t('motorcycle.addFirstBike')}</Text>
+            <Text style={styles.addBikeText}>
+              {bikes.length === 0 ? t('motorcycle.addFirstBike') : t('motorcycle.register')}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -693,6 +698,42 @@ export default function CustomerProfileScreen() {
         {/* Universal Language Selector */}
         <View style={{ marginBottom: 12 }}>
           <LanguageSelector variant="card" />
+        </View>
+
+        {/* Theme Preference Selection Card */}
+        <View style={[styles.card, { marginBottom: 12 }]}>
+          <View style={styles.themeSelectorHeader}>
+            <Moon color={colors.primary} size={18} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuRowTitle}>{t('settings.themePreference')}</Text>
+              <Text style={styles.menuRowSub}>{t('settings.systemModeDesc')}</Text>
+            </View>
+          </View>
+          <View style={styles.themeChipsRow}>
+            {(['light', 'dark', 'system'] as const).map((mode) => {
+              const isActive = themeMode === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  style={[
+                    styles.themeChip,
+                    isActive && styles.themeChipActive,
+                  ]}
+                  onPress={() => setThemeMode(mode)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.themeChipText,
+                      isActive && styles.themeChipTextActive,
+                    ]}
+                  >
+                    {mode === 'light' ? '☀️ Light' : mode === 'dark' ? '🌙 Dark' : '💻 System'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -1166,515 +1207,550 @@ export default function CustomerProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingTop: 24,
-    paddingBottom: 60,
-    gap: 20,
-  },
-  profileHeaderCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 26,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 24,
-  },
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  avatarImg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  cameraBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: COLORS.primary,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.surfaceContainer,
-  },
-  profileHeaderName: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  profileHeaderEmail: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  profileHeaderPhone: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.successBg,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.success,
-  },
-  statusText: {
-    color: COLORS.success,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  editProfileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  editProfileBtnText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  card: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 14,
-    marginBottom: 24,
-  },
-  cardTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  infoGrid: {
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  infoLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-  infoValue: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 12,
-  },
-  addBikeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  addBikeText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  emptyGarageCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-    marginBottom: 24,
-  },
-  emptyGarageTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  emptyGarageSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  garageCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 14,
-    marginBottom: 16,
-  },
-  garageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  bikeName: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  primaryBadge: {
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  primaryBadgeText: {
-    color: COLORS.primary,
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  bikeSub: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  garageSpecsGrid: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 10,
-    gap: 8,
-  },
-  garageSpecItem: {
-    flex: 1,
-  },
-  garageSpecLabel: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  garageSpecVal: {
-    color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  garageActionsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  garageActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surface,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  garageActionText: {
-    color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  filterPillsRow: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainer,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pillActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
-  },
-  pillText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  pillTextActive: {
-    color: COLORS.primary,
-    fontWeight: '900',
-  },
-  emptyDocsCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-  },
-  emptyDocsTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  emptyDocsSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  docItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  docItemTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  docItemMeta: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  docBtnGroup: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  docActionIconBtn: {
-    padding: 6,
-    backgroundColor: COLORS.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 6,
-  },
-  menuRowTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  menuRowTitleFlex: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  menuRowSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 4,
-  },
-  langToggleBtn: {
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  langToggleText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerBg,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    marginTop: 12,
-    marginBottom: 36,
-  },
-  logoutBtnText: {
-    color: COLORS.danger,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 14,
-  },
-  modalHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  specBox: {
-    width: '48%',
-    backgroundColor: COLORS.surface,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  specBoxLabel: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  specBoxVal: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
-    color: COLORS.textPrimary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: 13,
-  },
-  typeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  typeChipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
-  },
-  typeChipText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  typeChipTextActive: {
-    color: COLORS.primary,
-    fontWeight: '900',
-  },
-  filePickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-  },
-  filePickerBtnText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingTop: 24,
+      paddingBottom: 60,
+      gap: 20,
+    },
+    profileHeaderCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 26,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    avatarWrapper: {
+      position: 'relative',
+      marginBottom: 12,
+    },
+    avatarCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primaryDark,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    avatarImg: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    cameraBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.primary,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.surfaceContainer,
+    },
+    profileHeaderName: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: '900',
+    },
+    profileHeaderEmail: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    profileHeaderPhone: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+      marginTop: 4,
+    },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.successBg,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 20,
+      marginTop: 10,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.success,
+    },
+    statusText: {
+      color: colors.success,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    editProfileBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 12,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    editProfileBtnText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    card: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+      marginBottom: 24,
+    },
+    cardTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginBottom: 4,
+    },
+    infoGrid: {
+      gap: 12,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    infoLabel: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    infoValue: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 8,
+      marginBottom: 14,
+    },
+    sectionTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginBottom: 12,
+    },
+    addBikeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    addBikeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    emptyGarageCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 28,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+      marginBottom: 24,
+    },
+    emptyGarageTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    emptyGarageSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      textAlign: 'center',
+    },
+    garageCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+      marginBottom: 16,
+    },
+    garageHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    bikeName: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    primaryBadge: {
+      backgroundColor: colors.primaryDark,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    primaryBadgeText: {
+      color: colors.primary,
+      fontSize: 9,
+      fontWeight: '900',
+    },
+    bikeSub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    garageSpecsGrid: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 10,
+      gap: 8,
+    },
+    garageSpecItem: {
+      flex: 1,
+    },
+    garageSpecLabel: {
+      color: colors.textMuted,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    garageSpecVal: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    garageActionsRow: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    garageActionBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      backgroundColor: colors.surface,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    garageActionText: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    filterPillsRow: {
+      flexDirection: 'row',
+      marginVertical: 4,
+    },
+    pill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceContainer,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pillActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    pillText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    pillTextActive: {
+      color: colors.primary,
+      fontWeight: '900',
+    },
+    emptyDocsCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 24,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    emptyDocsTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    emptyDocsSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      textAlign: 'center',
+    },
+    docItemCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    docItemTitle: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    docItemMeta: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    docBtnGroup: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    docActionIconBtn: {
+      padding: 6,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    menuRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 6,
+    },
+    menuRowTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    menuRowTitleFlex: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    menuRowSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 4,
+    },
+    langToggleBtn: {
+      backgroundColor: colors.primaryDark,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    langToggleText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    logoutBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerBg,
+      paddingVertical: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      marginTop: 12,
+      marginBottom: 36,
+    },
+    logoutBtnText: {
+      color: colors.danger,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      width: '100%',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+    },
+    modalHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    specsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    specBox: {
+      width: '48%',
+      backgroundColor: colors.surface,
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    specBoxLabel: {
+      color: colors.textMuted,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    specBoxVal: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 42,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: 13,
+    },
+    typeChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    typeChipActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    typeChipText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    typeChipTextActive: {
+      color: colors.primary,
+      fontWeight: '900',
+    },
+    filePickerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.primaryGlow,
+    },
+    filePickerBtnText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    themeSelectorHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 4,
+    },
+    themeChipsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 8,
+    },
+    themeChip: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeChipActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)',
+      borderColor: colors.primary,
+    },
+    themeChipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    themeChipTextActive: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+  });

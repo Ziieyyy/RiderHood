@@ -9,9 +9,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import {
   getNotifications,
   markAsRead,
@@ -29,18 +30,21 @@ import {
 } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
 
-const NOTIF_ICONS: Record<string, { icon: any; color: string; bg: string }> = {
+const getNotifIcons = (colors: typeof DARK_COLORS): Record<string, { icon: any; color: string; bg: string }> => ({
   booking:     { icon: Calendar, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
   workshop:    { icon: AlertTriangle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
   inventory:   { icon: AlertTriangle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
   review:      { icon: Star, color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
   system:      { icon: ShieldAlert, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)' },
-  default:     { icon: Bell, color: COLORS.primary, bg: 'rgba(245, 158, 11, 0.15)' },
-};
+  default:     { icon: Bell, color: colors.primary, bg: 'rgba(245, 158, 11, 0.15)' },
+});
 
 export default function WorkshopNotificationsScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const NOTIF_ICONS = getNotifIcons(colors);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -211,33 +215,34 @@ export default function WorkshopNotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#000', fontWeight: '800', fontSize: 13 },
-  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
-  markAllText: { color: COLORS.primary, fontSize: 12, fontWeight: '700' },
-  filterScroll: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: { backgroundColor: COLORS.surfaceContainer, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
-  activeFilterChip: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primary },
-  filterText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  activeFilterText: { color: COLORS.primary },
-  scrollContent: { padding: 16, paddingBottom: 32 },
-  emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10 },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
-  emptyDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center', maxWidth: 280 },
-  notifCard: { flexDirection: 'row', backgroundColor: COLORS.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, gap: 12, alignItems: 'flex-start' },
-  unreadCard: { borderColor: COLORS.primary, backgroundColor: 'rgba(245, 158, 11, 0.05)' },
-  iconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  notifBody: { flex: 1, gap: 4 },
-  notifHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  notifTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  unreadTitle: { color: COLORS.primary, fontWeight: '800' },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
-  notifMsg: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
-  notifTime: { color: COLORS.textMuted, fontSize: 11, marginTop: 4 },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
+    errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceContainer, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+    markAllText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+    filterScroll: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+    filterChip: { backgroundColor: colors.surfaceContainer, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+    activeFilterChip: { backgroundColor: colors.primaryDark, borderColor: colors.primary },
+    filterText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+    activeFilterText: { color: colors.primary },
+    scrollContent: { padding: 16, paddingBottom: 32 },
+    emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10 },
+    emptyTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
+    emptyDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center', maxWidth: 280 },
+    notifCard: { flexDirection: 'row', backgroundColor: colors.surfaceContainer, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 10, gap: 12, alignItems: 'flex-start' },
+    unreadCard: { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(245, 158, 11, 0.05)' : 'rgba(245, 158, 11, 0.08)' },
+    iconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    notifBody: { flex: 1, gap: 4 },
+    notifHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    notifTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+    unreadTitle: { color: colors.primary, fontWeight: '800' },
+    unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+    notifMsg: { color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
+    notifTime: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
+  });

@@ -11,12 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import { ResponsiveModal } from '../../components/responsive/ResponsiveModal';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import {
   Search,
   Calendar,
@@ -38,6 +39,8 @@ export default function ServicesCatalogScreen() {
   const { user } = useAuth();
   const { t, formatCurrency, language } = useTranslation();
   const { contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
@@ -346,246 +349,247 @@ export default function ServicesCatalogScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    paddingVertical: 16,
-    paddingBottom: 40,
-  },
-  searchBarContainer: {
-    marginBottom: 12,
-    gap: 8,
-  },
-  searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 12,
-    height: 42,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 13,
-  },
-  workshopFilterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 12,
-    height: 38,
-    gap: 8,
-  },
-  workshopFilterBtnText: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoryScroll: {
-    paddingVertical: 4,
-    gap: 8,
-    marginBottom: 12,
-  },
-  categoryChip: {
-    backgroundColor: COLORS.surfaceContainer,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  categoryChipActive: {
-    backgroundColor: 'rgba(255, 107, 0, 0.15)',
-    borderColor: COLORS.primary,
-  },
-  categoryChipText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoryChipTextActive: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  listHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  resultsCount: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  clearFilterText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 20,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  emptySub: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  itemCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-    width: '100%',
-  },
-  serviceIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: COLORS.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  partInfo: {
-    gap: 6,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  brandBadge: {
-    backgroundColor: 'rgba(255, 107, 0, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  brandText: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  workshopTag: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-  },
-  partName: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  partSpecs: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  partPrice: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  durationText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  bookServiceFullBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 6,
-  },
-  bookServiceFullBtnText: {
-    color: '#000000',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  callWorkshopBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surface,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginTop: 6,
-  },
-  callWorkshopBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalItemActive: {
-    backgroundColor: 'rgba(255, 107, 0, 0.12)',
-    borderColor: COLORS.primary,
-  },
-  modalItemText: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  modalItemTextActive: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  modalItemSub: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      paddingVertical: 16,
+      paddingBottom: 40,
+    },
+    searchBarContainer: {
+      marginBottom: 12,
+      gap: 8,
+    },
+    searchInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      height: 42,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+    },
+    workshopFilterBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      height: 38,
+      gap: 8,
+    },
+    workshopFilterBtnText: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    categoryScroll: {
+      paddingVertical: 4,
+      gap: 8,
+      marginBottom: 12,
+    },
+    categoryChip: {
+      backgroundColor: colors.surfaceContainer,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)',
+      borderColor: colors.primary,
+    },
+    categoryChipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    categoryChipTextActive: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    listHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    resultsCount: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    clearFilterText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 20,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    emptySub: {
+      color: colors.textMuted,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    itemCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+      width: '100%',
+    },
+    serviceIconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.primaryDark,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    partInfo: {
+      gap: 6,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    brandBadge: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.1)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    brandText: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    workshopTag: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '600',
+      flex: 1,
+      textAlign: 'right',
+    },
+    partName: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    partSpecs: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    partPrice: {
+      color: colors.primary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    durationText: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    bookServiceFullBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      borderRadius: 10,
+      marginTop: 6,
+    },
+    bookServiceFullBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    callWorkshopBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginTop: 6,
+    },
+    callWorkshopBtnText: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    modalItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalItemActive: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.12)' : 'rgba(255, 107, 0, 0.08)',
+      borderColor: colors.primary,
+    },
+    modalItemText: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    modalItemTextActive: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    modalItemSub: {
+      color: colors.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+  });

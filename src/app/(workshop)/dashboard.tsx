@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   CalendarDays,
   Clock,
@@ -33,6 +33,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
@@ -47,6 +48,8 @@ export default function WorkshopDashboardScreen() {
   const { profile } = useAuth();
   const { t, formatCurrency, formatDate } = useTranslation();
   const { isPhone, isTablet, isDesktop, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
@@ -562,336 +565,337 @@ function getStatusTextStyle(status: BookingStatus) {
   }
 }
 
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    gap: 12,
-    backgroundColor: COLORS.background,
-  },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
-  scrollView: { flex: 1 },
-  scrollContent: {
-    padding: 20,
-    gap: 18,
-    paddingBottom: 40,
-  },
-  welcomeCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-  welcomeTextGroup: {
-    gap: 4,
-  },
-  greetingTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  greetingSub: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-  welcomeActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  welcomeSecondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.elevatedCards,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-  },
-  welcomeSecBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  welcomePrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  welcomePriBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  sectionHeaderTitle: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-  kpiCard: {
-    width: '48%',
-    backgroundColor: COLORS.cards,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-  },
-  kpiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  kpiIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  kpiValue: {
-    color: COLORS.textPrimary,
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  kpiLabel: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  kpiSubText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  quickBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.cards,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  quickBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  alertBannerCard: {
-    backgroundColor: COLORS.warningBg,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  alertBannerTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  alertBannerSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-  },
-  alertActionText: {
-    color: COLORS.warning,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  queueHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  viewAllQueueText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  emptyCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: 16,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  emptyDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  bookingCard: {
-    backgroundColor: COLORS.cards,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 14,
-  },
-  bookingMainRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  avatarBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarLetters: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  bookingTopLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  customerNameText: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  bikeText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  serviceText: {
-    color: COLORS.primaryDim,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metaText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  bookingActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  acceptBtn: {
-    backgroundColor: COLORS.primary,
-  },
-  acceptBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  rejectBtn: {
-    backgroundColor: COLORS.elevatedCards,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-  },
-  rejectBtnText: {
-    color: COLORS.danger,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  startBtn: {
-    backgroundColor: '#38bdf8',
-  },
-  startBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  completeBtn: {
-    backgroundColor: COLORS.success,
-  },
-  completeBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  secondaryActionBtn: {
-    backgroundColor: COLORS.elevatedCards,
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-  },
-  secondaryActionText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  viewBtn: {
-    backgroundColor: COLORS.elevatedCards,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginLeft: 'auto',
-  },
-  viewBtnText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+      gap: 12,
+      backgroundColor: colors.background,
+    },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
+    errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    scrollView: { flex: 1 },
+    scrollContent: {
+      padding: 20,
+      gap: 18,
+      paddingBottom: 40,
+    },
+    welcomeCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: 14,
+    },
+    welcomeTextGroup: {
+      gap: 4,
+    },
+    greetingTitle: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: '900',
+    },
+    greetingSub: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    welcomeActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    welcomeSecondaryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    welcomeSecBtnText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    welcomePrimaryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 10,
+    },
+    welcomePriBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    sectionHeaderTitle: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    kpiGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 14,
+    },
+    kpiCard: {
+      width: '48%',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    kpiHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    kpiIconBadge: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    kpiValue: {
+      color: colors.textPrimary,
+      fontSize: 22,
+      fontWeight: '900',
+    },
+    kpiLabel: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    kpiSubText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    quickActionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    quickBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.surfaceContainer,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    quickBtnText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    alertBannerCard: {
+      backgroundColor: colors.warningBg,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    alertBannerTitle: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    alertBannerSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    alertActionText: {
+      color: colors.warning,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    queueHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    viewAllQueueText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 28,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      gap: 8,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    emptyDesc: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    bookingCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+    },
+    bookingMainRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    avatarBox: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarLetters: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    bookingTopLine: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    customerNameText: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
+    statusBadgeText: {
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    bikeText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    serviceText: {
+      color: colors.primaryDim,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    metaText: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    bookingActionsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+    },
+    acceptBtn: {
+      backgroundColor: colors.primary,
+    },
+    acceptBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    rejectBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
+    rejectBtnText: {
+      color: colors.danger,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    startBtn: {
+      backgroundColor: '#38bdf8',
+    },
+    startBtnText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    completeBtn: {
+      backgroundColor: colors.success,
+    },
+    completeBtnText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    secondaryActionBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    secondaryActionText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    viewBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginLeft: 'auto',
+    },
+    viewBtnText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+  });

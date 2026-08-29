@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { COLORS } from '../../../constants/theme';
+import { COLORS, AppThemeColors } from '../../../constants/theme';
 import { Header } from '../../../components/Header';
 import { CustomButton } from '../../../components/CustomButton';
 import {
@@ -36,6 +36,7 @@ import {
 import { getWorkshop, getWorkshopServices } from '../../../services/workshopService';
 import { getWorkshopReviews, getReviewStats, canCustomerReview, getCompletedBookingsWithoutReview, createReviewWithPhotos, type ReviewStats } from '../../../services/reviewService';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../../context/ThemeContext';
 import type { Workshop, Service, Review } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
 import { getWorkshopImageSource } from '../../../utils/workshopImage';
@@ -45,6 +46,8 @@ export default function CustomerWorkshopDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [services, setServices] = useState<Service[]>([]); 
@@ -207,7 +210,7 @@ export default function CustomerWorkshopDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <Header title="Workshop Details" showBack />
-        <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
@@ -237,7 +240,7 @@ export default function CustomerWorkshopDetailScreen() {
         showBack
         rightElement={
           <TouchableOpacity onPress={() => setFavorite(!favorite)} activeOpacity={0.8}>
-            <Heart color={favorite ? COLORS.primary : COLORS.textMuted} fill={favorite ? COLORS.primary : 'none'} size={22} />
+            <Heart color={favorite ? colors.primary : colors.textMuted} fill={favorite ? colors.primary : 'none'} size={22} />
           </TouchableOpacity>
         }
       />
@@ -271,13 +274,13 @@ export default function CustomerWorkshopDetailScreen() {
             <Text style={styles.workshopTitle}>{workshop.name}</Text>
 
             <View style={styles.locationRow}>
-              <MapPin color={COLORS.textMuted} size={14} />
+              <MapPin color={colors.textMuted} size={14} />
               <Text style={styles.locationText}>{workshop.address || 'Kuala Lumpur, Malaysia'}</Text>
             </View>
 
             {workshop.opening_time && workshop.closing_time ? (
               <View style={styles.locationRow}>
-                <Clock color={COLORS.textMuted} size={14} />
+                <Clock color={colors.textMuted} size={14} />
                 <Text style={styles.locationText}>
                   Operating Hours: {workshop.opening_time} - {workshop.closing_time}
                 </Text>
@@ -287,12 +290,12 @@ export default function CustomerWorkshopDetailScreen() {
             {/* Quick Buttons: Call & Directions */}
             <View style={styles.quickBtnRow}>
               <TouchableOpacity style={styles.quickBtn} onPress={handleCall}>
-                <Phone color={COLORS.primary} size={16} />
+                <Phone color={colors.primary} size={16} />
                 <Text style={styles.quickBtnText}>CALL WORKSHOP</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.quickBtn} onPress={handleDirections}>
-                <MapPin color={COLORS.primary} size={16} />
+                <MapPin color={colors.primary} size={16} />
                 <Text style={styles.quickBtnText}>GET DIRECTIONS</Text>
               </TouchableOpacity>
             </View>
@@ -332,12 +335,12 @@ export default function CustomerWorkshopDetailScreen() {
                 >
                   {isSelected ? (
                     <>
-                      <Check color="#000" size={14} />
+                      <Check color={isDark ? "#000" : "#FFF"} size={14} />
                       <Text style={styles.addSvcTextActive}>{t('common.done').toUpperCase()}</Text>
                     </>
                   ) : (
                     <>
-                      <Plus color={COLORS.primary} size={14} />
+                      <Plus color={colors.primary} size={14} />
                       <Text style={styles.addSvcText}>{t('common.add').toUpperCase()}</Text>
                     </>
                   )}
@@ -383,7 +386,7 @@ export default function CustomerWorkshopDetailScreen() {
         {/* Write a Review Button */}
         {canReview && (
           <TouchableOpacity style={styles.writeReviewBtn} onPress={handleWriteReview}>
-            <Edit2 color="#000" size={16} />
+            <Edit2 color={isDark ? "#000" : "#FFF"} size={16} />
             <Text style={styles.writeReviewBtnText}>{t('reviews.writeReview')}</Text>
           </TouchableOpacity>
         )}
@@ -391,7 +394,7 @@ export default function CustomerWorkshopDetailScreen() {
         {/* Recent Reviews */}
         {reviews.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Star color={COLORS.textMuted} size={32} />
+            <Star color={colors.textMuted} size={32} />
             <Text style={styles.emptyTitle}>{t('empty.noReviews').toUpperCase()}</Text>
             <Text style={styles.emptySub}>{t('empty.noReviewsSub')}</Text>
           </View>
@@ -402,7 +405,7 @@ export default function CustomerWorkshopDetailScreen() {
                 <View style={styles.revHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={styles.avatarCircle}>
-                      <User color={COLORS.textMuted} size={14} />
+                      <User color={colors.textMuted} size={14} />
                     </View>
                     <View>
                       <Text style={styles.revName}>{rev.customer?.full_name || 'Rider'}</Text>
@@ -455,7 +458,7 @@ export default function CustomerWorkshopDetailScreen() {
                 <Text style={styles.viewAllBtnText}>
                   {showAllReviews ? 'Show Less' : `View All ${reviews.length} Reviews`}
                 </Text>
-                <ChevronRight color={COLORS.primary} size={14} />
+                <ChevronRight color={colors.primary} size={14} />
               </TouchableOpacity>
             )}
           </>
@@ -519,10 +522,11 @@ export default function CustomerWorkshopDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -530,17 +534,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   coverImageContainer: {
     height: 180,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     overflow: 'hidden',
   },
   coverImage: {
@@ -560,15 +564,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   ratingText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -576,26 +580,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.successBg,
+    backgroundColor: colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.success,
+    borderColor: colors.success,
   },
   openDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
   },
   openText: {
-    color: COLORS.success,
+    color: colors.success,
     fontSize: 10,
     fontWeight: '900',
   },
   workshopTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '900',
   },
@@ -605,7 +609,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   locationText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     flex: 1,
   },
@@ -620,14 +624,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   quickBtnText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -635,56 +639,56 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionTitle: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   sectionSub: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
   },
   emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 8,
   },
   emptyTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '800',
   },
   emptySub: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     textAlign: 'center',
   },
   svcCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   svcCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surface,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   svcName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '800',
   },
   svcDesc: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
@@ -695,36 +699,36 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   svcPrice: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 15,
     fontWeight: '900',
   },
   svcDuration: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
   },
   addSvcBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: colors.primaryDark,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   addSvcBtnActive: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   addSvcText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
   },
   addSvcTextActive: {
-    color: '#000',
+    color: isDark ? '#000' : '#FFF',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -732,11 +736,11 @@ const styles = StyleSheet.create({
   // ─── Rating Summary Card ────────────────────────────────────
   ratingSummaryCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 16,
   },
   ratingBigCol: {
@@ -746,12 +750,12 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   ratingBigNum: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 36,
     fontWeight: '900',
   },
   ratingCountText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
@@ -767,7 +771,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   barLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: '800',
     width: 22,
@@ -775,7 +779,7 @@ const styles = StyleSheet.create({
   barTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -785,7 +789,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   barPct: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     fontWeight: '800',
     width: 28,
@@ -798,23 +802,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
   },
   writeReviewBtnText: {
-    color: '#000',
+    color: isDark ? '#000' : '#FFF',
     fontSize: 14,
     fontWeight: '900',
   },
 
   // ─── Review Cards ───────────────────────────────────────────
   reviewCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 6,
   },
   revHeader: {
@@ -826,19 +830,19 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   revName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   revTimeAgo: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     marginTop: 1,
   },
@@ -848,7 +852,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   revComment: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 18,
@@ -859,36 +863,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   workshopReplyBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 8,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
     marginTop: 4,
   },
   replyHeader: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 10,
     fontWeight: '800',
   },
   replyText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
   sourceBadge: {
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: colors.primaryDark,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   sourceBadgeText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 8,
     fontWeight: '900',
   },
@@ -898,24 +902,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 10,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   viewAllBtnText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
   },
 
   // ─── Google Reviews Section ─────────────────────────────────
   googleReviewCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   googleIconBox: {
@@ -926,15 +930,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   googleTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   googleRatingText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -959,9 +963,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -969,12 +973,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   barLabelText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
   barPrice: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '900',
   },

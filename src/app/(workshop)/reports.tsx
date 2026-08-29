@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   TrendingUp,
   RefreshCw,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import {
   getWorkshopReports,
@@ -34,6 +35,8 @@ import { useTranslation } from '../../i18n';
 export default function WorkshopReportsScreen() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -309,42 +312,43 @@ ${(report.inventoryUsage || [])
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  errorTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
-  errorDesc: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
-  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  retryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, gap: 10 },
-  rangeChipsContainer: { gap: 6 },
-  rangeChip: { backgroundColor: COLORS.cards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
-  activeRangeChip: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
-  rangeChipText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '800' },
-  activeRangeChipText: { color: COLORS.primary },
-  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingHorizontal: 14, height: 34, borderRadius: 10 },
-  exportText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40, gap: 16 },
-  heroRevenueCard: { backgroundColor: COLORS.cards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.border, gap: 6 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255, 107, 0, 0.15)', justifyContent: 'center', alignItems: 'center' },
-  heroLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  heroVal: { color: COLORS.primary, fontSize: 34, fontWeight: '900' },
-  heroSubText: { color: COLORS.textSecondary, fontSize: 12 },
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  kpiCard: { width: '48%', backgroundColor: COLORS.cards, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
-  kpiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kpiLabel: { color: COLORS.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  kpiValue: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900' },
-  kpiSub: { color: COLORS.textSecondary, fontSize: 10 },
-  sectionCard: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  sectionHeaderLine: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10 },
-  sectionTitleText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
-  noneText: { color: COLORS.textMuted, fontSize: 12, fontStyle: 'italic' },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.secondaryBackground, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
-  itemName: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
-  itemSub: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
-  itemRevenue: { color: COLORS.primary, fontSize: 14, fontWeight: '900' },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    screenContainer: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
+    errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+    retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, gap: 10 },
+    rangeChipsContainer: { gap: 6 },
+    rangeChip: { backgroundColor: colors.cards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+    activeRangeChip: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
+    rangeChipText: { color: colors.textSecondary, fontSize: 10, fontWeight: '800' },
+    activeRangeChipText: { color: colors.primary },
+    exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 14, height: 34, borderRadius: 10 },
+    exportText: { color: isDark ? '#000000' : '#FFFFFF', fontSize: 11, fontWeight: '800' },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40, gap: 16 },
+    heroRevenueCard: { backgroundColor: colors.cards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: colors.border, gap: 6 },
+    heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    heroIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.1)', justifyContent: 'center', alignItems: 'center' },
+    heroLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+    heroVal: { color: colors.primary, fontSize: 34, fontWeight: '900' },
+    heroSubText: { color: colors.textSecondary, fontSize: 12 },
+    kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    kpiCard: { width: '48%', backgroundColor: colors.cards, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 4 },
+    kpiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    kpiLabel: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+    kpiValue: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+    kpiSub: { color: colors.textSecondary, fontSize: 10 },
+    sectionCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
+    sectionHeaderLine: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10 },
+    sectionTitleText: { color: colors.textPrimary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+    noneText: { color: colors.textMuted, fontSize: 12, fontStyle: 'italic' },
+    itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.secondaryBackground, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+    itemName: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
+    itemSub: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+    itemRevenue: { color: colors.primary, fontSize: 14, fontWeight: '900' },
+  });

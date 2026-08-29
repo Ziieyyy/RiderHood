@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { AppThemeColors, COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import { PasswordInput } from '../../components/PasswordInput';
@@ -25,11 +25,14 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { updatePassword, resetPassword } from '../../services/authService';
 import { useTranslation } from '../../i18n';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 
 export default function SecurityScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -93,7 +96,7 @@ export default function SecurityScreen() {
         {/* Status Box */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <ShieldCheck color={COLORS.success} size={20} />
+            <ShieldCheck color={colors.success} size={20} />
             <Text style={styles.cardTitle}>{t('common.status').toUpperCase()}</Text>
           </View>
           <View style={styles.statusRow}>
@@ -107,7 +110,7 @@ export default function SecurityScreen() {
         {/* Change Password Form */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <KeyRound color={COLORS.primary} size={20} />
+            <KeyRound color={colors.primary} size={20} />
             <Text style={styles.cardTitle}>{t('settings.changePassword').toUpperCase()}</Text>
           </View>
 
@@ -143,23 +146,23 @@ export default function SecurityScreen() {
         {/* Active Sessions */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Smartphone color={COLORS.primary} size={20} />
+            <Smartphone color={colors.primary} size={20} />
             <Text style={styles.cardTitle}>{t('settings.activeSessions').toUpperCase()}</Text>
           </View>
 
           <View style={styles.sessionRow}>
-            <Smartphone color={COLORS.textPrimary} size={18} />
+            <Smartphone color={colors.textPrimary} size={18} />
             <View style={{ flex: 1 }}>
               <Text style={styles.sessionTitle}>{t('settings.sessionInfo')}</Text>
               <Text style={styles.sessionSub}>{t('common.active')} • RiderHood Client</Text>
             </View>
-            <CheckCircle2 color={COLORS.success} size={16} />
+            <CheckCircle2 color={colors.success} size={16} />
           </View>
         </View>
 
         {/* Log Out Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <LogOut color={COLORS.danger} size={18} />
+          <LogOut color={colors.danger} size={18} />
           <Text style={styles.logoutText}>{t('common.logout').toUpperCase()}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -167,110 +170,111 @@ export default function SecurityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  card: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cardTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  emailText: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  activeBadge: {
-    backgroundColor: COLORS.successBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.success,
-  },
-  activeText: {
-    color: COLORS.success,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  forgotBtn: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  forgotText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
-    textDecorationLine: 'underline',
-  },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-  },
-  sessionTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  sessionSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.dangerBg,
-    marginTop: 8,
-  },
-  logoutText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 14,
+    },
+    card: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    cardTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    emailText: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    activeBadge: {
+      backgroundColor: colors.successBg,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.success,
+    },
+    activeText: {
+      color: colors.success,
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    forgotBtn: {
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    forgotText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+      textDecorationLine: 'underline',
+    },
+    sessionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    sessionTitle: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    sessionSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    logoutBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: colors.dangerBg,
+      marginTop: 8,
+    },
+    logoutText: {
+      color: colors.danger,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+  });

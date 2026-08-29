@@ -3,6 +3,13 @@ export interface Coordinates {
   longitude: number;
 }
 
+export interface UserLocationDetails extends Coordinates {
+  accuracy?: number; // accuracy radius in meters
+  heading?: number | null;
+  speed?: number | null;
+  timestamp?: number;
+}
+
 export const WORKSHOP_COORDINATES: Record<string, Coordinates> = {
   // 1. Wan Legacy Motor (Ground Floor No. 55, Lorong Kota Kenari 1/1, 09000 Kulim, Kedah)
   'b0000000-0000-0000-0000-000000000001': { latitude: 5.3712, longitude: 100.5543 },
@@ -39,9 +46,9 @@ export const WORKSHOP_COORDINATES: Record<string, Coordinates> = {
 };
 
 /**
- * Request real device / browser GPS location.
+ * Request real device / browser GPS location with high accuracy.
  */
-export async function requestUserLocation(): Promise<Coordinates | null> {
+export async function requestUserLocation(options?: { highAccuracy?: boolean; maxAge?: number }): Promise<UserLocationDetails | null> {
   return new Promise((resolve) => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -49,13 +56,21 @@ export async function requestUserLocation(): Promise<Coordinates | null> {
           resolve({
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            heading: pos.coords.heading,
+            speed: pos.coords.speed,
+            timestamp: pos.timestamp,
           });
         },
         (err) => {
           console.warn('Geolocation prompt/fetch error:', err.message);
           resolve(null);
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        {
+          enableHighAccuracy: options?.highAccuracy ?? true,
+          timeout: 10000,
+          maximumAge: options?.maxAge ?? 0,
+        }
       );
     } else {
       resolve(null);

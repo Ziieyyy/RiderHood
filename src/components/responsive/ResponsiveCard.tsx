@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from 'react-native';
-import { COLORS, RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS, SHADOWS } from '../../constants/theme';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ResponsiveCardProps {
   children: React.ReactNode;
@@ -27,13 +28,14 @@ export const ResponsiveCard: React.FC<ResponsiveCardProps> = ({
   glow = false,
 }) => {
   const { cardPadding } = useResponsive();
+  const { colors } = useTheme();
 
   const cardStyle: StyleProp<ViewStyle> = [
     styles.card,
     {
       padding: cardPadding,
-      backgroundColor: elevated ? COLORS.elevatedCards : COLORS.cards,
-      borderColor: active ? COLORS.primary : COLORS.border,
+      backgroundColor: elevated ? colors.elevatedCards : colors.cards,
+      borderColor: active ? colors.primary : colors.border,
     },
     glow && SHADOWS.orangeGlow,
     style,

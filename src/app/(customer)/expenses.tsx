@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -27,6 +27,7 @@ import {
   Info,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getCustomerExpenses, createExpense as createDbExpense } from '../../services/expenseService';
 import { getMotorcycles } from '../../services/motorcycleService';
 import type { ExpenseCategory, Motorcycle } from '../../types/database';
@@ -47,6 +48,8 @@ export default function CustomerExpensesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [expenses, setExpenses] = useState<RiderExpense[]>([]);
   const [bikes, setBikes] = useState<Motorcycle[]>([]);
@@ -134,7 +137,7 @@ export default function CustomerExpensesScreen() {
             activeOpacity={0.8}
           >
             <Plus color={COLORS.primary} size={16} />
-            <Text style={styles.addBtnText}>+ {t('expenses.addExpense')}</Text>
+            <Text style={styles.addBtnText}>{t('expenses.addExpense')}</Text>
           </TouchableOpacity>
         }
       />
@@ -250,201 +253,202 @@ export default function CustomerExpensesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  addBtnHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  addBtnText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  summaryCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-    alignItems: 'center',
-    gap: 8,
-  },
-  summaryTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  summaryTotalText: {
-    color: COLORS.primary,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-    width: '100%',
-  },
-  breakdownBox: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  breakdownLabel: {
-    color: COLORS.textMuted,
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  breakdownVal: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 6,
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  emptySub: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  expCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  expIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  expDesc: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  expSub: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  expAmount: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 14,
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  catChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  catChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  catChipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
-  },
-  catChipText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  catChipTextActive: {
-    color: COLORS.primary,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 46,
-    color: COLORS.textPrimary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: 14,
-  },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 14,
+    },
+    addBtnHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.primaryDark,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    addBtnText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    summaryCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.primaryGlow,
+      alignItems: 'center',
+      gap: 8,
+    },
+    summaryTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    summaryTotalText: {
+      color: colors.primary,
+      fontSize: 32,
+      fontWeight: '900',
+    },
+    breakdownRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+      width: '100%',
+    },
+    breakdownBox: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    breakdownLabel: {
+      color: colors.textMuted,
+      fontSize: 8,
+      fontWeight: '800',
+    },
+    breakdownVal: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    sectionTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      marginTop: 6,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    emptySub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    expCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    expIconCircle: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    expDesc: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    expSub: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    expAmount: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '900',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.primary,
+      gap: 14,
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    catChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    catChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    catChipActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    catChipText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    catChipTextActive: {
+      color: colors.primary,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      height: 46,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: 14,
+    },
+  });

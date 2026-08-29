@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, AppThemeColors } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -19,11 +19,14 @@ import {
   CheckCircle2,
   Image as ImageIcon,
 } from 'lucide-react-native';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useTranslation } from '../../i18n';
 
 export default function ReportProblemScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [category, setCategory] = useState<string>('App Bug');
   const [description, setDescription] = useState('');
@@ -59,7 +62,7 @@ export default function ReportProblemScreen() {
         <Header title={t('settings.reportProblem')} showBack />
         <View style={styles.successBox}>
           <View style={styles.successCircle}>
-            <CheckCircle2 color={COLORS.success} size={48} />
+            <CheckCircle2 color={colors.success} size={48} />
           </View>
           <Text style={styles.successTitle}>{t('settings.reportSubmitted')}</Text>
           <Text style={styles.successSub}>
@@ -110,7 +113,7 @@ export default function ReportProblemScreen() {
             value={description}
             onChangeText={setDescription}
             placeholder="Please provide steps to reproduce the issue, error messages or details..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={5}
           />
@@ -125,12 +128,12 @@ export default function ReportProblemScreen() {
           >
             {screenshotAttached ? (
               <>
-                <ImageIcon color={COLORS.primary} size={24} />
+                <ImageIcon color={colors.primary} size={24} />
                 <Text style={styles.attachTextActive}>Screenshot_2026-07-30.png (Attached)</Text>
               </>
             ) : (
               <>
-                <Camera color={COLORS.textMuted} size={24} />
+                <Camera color={colors.textMuted} size={24} />
                 <Text style={styles.attachText}>+ Tap to upload screenshot</Text>
               </>
             )}
@@ -148,10 +151,11 @@ export default function ReportProblemScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -159,15 +163,15 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 10,
   },
   cardTitle: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -181,29 +185,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   catChipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primary,
   },
   catChipText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '800',
   },
   catChipTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   textArea: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 14,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     fontSize: 13,
     minHeight: 120,
     textAlignVertical: 'top',
@@ -213,48 +217,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   attachText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '700',
   },
   attachTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
   },
   successBox: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
     margin: 16,
     borderWidth: 1,
-    borderColor: COLORS.success,
+    borderColor: colors.success,
     gap: 12,
   },
   successCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: COLORS.successBg,
+    backgroundColor: colors.successBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   successTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '900',
   },
   successSub: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,

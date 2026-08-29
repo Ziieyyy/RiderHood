@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, AppThemeColors } from '../../constants/theme';
 import { Header } from '../../components/Header';
 import { CustomButton } from '../../components/CustomButton';
 import {
@@ -34,13 +34,13 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { createMotorcycle } from '../../services/motorcycleService';
 import { createReminder } from '../../services/maintenanceService';
 import { createDocument, uploadAndCreateDocument } from '../../services/documentService';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../i18n';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
-
 
 const BRANDS = ['Yamaha', 'Honda', 'Modenas', 'Suzuki', 'Kawasaki', 'SYM', 'Benelli', 'KTM', 'BMW', 'Ducati'];
 const POPULAR_MODELS = ['Y15ZR', 'Y16ZR', 'RS150R', 'LC135', 'EX5', 'NVX 155', 'VF3i', 'Dash 125', 'MT-09', 'R15', 'Ninja 250'];
@@ -57,6 +57,8 @@ export default function SetupMotorcycleScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [loading, setLoading] = useState(false);
@@ -516,7 +518,7 @@ export default function SetupMotorcycleScreen() {
                 value={nickname}
                 onChangeText={setNickname}
                 placeholder={t('motorcycle.nicknamePlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -539,7 +541,7 @@ export default function SetupMotorcycleScreen() {
               value={customBrand}
               onChangeText={setCustomBrand}
               placeholder={t('motorcycle.selectBrand')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('motorcycle.model').toUpperCase()}</Text>
@@ -561,7 +563,7 @@ export default function SetupMotorcycleScreen() {
               value={customModel}
               onChangeText={setCustomModel}
               placeholder={t('motorcycle.selectModel')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             <View style={styles.twoColRow}>
@@ -572,7 +574,7 @@ export default function SetupMotorcycleScreen() {
                   value={year}
                   onChangeText={setYear}
                   placeholder={t('motorcycle.yearPlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                 />
               </View>
@@ -583,7 +585,7 @@ export default function SetupMotorcycleScreen() {
                   value={plateNumber}
                   onChangeText={setPlateNumber}
                   placeholder={t('motorcycle.plateNumberPlaceholder')}
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   autoCapitalize="characters"
                 />
               </View>
@@ -610,7 +612,7 @@ export default function SetupMotorcycleScreen() {
                 value={engineCc}
                 onChangeText={setEngineCc}
                 placeholder="e.g. 155"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
@@ -662,7 +664,7 @@ export default function SetupMotorcycleScreen() {
                   value={frontTyre}
                   onChangeText={setFrontTyre}
                   placeholder="e.g. 90/80-17"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -672,14 +674,14 @@ export default function SetupMotorcycleScreen() {
                   value={rearTyre}
                   onChangeText={setRearTyre}
                   placeholder="e.g. 120/70-17"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                 />
               </View>
             </View>
 
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
-                <ArrowLeft color={COLORS.textPrimary} size={16} />
+                <ArrowLeft color={colors.textPrimary} size={16} />
                 <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
@@ -704,7 +706,7 @@ export default function SetupMotorcycleScreen() {
                 value={currentMileage}
                 onChangeText={setCurrentMileage}
                 placeholder="e.g. 28000"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
               />
             </View>
@@ -717,8 +719,11 @@ export default function SetupMotorcycleScreen() {
                   onPress={() => openDatePicker('lastService')}
                   activeOpacity={0.8}
                 >
-                  <CalendarIcon color={COLORS.primary} size={16} />
-                  <Text style={[styles.datePickerBtnText, !lastServiceDate && { color: COLORS.textMuted }]}>
+                  <CalendarIcon color={colors.primary} size={16} />
+                  <Text style={[
+                    styles.datePickerBtnText, 
+                    !lastServiceDate ? { color: colors.textMuted } : { color: isDark ? colors.textPrimary : '#000000' }
+                  ]}>
                     {lastServiceDate || `${t('common.date')} 📅`}
                   </Text>
                 </TouchableOpacity>
@@ -731,7 +736,7 @@ export default function SetupMotorcycleScreen() {
                   value={lastServiceMileage}
                   onChangeText={setLastServiceMileage}
                   placeholder="e.g. 25000"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                 />
               </View>
@@ -745,7 +750,7 @@ export default function SetupMotorcycleScreen() {
                   value={nextServiceMileage}
                   onChangeText={setNextServiceMileage}
                   placeholder="e.g. 28000"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                 />
               </View>
@@ -757,8 +762,11 @@ export default function SetupMotorcycleScreen() {
                   onPress={() => openDatePicker('warranty')}
                   activeOpacity={0.8}
                 >
-                  <CalendarIcon color={COLORS.primary} size={16} />
-                  <Text style={[styles.datePickerBtnText, !warrantyExpiry && { color: COLORS.textMuted }]}>
+                  <CalendarIcon color={colors.primary} size={16} />
+                  <Text style={[
+                    styles.datePickerBtnText, 
+                    !warrantyExpiry ? { color: colors.textMuted } : { color: isDark ? colors.textPrimary : '#000000' }
+                  ]}>
                     {warrantyExpiry || `${t('common.date')} 📅`}
                   </Text>
                 </TouchableOpacity>
@@ -767,7 +775,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
-                <ArrowLeft color={COLORS.textPrimary} size={16} />
+                <ArrowLeft color={colors.textPrimary} size={16} />
                 <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
@@ -798,11 +806,11 @@ export default function SetupMotorcycleScreen() {
                     <Check color="#000" size={14} />
                     <Text style={styles.photoActiveText}>{photoName || t('motorcycle.photoUrl')}</Text>
                   </View>
-                  <Text style={{ color: COLORS.textMuted, fontSize: 10, marginTop: 4 }}>{t('motorcycle.tapToChange')}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 4 }}>{t('motorcycle.tapToChange')}</Text>
                 </View>
               ) : (
                 <>
-                  <Camera color={COLORS.primary} size={32} />
+                  <Camera color={colors.primary} size={32} />
                   <Text style={styles.uploadBoxTitle}>+ {t('motorcycle.chooseFromGallery')}</Text>
                   <Text style={styles.uploadBoxSub}>{t('motorcycle.photoFormatNotice')}</Text>
                 </>
@@ -826,8 +834,8 @@ export default function SetupMotorcycleScreen() {
                     onPress={() => handlePickDocumentFile(doc.title, doc.state, doc.setter, doc.assetSetter, doc.defaultVal)}
                     activeOpacity={0.8}
                   >
-                    <FolderOpen color={doc.state ? COLORS.success : COLORS.primary} size={14} />
-                    <Text style={[styles.docUploadBtnText, doc.state && { color: COLORS.success }]}>
+                    <FolderOpen color={doc.state ? colors.success : colors.primary} size={14} />
+                    <Text style={[styles.docUploadBtnText, doc.state && { color: colors.success }]}>
                       {doc.state ? t('common.remove') : t('common.upload')}
                     </Text>
                   </TouchableOpacity>
@@ -837,7 +845,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={handlePrevStep}>
-                <ArrowLeft color={COLORS.textPrimary} size={16} />
+                <ArrowLeft color={colors.textPrimary} size={16} />
                 <Text style={styles.backStepText}>{t('common.back')}</Text>
               </TouchableOpacity>
               <CustomButton
@@ -860,7 +868,7 @@ export default function SetupMotorcycleScreen() {
                 {photoUrl ? (
                   <Image source={{ uri: photoUrl }} style={{ width: 56, height: 56, borderRadius: 12 }} />
                 ) : (
-                  <Bike color={COLORS.primary} size={32} />
+                  <Bike color={colors.primary} size={32} />
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reviewTitle}>🏍️ {nickname || `${finalBrand} ${finalModel}`}</Text>
@@ -882,11 +890,11 @@ export default function SetupMotorcycleScreen() {
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>{t('motorcycle.lastServiceDate').toUpperCase()}</Text>
-                  <Text style={styles.specVal}>{lastServiceDate || 'N/A'}</Text>
+                  <Text style={[styles.specVal, !isDark && { color: '#000000' }]}>{lastServiceDate || 'N/A'}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>{t('motorcycle.warrantyExpiry').toUpperCase()}</Text>
-                  <Text style={styles.specVal}>{warrantyExpiry || 'N/A'}</Text>
+                  <Text style={[styles.specVal, !isDark && { color: '#000000' }]}>{warrantyExpiry || 'N/A'}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>{t('motorcycle.tyreSize').toUpperCase()}</Text>
@@ -897,7 +905,7 @@ export default function SetupMotorcycleScreen() {
               <View style={styles.divider} />
 
               <View style={styles.mileageSummaryBox}>
-                <Gauge color={COLORS.primary} size={20} />
+                <Gauge color={colors.primary} size={20} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.mileageLabel}>{t('motorcycle.currentOdometer').toUpperCase()}</Text>
                   <Text style={styles.mileageVal}>{parseInt(currentMileage || '0', 10).toLocaleString()} km</Text>
@@ -907,7 +915,7 @@ export default function SetupMotorcycleScreen() {
 
             <View style={styles.btnRow}>
               <TouchableOpacity style={styles.backStepBtn} onPress={() => setStep(4)}>
-                <ArrowLeft color={COLORS.textPrimary} size={16} />
+                <ArrowLeft color={colors.textPrimary} size={16} />
                 <Text style={styles.backStepText}>← {t('common.edit')}</Text>
               </TouchableOpacity>
               <CustomButton
@@ -924,12 +932,12 @@ export default function SetupMotorcycleScreen() {
         {step === 6 && (
           <View style={styles.successCard}>
             <View style={styles.successIconCircle}>
-              <CheckCircle2 color={COLORS.success} size={56} />
+              <CheckCircle2 color={colors.success} size={56} />
             </View>
 
             <Text style={styles.successTitle}>✓ {t('motorcycle.registrationComplete')}</Text>
             <Text style={styles.successDesc}>
-              Your <Text style={{ color: COLORS.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully saved into the database.
+              Your <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{finalBrand} {finalModel}</Text> ({plateNumber.toUpperCase()}) has been successfully saved into the database.
             </Text>
 
             <View style={styles.successActions}>
@@ -962,7 +970,7 @@ export default function SetupMotorcycleScreen() {
                 📅 {t('common.date')}
               </Text>
               <TouchableOpacity onPress={() => setDateModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <X color={COLORS.textSecondary} size={20} />
+                <X color={colors.textSecondary} size={20} />
               </TouchableOpacity>
             </View>
 
@@ -1005,13 +1013,13 @@ export default function SetupMotorcycleScreen() {
             {/* Calendar Month & Year Switcher */}
             <View style={styles.calMonthHeader}>
               <TouchableOpacity style={styles.calNavBtn} onPress={() => changeCalMonth(-1)}>
-                <ChevronLeft color={COLORS.textPrimary} size={20} />
+                <ChevronLeft color={colors.textPrimary} size={20} />
               </TouchableOpacity>
               <Text style={styles.calMonthTitle}>
                 {MONTH_NAMES[calMonth]} {calYear}
               </Text>
               <TouchableOpacity style={styles.calNavBtn} onPress={() => changeCalMonth(1)}>
-                <ChevronRight color={COLORS.textPrimary} size={20} />
+                <ChevronRight color={colors.textPrimary} size={20} />
               </TouchableOpacity>
             </View>
 
@@ -1060,10 +1068,11 @@ export default function SetupMotorcycleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -1082,54 +1091,54 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   stepBadgeActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primary,
   },
   stepBadgeCompleted: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   stepNumberText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '800',
   },
   stepNumberTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   progressTrack: {
     height: 4,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 2,
     overflow: 'hidden',
   },
   fillTrack: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   formCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   stepTitle: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
   },
   stepDesc: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     marginBottom: 8,
   },
@@ -1137,34 +1146,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inputLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     fontSize: 14,
   },
   datePickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
+    borderColor: colors.primaryGlow,
   },
   datePickerBtnText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1175,24 +1184,24 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   chip: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   chipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primary,
   },
   chipText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '700',
   },
   chipTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   twoColRow: {
     flexDirection: 'row',
@@ -1208,47 +1217,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   backStepText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   sectionHeaderLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   uploadBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderStyle: 'dashed',
     gap: 6,
   },
   uploadBoxActive: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderStyle: 'solid',
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: colors.primaryDark,
   },
   uploadBoxTitle: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '800',
   },
   uploadBoxSub: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
   },
   previewPhotoContainer: {
@@ -1264,13 +1273,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
   },
   photoActiveText: {
-    color: '#000',
+    color: isDark ? '#000' : '#FFF',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1280,19 +1289,19 @@ const styles = StyleSheet.create({
   docRowItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   docItemTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
   docItemFile: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
   },
@@ -1300,28 +1309,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
+    borderColor: colors.primaryGlow,
   },
   docUploadBtnSuccess: {
-    backgroundColor: COLORS.successBg,
-    borderColor: COLORS.success,
+    backgroundColor: colors.successBg,
+    borderColor: colors.success,
   },
   docUploadBtnText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
   },
   reviewCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   reviewHeader: {
@@ -1330,23 +1339,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reviewTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '900',
   },
   reviewSub: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   reviewPlate: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   specsGrid: {
     flexDirection: 'row',
@@ -1357,12 +1366,12 @@ const styles = StyleSheet.create({
     width: '46%',
   },
   specLabel: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     fontWeight: '800',
   },
   specVal: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
@@ -1371,46 +1380,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     padding: 12,
     borderRadius: 12,
   },
   mileageLabel: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '800',
   },
   mileageVal: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '900',
   },
   successCard: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 24,
     padding: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 16,
   },
   successIconCircle: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: COLORS.successBg,
+    backgroundColor: colors.successBg,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.success,
+    borderColor: colors.success,
   },
   successTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 22,
     fontWeight: '900',
   },
   successDesc: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
@@ -1429,11 +1438,11 @@ const styles = StyleSheet.create({
   },
   dateModalCard: {
     width: '100%',
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: 12,
   },
   modalHeaderRow: {
@@ -1442,12 +1451,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalHeaderTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '800',
   },
   modalSub: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1457,15 +1466,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   presetChip: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
+    borderColor: colors.primaryGlow,
   },
   presetChipText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1473,7 +1482,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: 10,
     borderRadius: 12,
     marginTop: 4,
@@ -1482,7 +1491,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   calMonthTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1495,7 +1504,7 @@ const styles = StyleSheet.create({
   weekDayText: {
     width: 38,
     textAlign: 'center',
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1514,31 +1523,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   dayCellSelected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   dayText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '700',
   },
   dayTextSelected: {
-    color: '#000',
+    color: isDark ? '#000' : '#FFF',
     fontWeight: '900',
   },
   closeModalBtn: {
     marginTop: 10,
     alignItems: 'center',
     paddingVertical: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   closeModalBtnText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '800',
   },

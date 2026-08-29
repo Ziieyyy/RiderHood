@@ -117,15 +117,25 @@ Listens to `user` state and `segments` from Expo Router:
 
 ---
 
-## 🎨 Design Tokens & UI Aesthetics (`src/constants/theme.ts`)
+## 🎨 System-Wide Dual Theme Architecture (`src/constants/theme.ts`, `src/context/ThemeContext.tsx`)
 
-RiderHood utilizes a dark cyber-garage theme palette:
-- **Background**: `#0a0c10` (Ultra Dark Titanium)
-- **Surface Containers**: `#12161f` & `#1a202c`
-- **Primary Accent**: `#ff6b00` (Electric Amber Orange)
-- **Workshop Accent**: `#f59e0b` (Industrial Amber)
-- **Success / Live**: `#10b981` (Emerald Green)
-- **Danger / Alert**: `#ef4444` (Crimson Red)
+RiderHood supports **Dark Mode (Default)**, **Light Mode (White)**, and **System / Auto Mode**:
+- **Persistence**: Saved to AsyncStorage (`@riderhood_theme_mode`).
+- **Dynamic Hook**: `useTheme()` and `useThemedStyles(createStyles)` for zero-hardcoded dynamic reactive switching without screen reloading.
+- **Dark Mode Palette**:
+  - **Background**: `#0a0c10` (Ultra Dark Titanium)
+  - **Surface / Containers**: `#12161f` & `#1a202c`
+  - **Text Primary**: `#FFFFFF` / **Muted**: `#718096`
+  - **Primary Accent**: `#ff6b00` (Electric Amber Orange)
+- **Light Mode Palette**:
+  - **Background**: `#F8FAFC` (Clean Slate White)
+  - **Surface / Containers**: `#FFFFFF` & `#F1F5F9`
+  - **Text Primary**: `#0F172A` / **Muted**: `#64748B`
+  - **Primary Accent**: `#ea580c` (Vibrant Dark Amber)
+- **Semantic Accents**:
+  - **Success / Live**: `#10b981` (Emerald Green)
+  - **Danger / Alert**: `#ef4444` (Crimson Red)
+  - **Workshop Accent**: `#f59e0b` (Industrial Amber)
 
 ---
 

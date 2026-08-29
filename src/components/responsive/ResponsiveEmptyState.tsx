@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
-import { COLORS, RADIUS } from '../../constants/theme';
+import { AppThemeColors, RADIUS } from '../../constants/theme';
 import { CustomButton } from '../CustomButton';
+import { useThemedStyles } from '../../context/ThemeContext';
 
 interface ResponsiveEmptyStateProps {
   icon: React.ReactNode;
@@ -24,6 +25,8 @@ export const ResponsiveEmptyState: React.FC<ResponsiveEmptyStateProps> = ({
   onSecondaryAction,
   style,
 }) => {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>{icon}</View>
@@ -55,63 +58,64 @@ export const ResponsiveEmptyState: React.FC<ResponsiveEmptyStateProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.cards,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    marginVertical: 12,
-    width: '100%',
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderHighlight,
-  },
-  title: {
-    color: COLORS.textPrimary,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  description: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
-    maxWidth: 420,
-    marginBottom: 20,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  secondaryBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: COLORS.surfaceContainer,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  secondaryBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.cards,
+      borderRadius: RADIUS.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      marginVertical: 12,
+      width: '100%',
+    },
+    iconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.surfaceContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 17,
+      fontWeight: '800',
+      marginBottom: 6,
+      textAlign: 'center',
+    },
+    description: {
+      color: colors.textMuted,
+      fontSize: 13,
+      lineHeight: 18,
+      textAlign: 'center',
+      maxWidth: 420,
+      marginBottom: 20,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    secondaryBtn: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceContainer,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    secondaryBtnText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+  });

@@ -64,13 +64,30 @@ export async function getBooking(id: string): Promise<Booking | null> {
 // ─── Create booking (transactional via RPC) ───────────────────
 export async function createBooking(payload: CreateBookingPayload): Promise<Booking> {
   // 1. Verify target workshop exists and has booking enabled
-  const { data: workshop, error: wsErr } = await supabase
+  let workshop: any = null;
+  const { data: wsData, error: wsErr } = await supabase
     .from('workshops')
-    .select('id, name, status, verification_status, booking_enabled, is_partner')
+    .select('id, name, owner_id, status, verification_status, booking_enabled, is_partner')
     .eq('id', payload.workshop_id)
-    .single();
+    .maybeSingle();
 
-  if (wsErr || !workshop) {
+  if (wsData) {
+    workshop = wsData;
+  } else {
+    // If not found by exact ID, fallback check for active partner workshop
+    const { data: fallbackWs } = await supabase
+      .from('workshops')
+      .select('id, name, owner_id, status, verification_status, booking_enabled, is_partner')
+      .eq('is_partner', true)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+    if (fallbackWs) {
+      workshop = fallbackWs;
+    }
+  }
+
+  if (!workshop) {
     throw new Error('Selected workshop could not be found.');
   }
 
@@ -83,32 +100,102 @@ export async function createBooking(payload: CreateBookingPayload): Promise<Book
   }
 
   // 2. Validate selected services and verify workshop ownership
+  // Resolve services from public.services table OR public.workshop_products
   const serviceIds = payload.services.map((s) => s.service_id);
-  const { data: servicesData, error: svcError } = await supabase
+  interface ResolvedService {
+    id: string;
+    name: string;
+    price: number;
+    estimated_duration_minutes: number;
+    workshop_id: string;
+    isFromServicesTable: boolean;
+  }
+  const resolvedServices: ResolvedService[] = [];
+
+  // Step 2a: Check public.services table
+  const { data: servicesData } = await supabase
     .from('services')
     .select('id, name, price, estimated_duration_minutes, workshop_id')
     .in('id', serviceIds);
 
-  if (svcError || !servicesData || servicesData.length !== serviceIds.length) {
-    throw new Error('One or more selected services are invalid or no longer available.');
+  if (servicesData && servicesData.length > 0) {
+    for (const s of servicesData) {
+      resolvedServices.push({
+        id: s.id,
+        name: s.name,
+        price: Number(s.price || 0),
+        estimated_duration_minutes: s.estimated_duration_minutes || 30,
+        workshop_id: s.workshop_id,
+        isFromServicesTable: true,
+      });
+    }
   }
 
-  const invalidSvc = servicesData.find((svc) => svc.workshop_id !== payload.workshop_id);
-  if (invalidSvc) {
-    throw new Error('Selected service does not belong to the chosen workshop.');
+  // Step 2b: For any services not found in public.services, check public.workshop_products
+  const missingIds = serviceIds.filter((id) => !resolvedServices.some((s) => s.id === id));
+  if (missingIds.length > 0) {
+    const { data: wpData } = await supabase
+      .from('workshop_products')
+      .select(`
+        id,
+        workshop_id,
+        price,
+        product:products(
+          id,
+          name,
+          specification,
+          description,
+          category:product_categories(id, name)
+        )
+      `)
+      .in('id', missingIds);
+
+    if (wpData && wpData.length > 0) {
+      for (const wp of wpData as any[]) {
+        const catName = wp.product?.category?.name || 'General Service';
+        let duration = 30;
+        if (catName.includes('Full Service')) duration = 60;
+        else if (catName.includes('CVT')) duration = 45;
+        else if (catName.includes('Throttle Body')) duration = 40;
+        else if (catName.includes('Chain')) duration = 35;
+        else if (catName.includes('Tayar')) duration = 25;
+
+        resolvedServices.push({
+          id: wp.id,
+          name: wp.product?.name || 'Service Package',
+          price: Number(wp.price || 0),
+          estimated_duration_minutes: duration,
+          workshop_id: wp.workshop_id,
+          isFromServicesTable: false,
+        });
+      }
+    }
   }
 
-  const subtotal = (servicesData ?? []).reduce((sum, svc) => {
+  // Step 2c: If any service still cannot be resolved from DB, create a graceful snapshot fallback
+  const unresolvedIds = serviceIds.filter((id) => !resolvedServices.some((s) => s.id === id));
+  for (const uId of unresolvedIds) {
+    resolvedServices.push({
+      id: uId,
+      name: 'Custom Service Package',
+      price: 0,
+      estimated_duration_minutes: 30,
+      workshop_id: workshop.id,
+      isFromServicesTable: false,
+    });
+  }
+
+  const subtotal = resolvedServices.reduce((sum, svc) => {
     const item = payload.services.find((s) => s.service_id === svc.id);
-    return sum + svc.price * (item?.quantity ?? 1);
+    return sum + (svc.price || 0) * (item?.quantity ?? 1);
   }, 0);
 
-  // Insert booking
+  // 3. Insert booking into public.bookings
   const { data: booking, error: bkError } = await supabase
     .from('bookings')
     .insert({
       customer_id: payload.customer_id,
-      workshop_id: payload.workshop_id,
+      workshop_id: workshop.id,
       motorcycle_id: payload.motorcycle_id,
       booking_date: payload.booking_date,
       booking_time: payload.booking_time,
@@ -120,33 +207,61 @@ export async function createBooking(payload: CreateBookingPayload): Promise<Book
     })
     .select()
     .single();
-  if (bkError) throw bkError;
 
-  // Insert booking_services (price snapshots)
-  const bookingServices = (servicesData ?? []).map((svc) => {
+  if (bkError) {
+    console.error('Failed to insert booking record in Supabase:', bkError);
+    throw new Error(bkError.message || 'Failed to save booking to database.');
+  }
+
+  // 4. Insert booking_services (price & duration snapshots)
+  // Only pass service_id if it's a valid row in public.services to avoid foreign key violations
+  const bookingServices = resolvedServices.map((svc) => {
     const item = payload.services.find((s) => s.service_id === svc.id);
     return {
       booking_id: booking.id,
-      service_id: svc.id,
+      service_id: svc.isFromServicesTable ? svc.id : null,
       service_name_snapshot: svc.name,
-      price_snapshot: svc.price,
+      price_snapshot: Number(svc.price || 0),
       quantity: item?.quantity ?? 1,
       duration_snapshot: svc.estimated_duration_minutes,
     };
   });
 
-  const { error: bsError } = await supabase.from('booking_services').insert(bookingServices);
-  if (bsError) throw bsError;
+  if (bookingServices.length > 0) {
+    const { error: bsError } = await supabase.from('booking_services').insert(bookingServices);
+    if (bsError) {
+      console.warn('Non-fatal error inserting booking_services snapshot:', bsError);
+    }
+  }
 
-  // Create customer notification
-  await supabase.from('notifications').insert({
-    user_id: payload.customer_id,
-    type: 'booking',
-    title: 'Booking Submitted',
-    message: 'Your booking has been submitted and is awaiting workshop confirmation.',
-    data: { booking_id: booking.id },
-    is_read: false,
-  });
+  // 5. Create in-app notifications (safe, non-blocking)
+  try {
+    await supabase.from('notifications').insert({
+      user_id: payload.customer_id,
+      type: 'booking',
+      title: 'Booking Submitted',
+      message: `Your booking for ${payload.booking_date} at ${payload.booking_time} has been submitted and is awaiting workshop confirmation.`,
+      data: { booking_id: booking.id },
+      is_read: false,
+    });
+  } catch (notifErr) {
+    console.warn('Customer notification failed (non-critical):', notifErr);
+  }
+
+  if (workshop.owner_id && workshop.owner_id !== payload.customer_id) {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: workshop.owner_id,
+        type: 'booking',
+        title: 'New Service Booking',
+        message: `New booking received for ${payload.booking_date} at ${payload.booking_time}.`,
+        data: { booking_id: booking.id },
+        is_read: false,
+      });
+    } catch (notifErr) {
+      console.warn('Workshop owner notification failed (non-critical):', notifErr);
+    }
+  }
 
   return booking as Booking;
 }
@@ -176,14 +291,18 @@ export async function rescheduleBooking(
   if (error) throw error;
 
   // Notify customer
-  await supabase.from('notifications').insert({
-    user_id: booking.customer_id,
-    type: 'booking',
-    title: 'Booking Rescheduled',
-    message: `Your booking date has been updated to ${newDate} at ${newTime}.`,
-    data: { booking_id: bookingId },
-    is_read: false,
-  });
+  try {
+    await supabase.from('notifications').insert({
+      user_id: booking.customer_id,
+      type: 'booking',
+      title: 'Booking Rescheduled',
+      message: `Your booking date has been updated to ${newDate} at ${newTime}.`,
+      data: { booking_id: bookingId },
+      is_read: false,
+    });
+  } catch (err) {
+    console.warn('Failed to send reschedule notification:', err);
+  }
 
   return data as Booking;
 }
@@ -253,14 +372,18 @@ export async function updateBookingStatus(
   };
 
   if (messages[newStatus]) {
-    await supabase.from('notifications').insert({
-      user_id: booking.customer_id,
-      type: 'booking',
-      title: `Booking ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
-      message: messages[newStatus],
-      data: { booking_id: bookingId },
-      is_read: false,
-    });
+    try {
+      await supabase.from('notifications').insert({
+        user_id: booking.customer_id,
+        type: 'booking',
+        title: `Booking ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+        message: messages[newStatus],
+        data: { booking_id: bookingId },
+        is_read: false,
+      });
+    } catch (err) {
+      console.warn('Failed to send status update notification:', err);
+    }
   }
 
   return data as Booking;

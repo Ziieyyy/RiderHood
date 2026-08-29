@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { COLORS } from '../../../constants/theme';
+import { COLORS, AppThemeColors } from '../../../constants/theme';
 import { Header } from '../../../components/Header';
 import { CustomButton } from '../../../components/CustomButton';
 import {
@@ -35,6 +35,7 @@ import {
 import { getBooking, cancelBooking } from '../../../services/bookingService';
 import { createReview } from '../../../services/reviewService';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme, useThemedStyles } from '../../../context/ThemeContext';
 import type { Booking, BookingService } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
 
@@ -43,6 +44,8 @@ export default function CustomerBookingDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -332,254 +335,255 @@ export default function CustomerBookingDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 12,
-  },
-  emptyCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
-  emptyTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  statusHeaderCard: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 16,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusHeaderTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  timelineContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 8,
-  },
-  timelineStep: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  stepCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 4,
-  },
-  stepCircleCompleted: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  stepNum: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  stepTitle: {
-    color: COLORS.textMuted,
-    fontSize: 8,
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-  stepTitleCompleted: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  stepLine: {
-    position: 'absolute',
-    top: 10,
-    right: '-50%',
-    left: '50%',
-    height: 2,
-    backgroundColor: COLORS.border,
-    zIndex: -1,
-  },
-  stepLineCompleted: {
-    backgroundColor: COLORS.primary,
-  },
-  card: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
-  },
-  cardTitle: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  workshopName: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  workshopAddress: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  bikeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-  bikeTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  bikePlate: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  svcRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  svcName: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  svcQty: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  svcPrice: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 4,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  totalLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  totalVal: {
-    color: COLORS.primary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  actionSection: {
-    gap: 10,
-    marginTop: 8,
-  },
-  cancelBookingBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 14,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.dangerBg,
-  },
-  cancelBookingText: {
-    color: COLORS.danger,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 24,
-    padding: 20,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 14,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginVertical: 4,
-  },
-  inputGroup: {
-    width: '100%',
-    gap: 6,
-  },
-  inputLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: COLORS.textPrimary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: 13,
-  },
-});
+const createStyles = (colors: AppThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 12,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    statusHeaderCard: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 16,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    statusHeaderTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '900',
+    },
+    timelineContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: 8,
+    },
+    timelineStep: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    stepCircle: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 4,
+    },
+    stepCircleCompleted: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    stepNum: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    stepTitle: {
+      color: colors.textMuted,
+      fontSize: 8,
+      textAlign: 'center',
+      fontWeight: '700',
+    },
+    stepTitleCompleted: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    stepLine: {
+      position: 'absolute',
+      top: 10,
+      right: '-50%',
+      left: '50%',
+      height: 2,
+      backgroundColor: colors.border,
+      zIndex: -1,
+    },
+    stepLineCompleted: {
+      backgroundColor: colors.primary,
+    },
+    card: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    cardTitle: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    workshopName: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    workshopAddress: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    bikeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 4,
+    },
+    bikeTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    bikePlate: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    svcRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 6,
+    },
+    svcName: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    svcQty: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    svcPrice: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 4,
+    },
+    totalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    totalLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    totalVal: {
+      color: colors.primary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    actionSection: {
+      gap: 10,
+      marginTop: 8,
+    },
+    cancelBookingBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 14,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: colors.dangerBg,
+    },
+    cancelBookingText: {
+      color: colors.danger,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.surfaceContainer,
+      borderRadius: 24,
+      padding: 20,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.primary,
+      gap: 14,
+      alignItems: 'center',
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    starsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginVertical: 4,
+    },
+    inputGroup: {
+      width: '100%',
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: 13,
+    },
+  });

@@ -12,7 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { COLORS, DARK_COLORS } from '../../constants/theme';
 import {
   getWorkshopBookings,
   updateBookingStatus,
@@ -34,22 +34,22 @@ import {
   Play,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
-
+import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import type { Booking, BookingStatus } from '../../types/database';
 import { useTranslation } from '../../i18n';
 
-const STATUS_CONFIG: Record<BookingStatus, { label: string; color: string; bg: string }> = {
+const getStatusConfig = (colors: typeof DARK_COLORS): Record<BookingStatus, { label: string; color: string; bg: string }> => ({
   pending:     { label: 'Pending',     color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' },
   confirmed:   { label: 'Confirmed',   color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' },
-  in_progress: { label: 'In Progress', color: COLORS.primary, bg: 'rgba(255, 107, 0, 0.15)' },
-  completed:   { label: 'Completed',   color: COLORS.success, bg: 'rgba(16, 185, 129, 0.15)' },
-  cancelled:   { label: 'Cancelled',   color: COLORS.danger, bg: 'rgba(239, 68, 68, 0.15)' },
-  rejected:    { label: 'Rejected',    color: COLORS.danger, bg: 'rgba(239, 68, 68, 0.15)' },
-  no_show:     { label: 'No Show',     color: COLORS.textMuted, bg: 'rgba(113, 113, 122, 0.15)' },
-};
+  in_progress: { label: 'In Progress', color: colors.primary, bg: 'rgba(255, 107, 0, 0.15)' },
+  completed:   { label: 'Completed',   color: colors.success, bg: 'rgba(16, 185, 129, 0.15)' },
+  cancelled:   { label: 'Cancelled',   color: colors.danger, bg: 'rgba(239, 68, 68, 0.15)' },
+  rejected:    { label: 'Rejected',    color: colors.danger, bg: 'rgba(239, 68, 68, 0.15)' },
+  no_show:     { label: 'No Show',     color: colors.textMuted, bg: 'rgba(113, 113, 122, 0.15)' },
+});
 
 const NEXT_ACTIONS: Partial<Record<BookingStatus, { to: BookingStatus; label: string; primary?: boolean }[]>> = {
   pending:     [{ to: 'confirmed', label: 'Accept', primary: true }, { to: 'rejected', label: 'Reject' }],
@@ -62,6 +62,9 @@ export default function WorkshopBookingsScreen() {
   const params = useLocalSearchParams<{ id?: string; status?: string; filter?: string }>();
   const { profile } = useAuth();
   const { isPhone, contentPadding } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const STATUS_CONFIG = getStatusConfig(colors);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [workshopId, setWorkshopId] = useState<string | null>(null);
@@ -559,78 +562,79 @@ export default function WorkshopBookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: COLORS.background },
-  loadingText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-  searchBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
-  searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10, height: 44 },
-  searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: 13 },
-  timeframeRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 6, gap: 8 },
-  timeframeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: COLORS.cards, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  activeTimeframeBtn: { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary },
-  timeframeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
-  activeTimeframeText: { color: COLORS.primary, fontWeight: '800' },
-  tabScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
-  tab: { backgroundColor: COLORS.cards, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
-  activeTab: { backgroundColor: COLORS.elevatedCards },
-  tabText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800' },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: COLORS.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: COLORS.border },
-  emptyTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  emptyDesc: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
-  bookingCard: { backgroundColor: COLORS.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14, gap: 12 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  refCode: { color: COLORS.primary, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
-  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.secondaryBackground, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  customerName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
-  customerPhone: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '500' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
-  statusText: { fontSize: 10, fontWeight: '900' },
-  bikeBox: { backgroundColor: COLORS.secondaryBackground, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
-  bikeTag: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
-  dateRow: { flexDirection: 'row', gap: 16 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { color: COLORS.textSecondary, fontSize: 12 },
-  servicesList: { gap: 3 },
-  serviceItem: { color: COLORS.textSecondary, fontSize: 12 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12 },
-  totalText: { color: COLORS.primary, fontSize: 16, fontWeight: '900' },
-  actionsRow: { flexDirection: 'row', gap: 8 },
-  viewBtn: { backgroundColor: COLORS.elevatedCards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border },
-  viewBtnText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '800' },
-  reschedBtn: { backgroundColor: 'rgba(245, 158, 11, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.warning },
-  reschedBtnText: { color: COLORS.warning, fontSize: 11, fontWeight: '800' },
-  actionBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  primaryBtn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  secondaryBtn: { backgroundColor: COLORS.elevatedCards, borderColor: COLORS.borderHighlight },
-  dangerBtn: { backgroundColor: COLORS.dangerBg, borderColor: COLORS.danger },
-  actionBtnText: { fontSize: 11, fontWeight: '900' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: COLORS.elevatedCards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.borderHighlight, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 12 },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900', letterSpacing: 0.5 },
-  detailScroll: { gap: 14 },
-  detailSection: { backgroundColor: COLORS.cards, padding: 14, borderRadius: 14, gap: 4, borderWidth: 1, borderColor: COLORS.border },
-  detailSectionLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  detailValueBold: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800' },
-  detailValue: { color: COLORS.textSecondary, fontSize: 12 },
-  detailSvcRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
-  detailSvcName: { color: COLORS.textSecondary, fontSize: 12 },
-  detailSvcPrice: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
-  detailTotalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 8, marginTop: 6 },
-  detailTotalLabel: { color: COLORS.primary, fontSize: 12, fontWeight: '900' },
-  detailTotalVal: { color: COLORS.primary, fontSize: 14, fontWeight: '900' },
-  detailActionContainer: { marginTop: 10 },
-  modalActionRow: { flexDirection: 'row', gap: 10 },
-  modalActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  completedBadgeBox: { backgroundColor: 'rgba(16, 185, 129, 0.15)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.success },
-  completedBadgeText: { color: COLORS.success, fontSize: 13, fontWeight: '900' },
-  rescheduleForm: { gap: 12 },
-  currentScheduleText: { color: COLORS.primary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  formLabel: { color: COLORS.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-  formInput: { backgroundColor: COLORS.cards, color: COLORS.textPrimary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, borderWidth: 1, borderColor: COLORS.border },
-  cancelModalBtn: { backgroundColor: COLORS.cards, borderWidth: 1, borderColor: COLORS.border },
-  cancelModalText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '800' },
-});
+const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
+    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    searchBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+    searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, gap: 10, height: 44 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    timeframeRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 6, gap: 8 },
+    timeframeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.cards, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+    activeTimeframeBtn: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
+    timeframeText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+    activeTimeframeText: { color: colors.primary, fontWeight: '800' },
+    tabScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
+    tab: { backgroundColor: colors.cards, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+    activeTab: { backgroundColor: colors.elevatedCards },
+    tabText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800' },
+    scrollContent: { padding: 20, paddingBottom: 40 },
+    emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: colors.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border },
+    emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+    emptyDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
+    bookingCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 14, gap: 12 },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    refCode: { color: colors.primary, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+    customerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondaryBackground, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+    customerName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+    customerPhone: { color: colors.textSecondary, fontSize: 11, fontWeight: '500' },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+    statusText: { fontSize: 10, fontWeight: '900' },
+    bikeBox: { backgroundColor: colors.secondaryBackground, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+    bikeTag: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+    dateRow: { flexDirection: 'row', gap: 16 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    metaText: { color: colors.textSecondary, fontSize: 12 },
+    servicesList: { gap: 3 },
+    serviceItem: { color: colors.textSecondary, fontSize: 12 },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
+    totalText: { color: colors.primary, fontSize: 16, fontWeight: '900' },
+    actionsRow: { flexDirection: 'row', gap: 8 },
+    viewBtn: { backgroundColor: colors.elevatedCards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+    viewBtnText: { color: colors.textPrimary, fontSize: 11, fontWeight: '800' },
+    reschedBtn: { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.warning },
+    reschedBtnText: { color: colors.warning, fontSize: 11, fontWeight: '800' },
+    actionBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+    primaryBtn: { backgroundColor: colors.primary, borderColor: colors.primary },
+    secondaryBtn: { backgroundColor: colors.elevatedCards, borderColor: colors.borderHighlight },
+    dangerBtn: { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+    actionBtnText: { fontSize: 11, fontWeight: '900' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: colors.elevatedCards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: colors.borderHighlight, maxHeight: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 },
+    modalTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '900', letterSpacing: 0.5 },
+    detailScroll: { gap: 14 },
+    detailSection: { backgroundColor: colors.cards, padding: 14, borderRadius: 14, gap: 4, borderWidth: 1, borderColor: colors.border },
+    detailSectionLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+    detailValueBold: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+    detailValue: { color: colors.textSecondary, fontSize: 12 },
+    detailSvcRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
+    detailSvcName: { color: colors.textSecondary, fontSize: 12 },
+    detailSvcPrice: { color: colors.textPrimary, fontSize: 12, fontWeight: '700' },
+    detailTotalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, marginTop: 6 },
+    detailTotalLabel: { color: colors.primary, fontSize: 12, fontWeight: '900' },
+    detailTotalVal: { color: colors.primary, fontSize: 14, fontWeight: '900' },
+    detailActionContainer: { marginTop: 10 },
+    modalActionRow: { flexDirection: 'row', gap: 10 },
+    modalActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    completedBadgeBox: { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.success },
+    completedBadgeText: { color: colors.success, fontSize: 13, fontWeight: '900' },
+    rescheduleForm: { gap: 12 },
+    currentScheduleText: { color: colors.primary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+    formLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+    formInput: { backgroundColor: colors.cards, color: colors.textPrimary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, borderWidth: 1, borderColor: colors.border },
+    cancelModalBtn: { backgroundColor: colors.cards, borderWidth: 1, borderColor: colors.border },
+    cancelModalText: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
+  });
