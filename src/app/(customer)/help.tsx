@@ -64,11 +64,11 @@ export default function HelpSupportScreen() {
   ];
 
   const handleContactWhatsApp = () => {
-    Linking.openURL('https://wa.me/60123456789?text=Hello%20RiderHood%20Support');
+    Linking.openURL('https://wa.me/60139657893?text=Hello%20RiderHood%20Support');
   };
 
   const handleContactEmail = () => {
-    Linking.openURL('mailto:support@riderhood.my?subject=RiderHood%20Support%20Inquiry');
+    Linking.openURL('mailto:riderhoodmotor@gmail.com?subject=RiderHood%20Support%20Inquiry');
   };
 
   const filteredTopics = topics.filter(t =>
@@ -129,17 +129,25 @@ export default function HelpSupportScreen() {
         <Text style={styles.sectionTitle}>{t('help.contactUs').toUpperCase()}</Text>
 
         <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>{t('help.contactSupport')}</Text>
-          <Text style={styles.contactSub}>{t('help.contactSupportDesc')}</Text>
+          <View style={styles.contactHeaderRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactTitle}>{t('help.contactSupport')}</Text>
+              <Text style={styles.contactSub}>{t('help.contactSupportDesc')}</Text>
+            </View>
+            <View style={styles.phoneBadge}>
+              <Phone color={colors.primary} size={13} />
+              <Text style={styles.phoneBadgeText}>013-965 7893</Text>
+            </View>
+          </View>
 
           <View style={styles.contactBtnsRow}>
-            <TouchableOpacity style={styles.contactBtn} onPress={handleContactWhatsApp}>
-              <MessageSquare color={COLORS.primary} size={16} />
+            <TouchableOpacity style={styles.contactBtn} onPress={handleContactWhatsApp} activeOpacity={0.7}>
+              <MessageSquare color={colors.primary} size={15} />
               <Text style={styles.contactBtnText}>WHATSAPP</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.contactBtn} onPress={handleContactEmail}>
-              <Mail color={COLORS.primary} size={16} />
+            <TouchableOpacity style={styles.contactBtn} onPress={handleContactEmail} activeOpacity={0.7}>
+              <Mail color={colors.primary} size={15} />
               <Text style={styles.contactBtnText}>{t('help.emailSupport').toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
@@ -245,7 +253,14 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       padding: 16,
       borderWidth: 1,
       borderColor: colors.primaryGlow,
+      gap: 12,
+    },
+    contactHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
       gap: 10,
+      flexWrap: 'wrap',
     },
     contactTitle: {
       color: colors.textPrimary,
@@ -256,20 +271,40 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       color: colors.textSecondary,
       fontSize: 11,
       lineHeight: 16,
+      marginTop: 2,
+    },
+    phoneBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    phoneBadgeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
     },
     contactBtnsRow: {
       flexDirection: 'row',
-      gap: 10,
-      marginTop: 6,
+      gap: 8,
+      flexWrap: 'wrap',
+      marginTop: 4,
     },
     contactBtn: {
       flex: 1,
+      minWidth: 100,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.surface,
       paddingVertical: 10,
+      paddingHorizontal: 8,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.primary,
