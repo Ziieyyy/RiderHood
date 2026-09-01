@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Phone,
   Mail,
+  ExternalLink,
 } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
@@ -144,6 +145,19 @@ export default function HelpSupportScreen() {
           </View>
         </View>
 
+        {/* About RiderHood Website Launcher */}
+        <TouchableOpacity
+          style={styles.reportCard}
+          onPress={() => Linking.openURL('https://riderhood.my')}
+        >
+          <ExternalLink color={COLORS.primary} size={20} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>{t('help.aboutRiderHood').toUpperCase()}</Text>
+            <Text style={styles.reportSub}>riderhood.my</Text>
+          </View>
+          <ChevronRight color={COLORS.textMuted} size={16} />
+        </TouchableOpacity>
+
         {/* Report a Problem Launcher */}
         <TouchableOpacity
           style={styles.reportCard}
@@ -169,7 +183,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     },
     scrollContent: {
       padding: 16,
-      paddingBottom: 40,
+      paddingBottom: 110,
       gap: 14,
     },
     searchBox: {

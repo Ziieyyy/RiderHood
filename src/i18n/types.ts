@@ -991,8 +991,13 @@ export interface TranslationSchema {
 
   profile: {
     personalInfo: string;
+    editPersonalInfo: string;
     editProfile: string;
     profileSaved: string;
+    avatarUrl: string;
+    chooseAvatar: string;
+    removeAvatar: string;
+    avatarUpdated: string;
   };
 
   security: {

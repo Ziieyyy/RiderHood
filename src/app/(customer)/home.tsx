@@ -495,7 +495,7 @@ export default function CustomerHomeScreen() {
 const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { paddingVertical: 16, paddingBottom: 40 },
+    scrollContent: { paddingVertical: 16, paddingBottom: 110 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
     loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
     errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 12 },

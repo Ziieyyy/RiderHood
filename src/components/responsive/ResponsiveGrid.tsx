@@ -54,7 +54,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
                     flexBasis: activeCols === 2 ? '48%' : activeCols === 3 ? '31.5%' : '23.5%',
                     flexGrow: 1,
                     flexShrink: 1,
-                    minWidth: activeCols > 1 ? 260 : '100%',
+                    minWidth: isPhone ? 140 : activeCols > 1 ? 260 : '100%',
                   },
             ]}
           >

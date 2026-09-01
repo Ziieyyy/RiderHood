@@ -6,6 +6,7 @@ import { Cpu, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { useTranslation } from '../i18n';
+import { AppLogo } from '../components/AppLogo';
 
 export default function SplashScreen() {
   const { t } = useTranslation();
@@ -36,10 +37,10 @@ export default function SplashScreen() {
       
       <View style={styles.content}>
         {/* Glow Logo */}
-        <Image
-          source={require('../../assets/images/riderhood-logo.png')}
-          style={styles.splashLogoImg}
-          resizeMode="contain"
+        <AppLogo
+          size={120}
+          containerStyle={{ marginBottom: 20 }}
+          alwaysDarkBg={!isDark}
         />
 
         {/* Brand Name */}

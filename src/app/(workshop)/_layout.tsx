@@ -32,6 +32,7 @@ import { useTranslation } from '../../i18n';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { getMyWorkshop } from '../../services/workshopService';
 import { useResponsive } from '../../hooks/useResponsive';
+import { AppLogo } from '../../components/AppLogo';
 import type { Workshop } from '../../types/database';
 
 function CustomWorkshopDrawerContent(props: any) {
@@ -66,11 +67,7 @@ function CustomWorkshopDrawerContent(props: any) {
       {/* Brand Header */}
       <View style={sidebarStyles.brandCard}>
         <View style={sidebarStyles.logoRow}>
-          <Image
-            source={require('../../../assets/images/riderhood-logo.png')}
-            style={sidebarStyles.drawerLogoImg}
-            resizeMode="contain"
-          />
+          <AppLogo size={36} />
           <View>
             <Text style={sidebarStyles.brandTitle}>RIDERHOOD</Text>
             <Text style={sidebarStyles.brandSub}>WORKSHOP ADMIN</Text>
@@ -158,19 +155,9 @@ function CustomWorkshopDrawerContent(props: any) {
 }
 
 export default function WorkshopDrawerLayout() {
-  const router = useRouter();
   const { user, profile, isLoading } = useAuth();
   const { isPhone } = useResponsive();
   const { colors } = useTheme();
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user || !profile || (profile.role !== 'workshop_admin' && profile.role !== 'super_admin')) {
-        Alert.alert('Access Denied', 'You must be logged in as an authorized Workshop Admin to access management tools.');
-        router.replace('/' as any);
-      }
-    }
-  }, [user, profile, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -181,7 +168,11 @@ export default function WorkshopDrawerLayout() {
   }
 
   if (!user || !profile || (profile.role !== 'workshop_admin' && profile.role !== 'super_admin')) {
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
   }
 
   return (

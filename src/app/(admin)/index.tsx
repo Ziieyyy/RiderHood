@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/theme';
 import { getPlatformStats, getAllUsers, setUserStatus } from '../../services/adminService';
 import { getAllWorkshops, setWorkshopVerification, setWorkshopStatus } from '../../services/workshopService';
-import { Header } from '../../components/Header';
 import { Users, Building2, Calendar, TrendingUp, RefreshCw, Shield, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
@@ -69,7 +68,6 @@ export default function AdminDashboardScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title={t('superAdmin.commandCenter')} subtitle={t('superAdmin.superAdminRole')} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
@@ -81,7 +79,6 @@ export default function AdminDashboardScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title={t('superAdmin.commandCenter')} subtitle={t('superAdmin.superAdminRole')} />
         <View style={styles.centered}>
           <RefreshCw color={COLORS.danger} size={40} />
           <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
@@ -96,7 +93,6 @@ export default function AdminDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title={t('superAdmin.commandCenter')} subtitle={`${t('auth.welcomeTitle')}, ${user?.full_name}`} />
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}

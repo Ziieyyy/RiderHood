@@ -114,6 +114,82 @@ export async function deleteMotorcyclePhoto(
   }
 }
 
+// ─── Generic helper to upload any local URI/blob to Supabase Storage ───
+export async function uploadPhotoUriToStorage(
+  userId: string,
+  folder: string,
+  photoUri: string
+): Promise<string> {
+  if (!photoUri) return photoUri;
+
+  // If it's already an external HTTPS url (and not a local blob), no need to upload
+  if (photoUri.startsWith('https://') && !photoUri.includes('blob:')) {
+    return photoUri;
+  }
+
+  if (photoUri.startsWith('file://') || photoUri.startsWith('blob:') || photoUri.startsWith('data:') || photoUri.startsWith('http://localhost')) {
+    const bucketsToTry = ['avatars', 'motorcycle-images', 'public', 'documents'];
+    const storagePath = `${folder}/${userId}_${Date.now()}.jpg`;
+
+    for (const b of bucketsToTry) {
+      try {
+        await supabase.storage.createBucket(b, { public: true }).catch(() => {});
+        const response = await fetch(photoUri);
+        const blob = await response.blob();
+
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from(b)
+          .upload(storagePath, blob, { contentType: 'image/jpeg', upsert: true });
+
+        if (!uploadErr && uploadData) {
+          const { data: urlData } = supabase.storage.from(b).getPublicUrl(uploadData.path);
+          if (urlData?.publicUrl) {
+            return urlData.publicUrl;
+          }
+        }
+      } catch (err: any) {
+        console.warn(`Storage upload note for bucket "${b}":`, err?.message);
+      }
+    }
+  }
+
+  return photoUri;
+}
+
+// ─── Upload Profile Avatar (CRUD: Create/Update Avatar) ──────
+export async function uploadProfileAvatar(userId: string, photoUri: string): Promise<string> {
+  const publicUrl = await uploadPhotoUriToStorage(userId, 'avatars', photoUri);
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      avatar_url: publicUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.warn('Update profile avatar DB error:', error.message);
+  }
+
+  return publicUrl;
+}
+
+// ─── Remove Profile Avatar (CRUD: Delete Avatar) ──────────────
+export async function removeProfileAvatar(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      avatar_url: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to remove avatar photo.');
+  }
+}
+
 // ─── Set photo as main cover ──────────────────────────────────
 export async function setMainMotorcyclePhoto(
   motorcycleId: string,
@@ -135,3 +211,5 @@ export async function setMainMotorcyclePhoto(
   // Update primary cover in motorcycles table
   await updateMotorcycle(motorcycleId, { photo_url: photoUrl });
 }
+
+

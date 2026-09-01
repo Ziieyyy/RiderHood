@@ -1,12 +1,90 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
-import { COLORS } from '../../constants/theme';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, Wrench, Calendar, Clock, User } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useTheme } from '../../context/ThemeContext';
 import { ResponsiveSidebar } from '../../components/responsive/ResponsiveSidebar';
+
+const PRIMARY_TABS = [
+  { name: 'home', icon: Home, labelKey: 'navigation.home' },
+  { name: 'workshops', icon: Wrench, labelKey: 'navigation.workshops' },
+  { name: 'booking', icon: Calendar, labelKey: 'navigation.bookings' },
+  { name: 'history', icon: Clock, labelKey: 'navigation.history' },
+  { name: 'profile', icon: User, labelKey: 'navigation.profile' },
+] as const;
+
+function CustomerBottomTabBar({ state, navigation }: BottomTabBarProps) {
+  const { isPhone } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  if (!isPhone) return null;
+
+  const currentRoute = state.routes[state.index];
+  const currentRouteName = currentRoute?.name;
+
+  return (
+    <View
+      style={[
+        bottomTabStyles.barContainer,
+        {
+          backgroundColor: colors.surfaceContainer,
+          borderTopColor: colors.border,
+        },
+      ]}
+    >
+      {PRIMARY_TABS.map((tab) => {
+        const isFocused = currentRouteName === tab.name;
+        const Icon = tab.icon;
+        const label = t(tab.labelKey as any);
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: tab.name,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(tab.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={tab.name}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={label}
+            onPress={onPress}
+            style={bottomTabStyles.tabItem}
+            activeOpacity={0.7}
+          >
+            <View style={bottomTabStyles.iconContainer}>
+              <Icon
+                color={isFocused ? colors.primary : colors.textMuted}
+                size={22}
+              />
+            </View>
+            <Text
+              style={[
+                bottomTabStyles.tabLabel,
+                { color: isFocused ? colors.primary : colors.textMuted },
+                isFocused && bottomTabStyles.tabLabelActive,
+              ]}
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function CustomerTabsLayout() {
   const { t } = useTranslation();
@@ -15,70 +93,40 @@ export default function CustomerTabsLayout() {
 
   const tabsContent = (
     <Tabs
+      tabBar={(props) => <CustomerBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: isPhone
-          ? {
-              backgroundColor: colors.surfaceContainer,
-              borderTopColor: colors.border,
-              borderTopWidth: 1,
-              height: 64,
-              paddingTop: 4,
-              paddingBottom: 6,
-            }
-          : {
-              display: 'none',
-            },
-        tabBarItemStyle: {
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingVertical: 2,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
-          lineHeight: 12,
-          marginTop: 1,
-          marginBottom: 0,
-        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: t('navigation.home'),
-          tabBarIcon: ({ color }) => <Home color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="workshops"
         options={{
           title: t('navigation.workshops'),
-          tabBarIcon: ({ color }) => <Wrench color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="booking"
         options={{
           title: t('navigation.bookings'),
-          tabBarIcon: ({ color }) => <Calendar color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: t('navigation.history'),
-          tabBarIcon: ({ color }) => <Clock color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('navigation.profile'),
-          tabBarIcon: ({ color }) => <User color={color} size={20} />,
         }}
       />
       <Tabs.Screen
@@ -203,6 +251,37 @@ export default function CustomerTabsLayout() {
     </View>
   );
 }
+
+const bottomTabStyles = StyleSheet.create({
+  barContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    minHeight: Platform.OS === 'ios' ? 76 : 64,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  iconContainer: {
+    marginBottom: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tabLabelActive: {
+    fontWeight: '800',
+  },
+});
 
 const styles = StyleSheet.create({
   desktopLayoutContainer: {

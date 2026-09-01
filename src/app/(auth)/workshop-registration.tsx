@@ -21,6 +21,7 @@ import {
   PasswordSecurityModal,
   PasswordModalMode,
 } from '../../components/PasswordSecurityModal';
+import { AppLogo } from '../../components/AppLogo';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { useTranslation } from '../../i18n';
 
@@ -152,11 +153,7 @@ export default function WorkshopRegistrationScreen() {
           </TouchableOpacity>
 
         <View style={styles.brandHeader}>
-          <Image
-            source={require('../../../assets/images/riderhood-logo.png')}
-            style={styles.brandLogoImg}
-            resizeMode="contain"
-          />
+          <AppLogo size={52} containerStyle={{ marginBottom: 10 }} />
           <Text style={styles.brandTitle}>{t('auth.workshopPartnerApp').toUpperCase()}</Text>
           <Text style={styles.brandSubtitle}>
             {t('auth.joinRiderHood')}

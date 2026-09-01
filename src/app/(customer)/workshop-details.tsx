@@ -206,34 +206,37 @@ export default function WorkshopDetailsScreen() {
     }
     try {
       const bks = await getCompletedBookingsWithoutReview(user.id, workshopId);
-      setCompletedBookings(bks);
-      if (bks.length > 0) {
+      setCompletedBookings(bks || []);
+      if (bks && bks.length > 0) {
         setSelectedBookingForReview(bks[0]);
+      } else {
+        setSelectedBookingForReview(null);
       }
       setWriteReviewModalVisible(true);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not verify booking eligibility.');
+      console.warn('Could not verify past bookings, opening review modal:', err?.message);
+      setSelectedBookingForReview(null);
+      setWriteReviewModalVisible(true);
     }
   };
 
   const handleSubmitReview = async () => {
-    if (!selectedBookingForReview) {
-      Alert.alert('Select Booking', 'Please select a completed booking to review.');
-      return;
-    }
     if (newRating === 0) {
       Alert.alert('Star Rating Required', 'Please tap the stars to choose your rating.');
       return;
     }
-    if (!user?.id || !workshopId) return;
+    if (!user?.id || !workshopId) {
+      Alert.alert('Sign In Required', 'Please sign in to submit a review.');
+      return;
+    }
 
     setSubmittingReview(true);
     try {
       await createReviewWithPhotos({
         customer_id: user.id,
         workshop_id: workshopId,
-        booking_id: selectedBookingForReview.id,
-        motorcycle_id: selectedBookingForReview.motorcycle_id || null,
+        booking_id: selectedBookingForReview?.id || undefined,
+        motorcycle_id: selectedBookingForReview?.motorcycle_id || undefined,
         rating: newRating,
         comment: newComment.trim() || null,
       });
@@ -252,6 +255,7 @@ export default function WorkshopDetailsScreen() {
       setReviewStats(statsData);
       setCanReview(false);
     } catch (err: any) {
+      console.error('Submit review error:', err);
       Alert.alert('Error', err?.message || 'Failed to submit review.');
     } finally {
       setSubmittingReview(false);
@@ -888,7 +892,7 @@ const createStyles = (colors: AppThemeColors, isDark: boolean) =>
   topHeaderNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   topTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: 110 },
   photoContainer: { height: 180, borderRadius: 20, overflow: 'hidden', marginBottom: 16, position: 'relative', backgroundColor: colors.surfaceContainer, borderWidth: 1, borderColor: colors.border },
   workshopCoverImage: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, backgroundColor: colors.surfaceContainer, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primaryGlow, gap: 8 },

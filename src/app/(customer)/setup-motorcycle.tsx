@@ -38,6 +38,7 @@ import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { createMotorcycle } from '../../services/motorcycleService';
 import { createReminder } from '../../services/maintenanceService';
 import { createDocument, uploadAndCreateDocument } from '../../services/documentService';
+import { uploadPhotoUriToStorage } from '../../services/photoService';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../i18n';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
@@ -351,7 +352,17 @@ export default function SetupMotorcycleScreen() {
       const cleanWarrantyExpiry = warrantyExpiry && warrantyExpiry.trim() ? warrantyExpiry.trim() : null;
       const cleanLastServiceDate = lastServiceDate && lastServiceDate.trim() ? lastServiceDate.trim() : null;
 
-      // 1. Create primary motorcycle record
+      // 1. Upload photo to Supabase storage if it's a blob/local file URI
+      let finalPhotoUrl = photoUrl ? photoUrl.trim() : null;
+      if (finalPhotoUrl && (finalPhotoUrl.startsWith('blob:') || finalPhotoUrl.startsWith('file:') || finalPhotoUrl.startsWith('data:'))) {
+        try {
+          finalPhotoUrl = await uploadPhotoUriToStorage(user.id, 'motorcycles', finalPhotoUrl);
+        } catch (photoErr) {
+          console.warn('Motorcycle photo upload storage notice (non-fatal):', photoErr);
+        }
+      }
+
+      // 2. Create primary motorcycle record
       let bike: any = null;
       try {
         bike = await createMotorcycle({
@@ -368,7 +379,7 @@ export default function SetupMotorcycleScreen() {
           front_tyre_size: frontTyre.trim() || null,
           rear_tyre_size: rearTyre.trim() || null,
           current_mileage: odo,
-          photo_url: photoUrl || null,
+          photo_url: finalPhotoUrl || null,
         });
       } catch (bikeErr: any) {
         if (bikeErr?.message?.includes('already registered') || bikeErr?.message?.includes('23505')) {

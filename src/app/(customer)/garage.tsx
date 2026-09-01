@@ -33,6 +33,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getMotorcycles, deleteMotorcycle, updateMotorcycle } from '../../services/motorcycleService';
 import { calculateHealthScore } from '../../services/maintenanceService';
+import { uploadPhotoUriToStorage } from '../../services/photoService';
 import type { Motorcycle } from '../../types/database';
 import { useTranslation } from '../../i18n';
 
@@ -102,6 +103,15 @@ export default function MyGarageScreen() {
       const odo = parseInt(editMileage, 10) || editingBike.current_mileage || 0;
       const cc = parseInt(editEngineCc, 10) || null;
 
+      let finalPhotoUrl = editPhotoUrl ? editPhotoUrl.trim() : null;
+      if (finalPhotoUrl && user?.id && (finalPhotoUrl.startsWith('blob:') || finalPhotoUrl.startsWith('file:') || finalPhotoUrl.startsWith('data:'))) {
+        try {
+          finalPhotoUrl = await uploadPhotoUriToStorage(user.id, 'motorcycles', finalPhotoUrl);
+        } catch (photoErr) {
+          console.warn('Storage upload notice for motorcycle edit (non-fatal):', photoErr);
+        }
+      }
+
       const updated = await updateMotorcycle(editingBike.id, {
         nickname: editNickname.trim() || `${editBrand} ${editModel}`,
         brand: editBrand.trim(),
@@ -115,7 +125,7 @@ export default function MyGarageScreen() {
         engine_oil_type: editEngineOil.trim() || null,
         front_tyre_size: editFrontTyre.trim() || null,
         rear_tyre_size: editRearTyre.trim() || null,
-        photo_url: editPhotoUrl.trim() || null,
+        photo_url: finalPhotoUrl || null,
       });
 
       if (updated) {
@@ -526,7 +536,7 @@ const createStyles = (colors: AppThemeColors, isDark: boolean) =>
     },
     scrollContent: {
       paddingVertical: 16,
-      paddingBottom: 40,
+      paddingBottom: 110,
       flexGrow: 1,
       backgroundColor: colors.background,
     },

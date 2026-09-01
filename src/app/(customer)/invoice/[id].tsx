@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { getBooking } from '../../../services/bookingService';
 import { useTheme, useThemedStyles } from '../../../context/ThemeContext';
+import { AppLogo } from '../../../components/AppLogo';
 import type { Booking } from '../../../types/database';
 import { useTranslation } from '../../../i18n';
 
@@ -109,11 +110,7 @@ export default function CustomerInvoiceScreen() {
           {/* Header & Logo */}
           <View style={styles.paperHeader}>
             <View style={styles.brandRow}>
-              <Image
-                source={require('../../../../assets/images/riderhood-logo.png')}
-                style={styles.invoiceLogoImg}
-                resizeMode="contain"
-              />
+              <AppLogo size={36} />
               <Text style={styles.brandTitle}>RIDERHOOD</Text>
             </View>
             <Text style={styles.brandTagline}>{t('invoice.title').toUpperCase()}</Text>

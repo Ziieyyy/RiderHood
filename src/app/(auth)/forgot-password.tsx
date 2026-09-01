@@ -29,6 +29,7 @@ import { CustomButton } from '../../components/CustomButton';
 import { PasswordInput } from '../../components/PasswordInput';
 import { VerificationCodeInput } from '../../components/VerificationCodeInput';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
+import { AppLogo } from '../../components/AppLogo';
 import { supabase } from '../../lib/supabase';
 import {
   requestResetCode,
@@ -314,11 +315,7 @@ export default function ForgotPasswordScreen() {
 
           {/* Brand Header */}
           <View style={styles.brandHeader}>
-            <Image
-              source={require('../../../assets/images/riderhood-logo.png')}
-              style={styles.brandLogoImg}
-              resizeMode="contain"
-            />
+            <AppLogo size={52} containerStyle={{ marginBottom: 10 }} />
             <Text style={styles.brandTitle}>RIDERHOOD</Text>
             <Text style={styles.brandSubtitle}>Premium Motor Care</Text>
           </View>

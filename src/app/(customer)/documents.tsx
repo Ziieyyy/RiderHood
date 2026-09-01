@@ -514,7 +514,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     },
     scrollContent: {
       padding: 16,
-      paddingBottom: 40,
+      paddingBottom: 110,
       gap: 10,
     },
     addBtnHeader: {

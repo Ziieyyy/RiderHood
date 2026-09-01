@@ -36,6 +36,7 @@ import { getMotorcycles, updateMotorcycle, deleteMotorcycle } from '../../servic
 import { calculateHealthScore } from '../../services/maintenanceService';
 import { getCustomerDocuments, createDocument, updateDocument, deleteDocument, uploadAndCreateDocument, validateDocumentFile } from '../../services/documentService';
 import { updateProfile, resetPassword, updatePassword } from '../../services/authService';
+import { uploadProfileAvatar, removeProfileAvatar } from '../../services/photoService';
 import { PasswordInput } from '../../components/PasswordInput';
 import type { Motorcycle, Document as RiderDoc, DocumentType } from '../../types/database';
 
@@ -163,9 +164,11 @@ export default function CustomerProfileScreen() {
               onPress: async () => {
                 const url = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400';
                 setAvatarUrl(url);
-                if (user?.id) await updateProfile(user.id, { avatar_url: url });
-                if (refreshProfile) refreshProfile();
-                Alert.alert('Success', 'Profile picture updated.');
+                if (user?.id) {
+                  await uploadProfileAvatar(user.id, url);
+                  if (refreshProfile) refreshProfile();
+                }
+                Alert.alert(t('common.success'), t('profile.avatarUpdated'));
               },
             },
             {
@@ -173,12 +176,14 @@ export default function CustomerProfileScreen() {
               onPress: async () => {
                 const url = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400';
                 setAvatarUrl(url);
-                if (user?.id) await updateProfile(user.id, { avatar_url: url });
-                if (refreshProfile) refreshProfile();
-                Alert.alert('Success', 'Profile picture updated.');
+                if (user?.id) {
+                  await uploadProfileAvatar(user.id, url);
+                  if (refreshProfile) refreshProfile();
+                }
+                Alert.alert(t('common.success'), t('profile.avatarUpdated'));
               },
             },
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
           ]
         );
         return;
@@ -195,32 +200,69 @@ export default function CustomerProfileScreen() {
         const selectedUri = result.assets[0].uri;
         setAvatarUrl(selectedUri);
         if (user?.id) {
-          await updateProfile(user.id, { avatar_url: selectedUri });
+          const finalUrl = await uploadProfileAvatar(user.id, selectedUri);
+          setAvatarUrl(finalUrl);
           if (refreshProfile) refreshProfile();
         }
-        Alert.alert('Success', 'Profile picture updated successfully.');
+        Alert.alert(t('common.success'), t('profile.avatarUpdated'));
       }
     } catch (err: any) {
       console.error('Profile picture edit error:', err);
-      Alert.alert('Error', err?.message || 'Failed to update profile picture.');
+      Alert.alert(t('common.error'), err?.message || 'Failed to update profile picture.');
     }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user?.id) return;
+    Alert.alert(
+      t('profile.removeAvatar'),
+      'Are you sure you want to remove your profile avatar?',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeProfileAvatar(user.id);
+              setAvatarUrl(null);
+              if (refreshProfile) refreshProfile();
+              Alert.alert(t('common.success'), 'Profile photo removed.');
+            } catch (err: any) {
+              Alert.alert(t('common.error'), err?.message || 'Failed to remove photo.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Handle Save Personal Info
   const handleSaveProfile = async () => {
     if (!user?.id) return;
+    if (!fullName.trim()) {
+      Alert.alert(t('common.required'), 'Full Name is required.');
+      return;
+    }
     setSavingProfile(true);
     try {
+      let finalAvatar: string | null = avatarUrl ? avatarUrl.trim() : null;
+      if (finalAvatar && (finalAvatar.startsWith('blob:') || finalAvatar.startsWith('file:') || finalAvatar.startsWith('data:'))) {
+        finalAvatar = await uploadProfileAvatar(user.id, finalAvatar);
+      }
+
       await updateProfile(user.id, {
         full_name: fullName.trim(),
-        phone: phone.trim(),
-        avatar_url: avatarUrl || undefined,
+        phone: phone.trim() || null,
+        avatar_url: finalAvatar,
       });
+
       setIsEditingProfile(false);
       if (refreshProfile) refreshProfile();
-      Alert.alert('Success', 'Personal information updated successfully.');
+      Alert.alert(t('common.success'), t('profile.profileSaved'));
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to update profile.');
+      console.error('Save profile error:', err);
+      Alert.alert(t('common.error'), err?.message || 'Failed to update profile.');
     } finally {
       setSavingProfile(false);
     }
@@ -499,16 +541,53 @@ export default function CustomerProfileScreen() {
         {/* ================= 2. PERSONAL INFORMATION ================= */}
         {isEditingProfile ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>EDIT PERSONAL INFORMATION</Text>
+            <View style={styles.cardHeaderRow}>
+              <User color={colors.primary} size={20} />
+              <Text style={styles.cardTitle}>{t('profile.editPersonalInfo').toUpperCase()}</Text>
+            </View>
+
+            {/* Avatar Preview & Quick Actions */}
+            <View style={styles.avatarEditRow}>
+              <View style={styles.avatarPreviewWrapper}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarPreviewImg} />
+                ) : (
+                  <View style={styles.avatarPreviewPlaceholder}>
+                    <User color={colors.primary} size={28} />
+                  </View>
+                )}
+              </View>
+              <View style={styles.avatarButtonsCol}>
+                <TouchableOpacity
+                  style={styles.avatarActionBtn}
+                  onPress={handlePickProfilePicture}
+                  activeOpacity={0.8}
+                >
+                  <Camera color={colors.primary} size={14} />
+                  <Text style={styles.avatarActionBtnText}>{t('profile.chooseAvatar')}</Text>
+                </TouchableOpacity>
+
+                {avatarUrl ? (
+                  <TouchableOpacity
+                    style={[styles.avatarActionBtn, styles.avatarRemoveBtn]}
+                    onPress={handleRemoveAvatar}
+                    activeOpacity={0.8}
+                  >
+                    <Trash2 color={colors.danger} size={14} />
+                    <Text style={[styles.avatarActionBtnText, { color: colors.danger }]}>{t('profile.removeAvatar')}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>FULL NAME *</Text>
+              <Text style={styles.inputLabel}>{t('auth.fullName').toUpperCase()} *</Text>
               <TextInput
                 style={styles.input}
                 value={fullName}
                 onChangeText={setFullName}
                 placeholder={t('auth.fullNamePlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -516,9 +595,10 @@ export default function CustomerProfileScreen() {
               <Text style={styles.inputLabel}>{t('auth.emailAddress').toUpperCase()}</Text>
               <TextInput
                 style={[styles.input, { opacity: 0.6 }]}
-                value={profile?.email || ''}
+                value={profile?.email || user?.email || ''}
                 editable={false}
               />
+              <Text style={styles.helperText}>Email is linked to your authentication account.</Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -528,52 +608,67 @@ export default function CustomerProfileScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 placeholder={t('auth.phonePlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="phone-pad"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{t('motorcycle.photoUrl').toUpperCase()}</Text>
+              <Text style={styles.inputLabel}>{t('profile.avatarUrl').toUpperCase()}</Text>
               <TextInput
                 style={styles.input}
                 value={avatarUrl || ''}
                 onChangeText={setAvatarUrl}
-                placeholder="https://..."
-                placeholderTextColor={COLORS.textMuted}
+                placeholder="https://... or choose photo above"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
               />
             </View>
 
-            <CustomButton
-              title={savingProfile ? t('common.submitting').toUpperCase() : t('common.save').toUpperCase()}
-              onPress={handleSaveProfile}
-              disabled={savingProfile}
-              style={{ marginTop: 8 }}
-            />
+            <View style={styles.btnRow}>
+              <TouchableOpacity
+                style={styles.backStepBtn}
+                onPress={() => setIsEditingProfile(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.backStepText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <CustomButton
+                title={savingProfile ? t('common.submitting').toUpperCase() : t('common.save').toUpperCase()}
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+                style={{ flex: 1 }}
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t('profile.personalInfo').toUpperCase()}</Text>
+            <View style={styles.cardHeaderRow}>
+              <User color={colors.primary} size={20} />
+              <Text style={styles.cardTitle}>{t('profile.personalInfo').toUpperCase()}</Text>
+            </View>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('auth.fullName')}</Text>
-                <Text style={styles.infoValue}>{profile?.full_name || '-'}</Text>
+                <Text style={styles.infoValue}>{profile?.full_name || fullName || '-'}</Text>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('auth.emailAddress')}</Text>
-                <Text style={styles.infoValue}>{profile?.email || user?.email}</Text>
+                <Text style={styles.infoValue}>{profile?.email || user?.email || '-'}</Text>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('auth.phone')}</Text>
-                <Text style={styles.infoValue}>{profile?.phone || '-'}</Text>
+                <Text style={styles.infoValue}>{profile?.phone || phone || '-'}</Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{t('workshop.address')}</Text>
-                <Text style={styles.infoValue}>{address}</Text>
+                <Text style={styles.infoLabel}>{t('profile.avatarUrl')}</Text>
+                <Text style={styles.infoValue} numberOfLines={1}>
+                  {profile?.avatar_url ? '✓ Active Avatar' : t('common.none')}
+                </Text>
               </View>
             </View>
           </View>
@@ -790,7 +885,11 @@ export default function CustomerProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => router.push('/(customer)/help')}
+            onPress={() => {
+              Linking.openURL('https://riderhood.my').catch(() => {
+                router.push('/(customer)/help');
+              });
+            }}
           >
             <Info color={COLORS.primary} size={18} />
             <Text style={styles.menuRowTitleFlex}>{t('help.aboutRiderHood')}</Text>
@@ -1216,7 +1315,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     scrollContent: {
       padding: 16,
       paddingTop: 24,
-      paddingBottom: 60,
+      paddingBottom: 110,
       gap: 20,
     },
     profileHeaderCard: {
@@ -1752,5 +1851,93 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     themeChipTextActive: {
       color: colors.primary,
       fontWeight: '800',
+    },
+    cardHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 10,
+    },
+    avatarEditRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginVertical: 10,
+      padding: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    avatarPreviewWrapper: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      overflow: 'hidden',
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarPreviewImg: {
+      width: '100%',
+      height: '100%',
+    },
+    avatarPreviewPlaceholder: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarButtonsCol: {
+      flex: 1,
+      gap: 6,
+    },
+    avatarActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: colors.surfaceContainer,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    avatarActionBtnText: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    avatarRemoveBtn: {
+      borderColor: colors.danger,
+      backgroundColor: colors.dangerBg,
+    },
+    helperText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    btnRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+    },
+    backStepBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    backStepText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '700',
     },
   });

@@ -10,6 +10,7 @@ import {
 import { useRouter, usePathname } from 'expo-router';
 import { AppThemeColors } from '../../constants/theme';
 import { LAYOUT } from '../../constants/responsive';
+import { AppLogo } from '../AppLogo';
 import {
   Home,
   Wrench,
@@ -124,10 +125,9 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
       {/* Brand Header */}
       <View style={[styles.brandHeader, isCollapsed && styles.brandHeaderCollapsed]}>
         <View style={[styles.logoRow, isCollapsed && styles.logoRowCollapsed]}>
-          <Image
-            source={require('../../../assets/images/riderhood-logo.png')}
-            style={isCollapsed ? styles.sidebarLogoImgCollapsed : styles.sidebarLogoImg}
-            resizeMode="contain"
+          <AppLogo
+            size={isCollapsed ? 32 : 36}
+            containerStyle={isCollapsed ? { paddingHorizontal: 4, paddingVertical: 4 } : undefined}
           />
           {!isCollapsed && (
             <View style={{ flex: 1 }}>

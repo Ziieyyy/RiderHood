@@ -574,7 +574,7 @@ export const enGB: TranslationSchema = {
     monthlyRevenue: 'Monthly Revenue',
     workshopRating: 'Workshop Rating',
     viewBookings: 'View Bookings',
-    addService: 'Add Service Package',
+    addService: 'Add Service',
     updateStatus: 'Update Status',
     workshopOnline: 'WORKSHOP ONLINE',
     workshopOffline: 'WORKSHOP OFFLINE',
@@ -993,8 +993,13 @@ export const enGB: TranslationSchema = {
 
   profile: {
     personalInfo: 'Personal Information',
+    editPersonalInfo: 'Edit Personal Information',
     editProfile: 'Edit Profile',
     profileSaved: 'Profile Saved Successfully',
+    avatarUrl: 'Profile / Avatar Photo URL',
+    chooseAvatar: 'Choose Avatar Photo',
+    removeAvatar: 'Remove Avatar',
+    avatarUpdated: 'Profile picture updated successfully',
   },
 
   security: {

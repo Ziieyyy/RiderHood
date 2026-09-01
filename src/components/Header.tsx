@@ -5,6 +5,7 @@ import { ChevronLeft, Bell, Sun, Moon, Laptop } from 'lucide-react-native';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useResponsive } from '../hooks/useResponsive';
+import { AppLogo } from './AppLogo';
 
 interface HeaderProps {
   title?: string;
@@ -55,22 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronLeft color={colors.textPrimary} size={24} />
           </TouchableOpacity>
         ) : (
-          <Image
-            source={require('../../assets/images/riderhood-logo.png')}
-            style={styles.headerLogoImg}
-            resizeMode="contain"
-          />
+          <AppLogo size={36} />
         )}
         
         <View style={styles.textContainer}>
-          <Text style={[styles.titleText, { color: colors.textPrimary }]}>{title}</Text>
+          <Text style={[styles.titleText, { color: colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
           {subtitle ? (
-            <Text style={[styles.subtitleText, { color: colors.textSecondary }]}>{subtitle}</Text>
+            <Text style={[styles.subtitleText, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text>
           ) : (
             showTelemetryBadge && (
               <View style={styles.telemetryTag}>
                 <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-                <Text style={[styles.telemetryText, { color: colors.primaryDim }]}>
+                <Text style={[styles.telemetryText, { color: colors.primaryDim }]} numberOfLines={1}>
                   {t('common.telemetryLive')}
                 </Text>
               </View>
@@ -133,43 +130,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
     borderBottomWidth: 1,
+    gap: 8,
   },
   leftRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
   },
   rightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
   },
   headerLogoImg: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
   },
   textContainer: {
     gap: 2,
+    flex: 1,
+    minWidth: 0,
   },
   titleText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
   subtitleText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
   telemetryTag: {

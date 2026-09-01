@@ -328,12 +328,13 @@ export default function WorkshopDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Actions Bar */}
+        {/* Quick Actions / Recent Activity Bar */}
         <Text style={styles.sectionHeaderTitle}>{t('dashboard.recentActivity').toUpperCase()}</Text>
         <View style={styles.quickActionsRow}>
           <TouchableOpacity
             style={styles.quickBtn}
             onPress={() => router.push('/(workshop)/bookings')}
+            activeOpacity={0.7}
           >
             <CalendarDays color={COLORS.primary} size={18} />
             <Text style={styles.quickBtnText}>{t('workshopAdmin.viewBookings')}</Text>
@@ -342,6 +343,7 @@ export default function WorkshopDashboardScreen() {
           <TouchableOpacity
             style={styles.quickBtn}
             onPress={() => router.push('/(workshop)/services')}
+            activeOpacity={0.7}
           >
             <Plus color={COLORS.primary} size={18} />
             <Text style={styles.quickBtnText}>{t('workshopAdmin.addService')}</Text>
@@ -349,15 +351,8 @@ export default function WorkshopDashboardScreen() {
 
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/services')}
-          >
-            <Wrench color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>{t('workshopAdmin.serviceCatalog')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickBtn}
             onPress={() => router.push('/(workshop)/customers')}
+            activeOpacity={0.7}
           >
             <Users color={COLORS.primary} size={18} />
             <Text style={styles.quickBtnText}>{t('workshopAdmin.customerDirectory')}</Text>
@@ -366,6 +361,7 @@ export default function WorkshopDashboardScreen() {
           <TouchableOpacity
             style={styles.quickBtn}
             onPress={() => router.push('/(workshop)/reports')}
+            activeOpacity={0.7}
           >
             <TrendingUp color={COLORS.primary} size={18} />
             <Text style={styles.quickBtnText}>{t('workshopAdmin.reports')}</Text>
@@ -617,10 +613,12 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     welcomeActions: {
       flexDirection: 'row',
       gap: 10,
+      flexWrap: 'wrap',
     },
     welcomeSecondaryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.surface,
       paddingHorizontal: 12,
@@ -628,6 +626,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       borderRadius: 10,
       borderWidth: 1,
       borderColor: colors.borderHighlight,
+      flexGrow: 1,
     },
     welcomeSecBtnText: {
       color: colors.textPrimary,
@@ -637,11 +636,13 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     welcomePrimaryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.primary,
       paddingHorizontal: 14,
       paddingVertical: 9,
       borderRadius: 10,
+      flexGrow: 1,
     },
     welcomePriBtnText: {
       color: isDark ? '#000000' : '#FFFFFF',
@@ -657,16 +658,17 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     kpiGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 14,
+      justifyContent: 'space-between',
+      rowGap: 12,
     },
     kpiCard: {
-      width: '48%',
+      width: '48.5%',
       backgroundColor: colors.surfaceContainer,
       borderRadius: 16,
-      padding: 16,
+      padding: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      gap: 8,
+      gap: 6,
     },
     kpiHeader: {
       flexDirection: 'row',
@@ -674,47 +676,52 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       justifyContent: 'space-between',
     },
     kpiIconBadge: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
+      width: 32,
+      height: 32,
+      borderRadius: 8,
       justifyContent: 'center',
       alignItems: 'center',
     },
     kpiValue: {
       color: colors.textPrimary,
-      fontSize: 22,
+      fontSize: 20,
       fontWeight: '900',
     },
     kpiLabel: {
       color: colors.textMuted,
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: '800',
       letterSpacing: 0.5,
     },
     kpiSubText: {
       color: colors.textSecondary,
-      fontSize: 11,
+      fontSize: 10,
     },
     quickActionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 10,
+      justifyContent: 'space-between',
+      rowGap: 10,
     },
     quickBtn: {
+      width: '48.5%',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       backgroundColor: colors.surfaceContainer,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: colors.border,
+      minHeight: 52,
     },
     quickBtnText: {
       color: colors.textPrimary,
-      fontSize: 13,
+      fontSize: 11.5,
       fontWeight: '700',
+      flex: 1,
+      lineHeight: 15,
     },
     alertBannerCard: {
       backgroundColor: colors.warningBg,
@@ -833,6 +840,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       flexDirection: 'row',
       gap: 8,
       alignItems: 'center',
+      flexWrap: 'wrap',
     },
     actionBtn: {
       flexDirection: 'row',

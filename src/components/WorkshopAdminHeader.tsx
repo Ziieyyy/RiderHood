@@ -8,12 +8,14 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, useNavigation } from 'expo-router';
+import { DrawerActions } from '@react-navigation/native';
 import { COLORS, DARK_COLORS } from '../constants/theme';
-import { Bell, User, Settings, LogOut, Key, CheckCircle2, ShieldCheck } from 'lucide-react-native';
+import { Menu, Bell, User, Settings, LogOut, Key, CheckCircle2, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 import { getMyWorkshop, updateWorkshop } from '../services/workshopService';
 import { getUnreadCount } from '../services/notificationService';
 import type { Workshop } from '../types/database';
@@ -27,11 +29,14 @@ interface WorkshopAdminHeaderProps {
 export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
   title,
   subtitle,
+  onToggleDrawer,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigation = useNavigation();
   const pathname = usePathname();
   const { profile, logout } = useAuth();
+  const { isPhone } = useResponsive();
   const { colors, isDark } = useTheme();
   const styles = useThemedStyles(createStyles);
 
@@ -39,6 +44,18 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleToggleDrawer = () => {
+    if (onToggleDrawer) {
+      onToggleDrawer();
+    } else {
+      try {
+        navigation.dispatch(DrawerActions.toggleDrawer());
+      } catch {
+        (navigation as any).toggleDrawer?.();
+      }
+    }
+  };
 
   const loadHeaderState = useCallback(async () => {
     if (!profile?.id) return;
@@ -73,21 +90,45 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Title & Breadcrumb */}
-      <View style={styles.titleSection}>
-        <Text style={styles.breadcrumbText}>RiderHood Admin &gt; {title}</Text>
-        <Text style={styles.titleText}>{title}</Text>
-        {subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
+    <View style={[styles.container, isPhone && styles.containerMobile]}>
+      {/* Left side: Hamburger (on mobile) + Title */}
+      <View style={styles.leftWrapper}>
+        {isPhone && (
+          <TouchableOpacity
+            style={styles.drawerToggleBtn}
+            onPress={handleToggleDrawer}
+            activeOpacity={0.7}
+            accessibilityLabel="Open navigation drawer"
+          >
+            <Menu color={colors.textPrimary} size={20} />
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.titleSection}>
+          {!isPhone && (
+            <Text style={styles.breadcrumbText} numberOfLines={1}>
+              RiderHood Admin &gt; {title}
+            </Text>
+          )}
+          <Text style={[styles.titleText, isPhone && styles.titleTextMobile]} numberOfLines={1} ellipsizeMode="tail">
+            {title}
+          </Text>
+          {subtitle && !isPhone ? (
+            <Text style={styles.subtitleText} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
       {/* Right Controls */}
-      <View style={styles.actionsSection}>
+      <View style={[styles.actionsSection, isPhone && styles.actionsSectionMobile]}>
         {/* Dynamic Workshop Status Switch */}
         {workshop && (
           <TouchableOpacity
             style={[
               styles.statusChip,
+              isPhone && styles.statusChipMobile,
               {
                 backgroundColor: workshop.is_open ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
                 borderColor: workshop.is_open ? colors.success : colors.danger,
@@ -111,10 +152,13 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
                 <Text
                   style={[
                     styles.statusChipText,
+                    isPhone && styles.statusChipTextMobile,
                     { color: workshop.is_open ? colors.success : colors.danger },
                   ]}
                 >
-                  {workshop.is_open ? `● ${t('workshop.openNow').toUpperCase()}` : `● ${t('workshop.closed').toUpperCase()}`}
+                  {workshop.is_open
+                    ? isPhone ? 'OPEN' : t('workshop.openNow').toUpperCase()
+                    : isPhone ? 'CLOSED' : t('workshop.closed').toUpperCase()}
                 </Text>
               </>
             )}
@@ -125,6 +169,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
         <TouchableOpacity
           style={[
             styles.iconBtn,
+            isPhone && styles.iconBtnMobile,
             pathname.includes('notifications') && { borderColor: colors.primary, backgroundColor: colors.elevatedCards },
           ]}
           onPress={() => router.push('/(workshop)/notifications')}
@@ -140,7 +185,7 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
 
         {/* Profile Dropdown Menu Trigger */}
         <TouchableOpacity
-          style={styles.profileBtn}
+          style={[styles.profileBtn, isPhone && styles.profileBtnMobile]}
           onPress={() => setShowProfileMenu(true)}
           accessibilityLabel="Admin Profile Options"
         >
@@ -149,14 +194,16 @@ export const WorkshopAdminHeader: React.FC<WorkshopAdminHeaderProps> = ({
               {(profile?.full_name || 'Admin').substring(0, 2).toUpperCase()}
             </Text>
           </View>
-          <View style={styles.profileInfoMobileHide}>
-            <Text style={styles.profileName} numberOfLines={1}>
-              {profile?.full_name || 'Workshop Admin'}
-            </Text>
-            <Text style={styles.profileRole} numberOfLines={1}>
-              {workshop?.name || 'RiderHood Workshop'}
-            </Text>
-          </View>
+          {!isPhone && (
+            <View style={styles.profileInfoBox}>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.full_name || 'Workshop Admin'}
+              </Text>
+              <Text style={styles.profileRole} numberOfLines={1}>
+                {workshop?.name || 'RiderHood Workshop'}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -226,15 +273,39 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       paddingHorizontal: 20,
-      paddingVertical: 14,
+      paddingVertical: 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       zIndex: 50,
+      gap: 12,
+    },
+    containerMobile: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    leftWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+      minWidth: 0,
+    },
+    drawerToggleBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     titleSection: {
-      gap: 2,
+      gap: 1,
       flex: 1,
+      minWidth: 0,
     },
     breadcrumbText: {
       color: colors.textMuted,
@@ -248,23 +319,36 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       fontSize: 18,
       fontWeight: '800',
     },
+    titleTextMobile: {
+      fontSize: 16,
+      fontWeight: '800',
+    },
     subtitleText: {
       color: colors.textSecondary,
-      fontSize: 12,
+      fontSize: 11,
     },
     actionsSection: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 10,
+      flexShrink: 0,
+    },
+    actionsSectionMobile: {
+      gap: 6,
     },
     statusChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       borderRadius: 20,
       borderWidth: 1,
+    },
+    statusChipMobile: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      gap: 4,
     },
     statusDot: {
       width: 7,
@@ -272,13 +356,17 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       borderRadius: 4,
     },
     statusChipText: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '800',
       letterSpacing: 0.5,
     },
+    statusChipTextMobile: {
+      fontSize: 9,
+      letterSpacing: 0.2,
+    },
     iconBtn: {
-      width: 38,
-      height: 38,
+      width: 36,
+      height: 36,
       borderRadius: 10,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -286,6 +374,10 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
+    },
+    iconBtnMobile: {
+      width: 34,
+      height: 34,
     },
     badge: {
       position: 'absolute',
@@ -315,9 +407,14 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
+    profileBtnMobile: {
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
     avatarCircle: {
-      width: 28,
-      height: 28,
+      width: 26,
+      height: 26,
       borderRadius: 8,
       backgroundColor: colors.primary,
       justifyContent: 'center',
@@ -325,11 +422,11 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     },
     avatarText: {
       color: '#FFFFFF',
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '900',
     },
-    profileInfoMobileHide: {
-      maxWidth: 130,
+    profileInfoBox: {
+      maxWidth: 120,
     },
     profileName: {
       color: colors.textPrimary,

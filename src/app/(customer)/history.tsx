@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { COLORS, DARK_COLORS } from '../../constants/theme';
 import { getCustomerBookings } from '../../services/bookingService';
 import { Header } from '../../components/Header';
@@ -86,9 +86,11 @@ export default function CustomerHistoryScreen() {
     }
   }, [user?.id, t]);
 
-  useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+  useFocusEffect(
+    useCallback(() => {
+      loadBookings();
+    }, [loadBookings])
+  );
 
   const filtered =
     activeFilter === 'all'
@@ -274,7 +276,7 @@ export default function CustomerHistoryScreen() {
 const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { paddingVertical: 16, paddingBottom: 40 },
+    scrollContent: { paddingVertical: 16, paddingBottom: 110 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
     loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
     errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },

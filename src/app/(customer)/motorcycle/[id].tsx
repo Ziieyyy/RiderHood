@@ -76,6 +76,7 @@ import {
   uploadMotorcyclePhoto,
   deleteMotorcyclePhoto,
   setMainMotorcyclePhoto,
+  uploadPhotoUriToStorage,
 } from '../../../services/photoService';
 import {
   openDocument,
@@ -257,6 +258,15 @@ export default function MotorcycleDetailScreen() {
       const cc = parseInt(editEngineCc, 10) || null;
       const odo = parseInt(editMileage, 10) || bike.current_mileage || 0;
 
+      let finalPhotoUrl = editPhotoUrl ? editPhotoUrl.trim() : null;
+      if (finalPhotoUrl && user?.id && (finalPhotoUrl.startsWith('blob:') || finalPhotoUrl.startsWith('file:') || finalPhotoUrl.startsWith('data:'))) {
+        try {
+          finalPhotoUrl = await uploadPhotoUriToStorage(user.id, 'motorcycles', finalPhotoUrl);
+        } catch (photoErr) {
+          console.warn('Storage upload notice for motorcycle edit (non-fatal):', photoErr);
+        }
+      }
+
       const updated = await updateMotorcycle(bike.id, {
         nickname: editNickname.trim() || `${editBrand} ${editModel}`,
         brand: editBrand.trim(),
@@ -272,7 +282,7 @@ export default function MotorcycleDetailScreen() {
         last_service_date: editLastServiceDate.trim() || null,
         warranty_expiry_date: editWarrantyExpiry.trim() || null,
         current_mileage: odo,
-        photo_url: editPhotoUrl.trim() || null,
+        photo_url: finalPhotoUrl || null,
       });
 
       setBike(updated);

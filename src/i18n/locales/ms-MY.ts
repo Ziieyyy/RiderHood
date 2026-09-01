@@ -993,8 +993,13 @@ export const msMY: TranslationSchema = {
 
   profile: {
     personalInfo: 'Maklumat Peribadi',
+    editPersonalInfo: 'Sunting Maklumat Peribadi',
     editProfile: 'Sunting Profil',
     profileSaved: 'Profil Berjaya Disimpan',
+    avatarUrl: 'URL Foto Profil / Avatar',
+    chooseAvatar: 'Pilih Foto Avatar',
+    removeAvatar: 'Buang Avatar',
+    avatarUpdated: 'Foto profil berjaya dikemas kini',
   },
 
   security: {

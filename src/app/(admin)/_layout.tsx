@@ -8,32 +8,34 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function AdminDrawerLayout() {
   const router = useRouter();
   const { logout } = useAuth();
   const { t } = useTranslation();
   const { isPhone } = useResponsive();
+  const { colors } = useTheme();
 
   return (
     <Drawer
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: COLORS.surfaceContainer, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-        headerTintColor: COLORS.textPrimary,
-        drawerActiveBackgroundColor: COLORS.primaryDark,
-        drawerActiveTintColor: COLORS.primary,
-        drawerInactiveTintColor: COLORS.textSecondary,
+        headerStyle: { backgroundColor: colors.surfaceContainer, borderBottomWidth: 1, borderBottomColor: colors.border },
+        headerTintColor: colors.textPrimary,
+        drawerActiveBackgroundColor: colors.primaryDark,
+        drawerActiveTintColor: colors.primary,
+        drawerInactiveTintColor: colors.textSecondary,
         drawerType: isPhone ? 'front' : 'permanent',
-        drawerStyle: { backgroundColor: COLORS.surface, width: 270 },
-        sceneStyle: { backgroundColor: COLORS.background },
+        drawerStyle: { backgroundColor: colors.surface, width: 270 },
+        sceneStyle: { backgroundColor: colors.background },
 
         headerRight: () => (
           <TouchableOpacity 
-            style={{ marginRight: 16, width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.dangerBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.danger }}
+            style={{ marginRight: 16, width: 36, height: 36, borderRadius: 10, backgroundColor: colors.dangerBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.danger }}
             onPress={logout}
           >
-            <LogOut color={COLORS.danger} size={16} />
+            <LogOut color={colors.danger} size={16} />
           </TouchableOpacity>
         ),
       }}

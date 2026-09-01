@@ -357,7 +357,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     },
     scrollContent: {
       paddingVertical: 16,
-      paddingBottom: 40,
+      paddingBottom: 110,
     },
     searchBarContainer: {
       marginBottom: 12,

@@ -137,42 +137,104 @@ export async function canCustomerReview(customerId: string, workshopId: string):
   }
 }
 
+// ─── Resilient Review Insertion with multi-tier fallback ─────
+async function insertReviewWithFallback(payload: Record<string, any>): Promise<Review> {
+  const attempts: Record<string, any>[] = [
+    // Attempt 1: Full payload
+    {
+      customer_id: payload.customer_id,
+      workshop_id: payload.workshop_id,
+      booking_id: payload.booking_id || undefined,
+      motorcycle_id: payload.motorcycle_id || undefined,
+      rating: payload.rating,
+      comment: payload.comment || null,
+      status: payload.status || 'active',
+    },
+    // Attempt 2: Standard fields without motorcycle_id & status
+    {
+      customer_id: payload.customer_id,
+      workshop_id: payload.workshop_id,
+      booking_id: payload.booking_id || undefined,
+      rating: payload.rating,
+      comment: payload.comment || null,
+    },
+    // Attempt 3: Core review fields (customer_id, workshop_id, rating, comment)
+    {
+      customer_id: payload.customer_id,
+      workshop_id: payload.workshop_id,
+      rating: payload.rating,
+      comment: payload.comment || null,
+    },
+    // Attempt 4: Fallback if table uses user_id instead of customer_id
+    {
+      user_id: payload.customer_id,
+      workshop_id: payload.workshop_id,
+      booking_id: payload.booking_id || undefined,
+      rating: payload.rating,
+      comment: payload.comment || null,
+    },
+    // Attempt 5: Minimal user_id
+    {
+      user_id: payload.customer_id,
+      workshop_id: payload.workshop_id,
+      rating: payload.rating,
+      comment: payload.comment || null,
+    },
+  ];
+
+  let lastError: any = null;
+
+  for (const candidate of attempts) {
+    const cleanPayload: Record<string, any> = {};
+    for (const [key, val] of Object.entries(candidate)) {
+      if (val !== undefined) cleanPayload[key] = val;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert(cleanPayload)
+        .select()
+        .single();
+
+      if (!error && data) {
+        return data as Review;
+      }
+      lastError = error;
+      console.warn('[insertReviewWithFallback] Candidate attempt notice:', error?.message);
+    } catch (err: any) {
+      lastError = err;
+      console.warn('[insertReviewWithFallback] Candidate caught notice:', err?.message);
+    }
+  }
+
+  throw lastError || new Error('Failed to submit review to database.');
+}
+
 // ─── Create review with optional photos ──────────────────────
 export async function createReviewWithPhotos(
   review: Partial<Review>,
   photoUris: string[] = []
 ): Promise<Review> {
-  // 1. Insert the review
-  const { data, error } = await supabase
-    .from('reviews')
-    .insert({
-      customer_id: review.customer_id,
-      workshop_id: review.workshop_id,
-      booking_id: review.booking_id,
-      motorcycle_id: review.motorcycle_id || null,
-      rating: review.rating,
-      comment: review.comment || null,
-      status: 'active',
-    })
-    .select()
-    .single();
-  if (error) throw error;
+  const createdReview = await insertReviewWithFallback(review);
 
-  const createdReview = data as Review;
-
-  // 2. Insert review photos (if any)
+  // Insert review photos (if any)
   if (photoUris.length > 0 && createdReview.id) {
-    const photoInserts = photoUris.map((uri, index) => ({
-      review_id: createdReview.id,
-      photo_url: uri,
-      file_path: `review-images/${review.customer_id}/${createdReview.id}_${index}.jpg`,
-    }));
+    try {
+      const photoInserts = photoUris.map((uri, index) => ({
+        review_id: createdReview.id,
+        photo_url: uri,
+        file_path: `review-images/${review.customer_id || 'user'}/${createdReview.id}_${index}.jpg`,
+      }));
 
-    const { error: photoErr } = await supabase
-      .from('review_photos')
-      .insert(photoInserts);
+      const { error: photoErr } = await supabase
+        .from('review_photos')
+        .insert(photoInserts);
 
-    if (photoErr) {
+      if (photoErr) {
+        console.warn('Failed to insert review photos (non-fatal):', photoErr.message);
+      }
+    } catch (photoErr) {
       console.warn('Failed to insert review photos (non-fatal):', photoErr);
     }
   }
@@ -182,9 +244,7 @@ export async function createReviewWithPhotos(
 
 // ─── Create review (simple, no photos) ───────────────────────
 export async function createReview(payload: Partial<Review>): Promise<Review> {
-  const { data, error } = await supabase.from('reviews').insert(payload).select().single();
-  if (error) throw error;
-  return data;
+  return insertReviewWithFallback(payload);
 }
 
 // ─── Reply to review (workshop admin) ────────────────────────

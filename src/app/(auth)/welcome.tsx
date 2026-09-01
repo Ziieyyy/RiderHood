@@ -24,6 +24,7 @@ import {
   PasswordSecurityModal,
   PasswordModalMode,
 } from '../../components/PasswordSecurityModal';
+import { AppLogo } from '../../components/AppLogo';
 import { resendConfirmationEmail } from '../../services/authService';
 
 export default function WelcomeScreen() {
@@ -207,11 +208,7 @@ export default function WelcomeScreen() {
 
         {/* Brand Header */}
         <View style={styles.brandHeader}>
-          <Image
-            source={require('../../../assets/images/riderhood-logo.png')}
-            style={styles.brandLogoImg}
-            resizeMode="contain"
-          />
+          <AppLogo size={56} containerStyle={{ marginBottom: 12 }} />
           <Text style={styles.brandTitle}>RIDERHOOD</Text>
           <Text style={styles.brandSubtitle}>Premium Motor Care</Text>
 
