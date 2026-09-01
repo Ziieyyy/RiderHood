@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "riderhood-mobile",
+    "name": "RiderHood",
     "slug": "riderhood-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,14 +8,14 @@
     "scheme": "riderhoodmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.riderhood.mobile"
     },
     "android": {
+      "package": "com.riderhood.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#090A0F",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -28,15 +28,21 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#090A0F",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9eeb4572-35b4-4362-bbc6-8a5e58a0ca91"
+      }
     }
   }
 }
