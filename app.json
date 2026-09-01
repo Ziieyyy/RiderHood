@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "RiderHood",
-    "slug": "riderhood-mobile",
+    "slug": "riderhood",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "riderhoodmobile",
+    "scheme": "riderhood",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
