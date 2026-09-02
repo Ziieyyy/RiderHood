@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY');
-}
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://jmeffczykjgtzaabliwh.supabase.co';
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_zazuQ_m0URPRdDQIc0Hm_A__hQBgiyL';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

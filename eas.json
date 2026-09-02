@@ -8,12 +8,22 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jmeffczykjgtzaabliwh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_zazuQ_m0URPRdDQIc0Hm_A__hQBgiyL",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyD_bCE_mFIlwBDeieE9Pdh4118XB_7QctU"
       }
     },
     "production": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jmeffczykjgtzaabliwh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_zazuQ_m0URPRdDQIc0Hm_A__hQBgiyL",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyD_bCE_mFIlwBDeieE9Pdh4118XB_7QctU"
       }
     }
   }
