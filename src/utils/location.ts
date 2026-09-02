@@ -1,3 +1,6 @@
+import { Platform } from 'react-native';
+import * as Location from 'expo-location';
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -46,14 +49,129 @@ export const WORKSHOP_COORDINATES: Record<string, Coordinates> = {
 };
 
 /**
- * Request real device / browser GPS location with high accuracy.
+ * Request real device GPS location across Android, iPhone (iOS), and Web browsers.
  */
-export async function requestUserLocation(options?: { highAccuracy?: boolean; maxAge?: number }): Promise<UserLocationDetails | null> {
-  return new Promise((resolve) => {
+export async function requestUserLocation(options?: {
+  highAccuracy?: boolean;
+  maxAge?: number;
+}): Promise<UserLocationDetails | null> {
+  try {
+    // 1. Native Mobile (Android & iPhone / iOS) via expo-location
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn(`[GPS] Location permission denied on ${Platform.OS}`);
+        return null;
+      }
+
+      try {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: options?.highAccuracy ?? true
+            ? Location.Accuracy.High
+            : Location.Accuracy.Balanced,
+        });
+
+        if (position && position.coords) {
+          return {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy ?? undefined,
+            heading: position.coords.heading,
+            speed: position.coords.speed,
+            timestamp: position.timestamp,
+          };
+        }
+      } catch (locErr) {
+        // If high accuracy GPS timed out (e.g. indoor), try last known position
+        console.warn('[GPS] getCurrentPosition failed, falling back to last known:', locErr);
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: options?.maxAge ?? 60000,
+        });
+
+        if (lastKnown && lastKnown.coords) {
+          return {
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+            accuracy: lastKnown.coords.accuracy ?? undefined,
+            heading: lastKnown.coords.heading,
+            speed: lastKnown.coords.speed,
+            timestamp: lastKnown.timestamp,
+          };
+        }
+      }
+      return null;
+    }
+
+    // 2. Web fallback (Browser navigator.geolocation)
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              heading: pos.coords.heading,
+              speed: pos.coords.speed,
+              timestamp: pos.timestamp,
+            });
+          },
+          (err) => {
+            console.warn('[GPS] Web Geolocation error:', err.message);
+            resolve(null);
+          },
+          {
+            enableHighAccuracy: options?.highAccuracy ?? true,
+            timeout: 10000,
+            maximumAge: options?.maxAge ?? 0,
+          }
+        );
+      });
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[GPS] Unexpected location error:', error);
+    return null;
+  }
+}
+
+/**
+ * Watch live GPS updates in real-time as user moves (Android, iOS & Web).
+ */
+export async function watchUserLocation(
+  callback: (location: UserLocationDetails) => void
+): Promise<(() => void) | null> {
+  try {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return null;
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 3000,
+          distanceInterval: 5, // update every 5 meters
+        },
+        (loc) => {
+          callback({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            accuracy: loc.coords.accuracy ?? undefined,
+            heading: loc.coords.heading,
+            speed: loc.coords.speed,
+            timestamp: loc.timestamp,
+          });
+        }
+      );
+
+      return () => subscription.remove();
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          resolve({
+          callback({
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
@@ -62,26 +180,31 @@ export async function requestUserLocation(options?: { highAccuracy?: boolean; ma
             timestamp: pos.timestamp,
           });
         },
-        (err) => {
-          console.warn('Geolocation prompt/fetch error:', err.message);
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: options?.highAccuracy ?? true,
-          timeout: 10000,
-          maximumAge: options?.maxAge ?? 0,
-        }
+        undefined,
+        { enableHighAccuracy: true }
       );
-    } else {
-      resolve(null);
+
+      return () => navigator.geolocation.clearWatch(watchId);
     }
-  });
+
+    return null;
+  } catch (err) {
+    console.warn('[GPS] watchUserLocation error:', err);
+    return null;
+  }
 }
 
 /**
  * Get coordinates for a workshop, falling back to known geolocations in Kulim.
  */
-export function getWorkshopCoordinates(workshop?: { id?: string; latitude?: number | null; longitude?: number | null; name?: string } | null): Coordinates | null {
+export function getWorkshopCoordinates(
+  workshop?: {
+    id?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    name?: string;
+  } | null
+): Coordinates | null {
   if (!workshop) return null;
 
   if (workshop.latitude && workshop.longitude && Number(workshop.latitude) !== 0) {
@@ -103,10 +226,13 @@ export function getWorkshopCoordinates(workshop?: { id?: string; latitude?: numb
   if (name.includes('eu li')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000004'];
   if (name.includes('hai motor')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000005'];
   if (name.includes('yew ngee')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000006'];
-  if (name.includes('csl') || name.includes('soon soon lee')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000007'];
+  if (name.includes('csl') || name.includes('soon soon lee'))
+    return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000007'];
   if (name.includes('pit stop')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000008'];
-  if (name.includes('lian motor') || name.includes('lian auto')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000009'];
-  if (name.includes('chong hun')) return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000011'];
+  if (name.includes('lian motor') || name.includes('lian auto'))
+    return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000009'];
+  if (name.includes('chong hun'))
+    return WORKSHOP_COORDINATES['b0000000-0000-0000-0000-000000000011'];
 
   return null;
 }

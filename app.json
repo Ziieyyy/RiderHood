@@ -9,10 +9,17 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.riderhood.mobile"
+      "bundleIdentifier": "com.riderhood.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RiderHood uses your live GPS location to discover nearby workshops and calculate distance."
+      }
     },
     "android": {
       "package": "com.riderhood.mobile",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#090A0F",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
@@ -36,6 +43,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RiderHood uses your live GPS location to discover nearby workshops and calculate distance."
         }
       ]
     ],
