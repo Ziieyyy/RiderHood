@@ -1,11 +1,26 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet, Platform, Text, TouchableOpacity, ActivityIndicator, type DimensionValue } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  type DimensionValue,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
 import { COLORS } from '../constants/theme';
-import { calculateDistanceKm, formatDistance, getWorkshopCoordinates, type Coordinates, type UserLocationDetails } from '../utils/location';
+import {
+  calculateDistanceKm,
+  formatDistance,
+  getWorkshopCoordinates,
+  type Coordinates,
+  type UserLocationDetails,
+} from '../utils/location';
 import { getWorkshopOpenStatus } from '../utils/operatingHours';
 import { canBookWorkshop } from '../services/workshopService';
 import type { Workshop } from '../types/database';
-import { Crosshair, MapPin } from 'lucide-react-native';
+import { Crosshair } from 'lucide-react-native';
 
 interface InteractiveWorkshopMapProps {
   userLocation: UserLocationDetails | Coordinates | null;
@@ -31,6 +46,7 @@ export function InteractiveWorkshopMap({
   showHud = true,
 }: InteractiveWorkshopMapProps) {
   const iframeRef = useRef<any>(null);
+  const webViewRef = useRef<any>(null);
 
   // Prepare workshops data payload with coordinates and distances
   const workshopsData = useMemo(() => {
@@ -66,7 +82,7 @@ export function InteractiveWorkshopMap({
       .filter(Boolean);
   }, [workshops, userLocation]);
 
-  // Listen to postMessage from iframe
+  // Handle messages received from Web / iframe
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
@@ -95,7 +111,29 @@ export function InteractiveWorkshopMap({
     return () => window.removeEventListener('message', handleMessage);
   }, [workshops, onSelectWorkshop, onBookWorkshop]);
 
-  // Generate Leaflet Dark-Mode HTML template
+  // Handle messages received from native WebView
+  const handleNativeMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (!data || !data.type) return;
+
+      if (data.type === 'SELECT_WORKSHOP' && data.workshopId) {
+        const found = workshops.find((w) => w.id === data.workshopId);
+        if (found && onSelectWorkshop) {
+          onSelectWorkshop(found);
+        }
+      } else if (data.type === 'BOOK_WORKSHOP' && data.workshopId) {
+        const found = workshops.find((w) => w.id === data.workshopId);
+        if (found && onBookWorkshop) {
+          onBookWorkshop(found);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  // Generate Leaflet Dark-Mode HTML template (fully compatible with iOS, Android WebView & Web)
   const mapHtml = useMemo(() => {
     const userLat = userLocation?.latitude ?? 5.3644;
     const userLng = userLocation?.longitude ?? 100.5618;
@@ -111,8 +149,8 @@ export function InteractiveWorkshopMap({
   <title>RiderHood Live GPS Workshop Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; background: #0A0C10; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body, #map { width: 100%; height: 100%; background: #0A0C10; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
     
     /* Dark Tile Filter for OpenStreetMap */
     .leaflet-tile {
@@ -308,7 +346,7 @@ export function InteractiveWorkshopMap({
       <span>${hasUserGPS ? 'Live GPS (' + userLat.toFixed(4) + '°, ' + userLng.toFixed(4) + '°)' : 'Kulim Center (5.3644°, 100.5618°)'}</span>
     </div>
     <div class="map-hud-right">
-      <button class="hud-btn" onclick="recenterMap()">🎯 Focus Me</button>
+      <button class="hud-btn" onclick="recenterMap()">🎯 Focus</button>
       <button class="hud-btn" onclick="fitAllWorkshops()">🗺️ Fit All</button>
     </div>
   </div>
@@ -320,6 +358,19 @@ export function InteractiveWorkshopMap({
     const accuracy = ${accuracy};
     const hasGPS = ${hasUserGPS};
     const workshops = ${JSON.stringify(workshopsData)};
+
+    // Helper to send messages safely to React Native WebView or Web iframe parent
+    function sendBridgeMessage(payload) {
+      try {
+        if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        } else if (window.parent && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage(payload, '*');
+        }
+      } catch (e) {
+        console.warn('Bridge postMessage error:', e);
+      }
+    }
 
     // Initialize Map with dark tiles
     const map = L.map('map', {
@@ -427,11 +478,11 @@ export function InteractiveWorkshopMap({
     };
 
     window.bookWorkshop = function(wsId) {
-      window.parent.postMessage({ type: 'BOOK_WORKSHOP', workshopId: wsId }, '*');
+      sendBridgeMessage({ type: 'BOOK_WORKSHOP', workshopId: wsId });
     };
 
     window.selectWorkshop = function(wsId) {
-      window.parent.postMessage({ type: 'SELECT_WORKSHOP', workshopId: wsId }, '*');
+      sendBridgeMessage({ type: 'SELECT_WORKSHOP', workshopId: wsId });
     };
   </script>
 </body>
@@ -455,15 +506,19 @@ export function InteractiveWorkshopMap({
           }}
         />
       ) : (
-        <View style={styles.nativeFallback}>
-          <MapPin color={COLORS.primary} size={36} />
-          <Text style={styles.nativeFallbackTitle}>Live GPS Workshop Map</Text>
-          <Text style={styles.nativeFallbackSubtitle}>
-            {userLocation
-              ? `📍 Precise Location: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`
-              : 'Detecting live GPS coordinates...'}
-          </Text>
-        </View>
+        <WebView
+          ref={webViewRef}
+          originWhitelist={['*']}
+          source={{ html: mapHtml }}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          style={styles.webView}
+          onMessage={handleNativeMessage}
+          scalesPageToFit={true}
+          scrollEnabled={false}
+          nestedScrollEnabled={true}
+          allowsInlineMediaPlayback={true}
+        />
       )}
 
       {/* Floating GPS HUD Info Card */}
@@ -522,22 +577,11 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  nativeFallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    gap: 8,
-  },
-  nativeFallbackTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  nativeFallbackSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
+  webView: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0A0C10',
+    borderRadius: 18,
   },
   hudOverlay: {
     position: 'absolute',
