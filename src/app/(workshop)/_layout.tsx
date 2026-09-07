@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
@@ -41,6 +42,7 @@ function CustomWorkshopDrawerContent(props: any) {
   const { logout, profile } = useAuth();
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const sidebarStyles = useThemedStyles(createSidebarStyles);
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
 
@@ -120,7 +122,7 @@ function CustomWorkshopDrawerContent(props: any) {
       </ScrollView>
 
       {/* Footer Profile & Logout */}
-      <View style={sidebarStyles.footer}>
+      <View style={[sidebarStyles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View style={sidebarStyles.profileRow}>
           <View style={sidebarStyles.profileAvatar}>
             <Text style={sidebarStyles.avatarInitials}>

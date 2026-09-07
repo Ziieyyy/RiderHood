@@ -35,6 +35,7 @@ import {
   Menu,
   ChevronLeft,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation, SupportedLanguage } from '../../i18n';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
@@ -59,6 +60,7 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
   const { user, profile, logout } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const { themeMode, activeTheme, isDark, colors, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useThemedStyles(createStyles);
 
   // Navigation Items by Role
@@ -218,7 +220,13 @@ export const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({
       </ScrollView>
 
       {/* Footer: Theme Toggle & Language Switcher & Profile & Logout */}
-      <View style={[styles.footerContainer, isCollapsed && styles.footerContainerCollapsed]}>
+      <View
+        style={[
+          styles.footerContainer,
+          isCollapsed && styles.footerContainerCollapsed,
+          { paddingBottom: Math.max(insets.bottom, 14) },
+        ]}
+      >
         {/* Theme Mode Toggle (Cycles Dark -> Light -> System) */}
         <TouchableOpacity
           style={[styles.langSwitchBtn, isCollapsed && styles.langSwitchBtnCollapsed, { marginBottom: 6 }]}

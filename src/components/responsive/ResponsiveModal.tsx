@@ -13,6 +13,7 @@ import {
   ViewStyle,
   StyleProp,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppThemeColors } from '../../constants/theme';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
@@ -49,6 +50,7 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
   const { isPhone } = useResponsive();
   const { height } = useWindowDimensions();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useThemedStyles(createStyles);
 
   if (!visible) return null;
@@ -71,6 +73,7 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
                 style={[
                   styles.modalContent,
                   isPhone ? styles.phoneModalContent : styles.desktopModalContent,
+                  isPhone && { paddingBottom: Math.max(insets.bottom, 16) },
                   {
                     maxWidth: isPhone ? '100%' : maxWidth,
                     maxHeight: (height * maxHeightPercent) / 100,

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Wrench, Calendar, Clock, User } from 'lucide-react-native';
 import { useTranslation } from '../../i18n';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -20,11 +21,15 @@ function CustomerBottomTabBar({ state, navigation }: BottomTabBarProps) {
   const { isPhone } = useResponsive();
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   if (!isPhone) return null;
 
   const currentRoute = state.routes[state.index];
   const currentRouteName = currentRoute?.name;
+
+  // Dynamic bottom clearance for Android 3-button navigation, swipe gesture pill, and iOS home bar
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
 
   return (
     <View
@@ -33,6 +38,8 @@ function CustomerBottomTabBar({ state, navigation }: BottomTabBarProps) {
         {
           backgroundColor: colors.surfaceContainer,
           borderTopColor: colors.border,
+          paddingBottom: bottomPadding,
+          minHeight: 56 + bottomPadding,
         },
       ]}
     >
@@ -259,8 +266,6 @@ const bottomTabStyles = StyleSheet.create({
     justifyContent: 'space-around',
     borderTopWidth: 1,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-    minHeight: Platform.OS === 'ios' ? 76 : 64,
   },
   tabItem: {
     flex: 1,

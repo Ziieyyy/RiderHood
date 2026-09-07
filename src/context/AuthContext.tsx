@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import * as authService from '../services/authService';
 import type { Profile, UserRole } from '../types/database';
+
+// ─── Storage Keys & Constants ─────────────────────────────────
+const CACHED_PROFILE_KEY = '@riderhood_cached_profile';
+const SESSION_LAST_ACTIVE_KEY = '@riderhood_session_last_active';
+// 30 days in milliseconds (1 month continuous session window)
+const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -47,6 +54,32 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
 });
 
+// ─── Storage Helpers ──────────────────────────────────────────
+
+async function touchSessionActivity(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SESSION_LAST_ACTIVE_KEY, Date.now().toString());
+  } catch (err) {
+    console.warn('[AuthContext] Failed to touch session activity:', err);
+  }
+}
+
+async function saveCachedProfile(profile: Profile): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
+  } catch (err) {
+    console.warn('[AuthContext] Failed to cache profile:', err);
+  }
+}
+
+async function clearLocalSession(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([CACHED_PROFILE_KEY, SESSION_LAST_ACTIVE_KEY]);
+  } catch (err) {
+    console.warn('[AuthContext] Failed to clear local session:', err);
+  }
+}
+
 // ─── Provider ────────────────────────────────────────────────
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -59,37 +92,114 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await authService.getProfile(userId);
 
-      // Check account status — suspended/deleted users should not have sessions
+      // Check account status — suspended/deleted users should not have active sessions
       if (profile && (profile.status === 'suspended' || profile.status === 'deleted')) {
+        await clearLocalSession();
         await authService.signOut();
         setUser(null);
         return;
       }
 
-      setUser(profile);
+      if (profile) {
+        setUser(profile);
+        await saveCachedProfile(profile);
+        await touchSessionActivity();
+      }
     } catch {
-      setUser(null);
+      // If network fails, retain existing state if available
     }
   }, []);
 
   const refreshProfile = useCallback(async () => {
     const session = await authService.getSession();
-    if (session?.user?.id) await loadProfile(session.user.id);
+    if (session?.user?.id) {
+      await loadProfile(session.user.id);
+    }
   }, [loadProfile]);
 
-  // Listen for Supabase auth state changes (session restore on app start)
+  // Initial cold-start bootstrap & auth listener with 1-month session window
   useEffect(() => {
+    let isMounted = true;
+
+    const bootstrapAuth = async () => {
+      try {
+        const [cachedProfileStr, lastActiveStr] = await Promise.all([
+          AsyncStorage.getItem(CACHED_PROFILE_KEY),
+          AsyncStorage.getItem(SESSION_LAST_ACTIVE_KEY),
+        ]);
+
+        const lastActive = lastActiveStr ? parseInt(lastActiveStr, 10) : null;
+        const now = Date.now();
+
+        // Check if previous session exceeded 30 days of inactivity
+        if (lastActive && (now - lastActive > SESSION_LIFETIME_MS)) {
+          console.log('[AuthContext] Session expired after 1 month of inactivity. Signing out.');
+          await clearLocalSession();
+          await authService.signOut();
+          if (isMounted) {
+            setUser(null);
+            setIsInitialized(true);
+          }
+          return;
+        }
+
+        // Fast hydrated state from cache
+        if (cachedProfileStr && isMounted) {
+          try {
+            const cachedProfile = JSON.parse(cachedProfileStr) as Profile;
+            setUser(cachedProfile);
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      } catch (err) {
+        console.warn('[AuthContext] Error reading cached session:', err);
+      }
+    };
+
+    bootstrapAuth();
+
+    // Listen for Supabase auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
+
         if (session?.user) {
+          // Check 1-month session inactivity
+          const lastActiveStr = await AsyncStorage.getItem(SESSION_LAST_ACTIVE_KEY);
+          const lastActive = lastActiveStr ? parseInt(lastActiveStr, 10) : null;
+          const now = Date.now();
+
+          if (lastActive && (now - lastActive > SESSION_LIFETIME_MS)) {
+            console.log('[AuthContext] Expired session detected during auth change. Signing out.');
+            await clearLocalSession();
+            await authService.signOut();
+            if (isMounted) {
+              setUser(null);
+              setIsInitialized(true);
+            }
+            return;
+          }
+
+          await touchSessionActivity();
           await loadProfile(session.user.id);
         } else {
-          setUser(null);
+          await clearLocalSession();
+          if (isMounted) {
+            setUser(null);
+          }
         }
-        setIsInitialized(true);
+
+        if (isMounted) {
+          setIsInitialized(true);
+        }
       },
     );
-    return () => subscription.unsubscribe();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadProfile]);
 
   // ─── Login ──────────────────────────────────────────────────
@@ -118,6 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Check account status
       if (profileData.status === 'suspended') {
+        await clearLocalSession();
         await authService.signOut();
         return {
           success: false,
@@ -127,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (profileData.status === 'deleted') {
+        await clearLocalSession();
         await authService.signOut();
         return {
           success: false,
@@ -136,6 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (profileData.status === 'pending') {
+        await clearLocalSession();
         await authService.signOut();
         return {
           success: false,
@@ -143,6 +256,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           errorMessage: 'Your account is still awaiting approval. You will be notified once approved.',
         };
       }
+
+      // Persist session timestamp and cached profile for seamless 1-month persistence
+      await saveCachedProfile(profileData);
+      await touchSessionActivity();
 
       setUser(profileData);
       return { success: true, profile: profileData };
@@ -163,7 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errorMessage = 'Security rate limit reached. Please wait a few moments before trying again.';
       } else if (msg.includes('invalid email') || msg.includes('email format')) {
         errorType = 'invalid_email';
-        errorMessage = 'Please enter a valid email address.';
+        errorMessage = 'Please enter a practical valid email address.';
       } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) {
         errorType = 'network_error';
         errorMessage = 'Network error. Please check your internet connection and try again.';
@@ -179,7 +296,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setIsLoading(true);
     try {
+      await clearLocalSession();
       await authService.signOut();
+    } catch (err) {
+      console.warn('[AuthContext] SignOut error:', err);
     } finally {
       setUser(null);
       setIsLoading(false);
@@ -205,3 +325,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useAuth = () => useContext(AuthContext);
+

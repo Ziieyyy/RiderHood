@@ -19,7 +19,13 @@ export default function SplashScreen() {
     const timer = setTimeout(() => {
       if (isInitialized) {
         if (user) {
-          router.replace('/(customer)/home');
+          if (user.role === 'workshop_admin') {
+            router.replace('/(workshop)/dashboard');
+          } else if (user.role === 'super_admin') {
+            router.replace('/(admin)');
+          } else {
+            router.replace('/(customer)/home');
+          }
         } else {
           router.replace('/(auth)/welcome');
         }

@@ -25,7 +25,15 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "navigationBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#090A0F"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "androidNavigationBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#090A0F"
     },
     "updates": {
       "enabled": false,
