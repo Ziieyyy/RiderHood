@@ -215,12 +215,16 @@ export default function CustomerWorkshopsScreen() {
           <View style={styles.viewModeHeader}>
             <View style={styles.viewModeInfo}>
               <Text style={styles.viewModeTitle}>
-                {viewMode === 'map' ? 'MAP EXPLORER' : viewMode === 'split' ? 'INTERACTIVE MAP & DIRECTORY' : 'WORKSHOP DIRECTORY'}
+                {viewMode === 'map'
+                  ? t('workshop.mapExplorer')
+                  : viewMode === 'split'
+                  ? t('workshop.interactiveMapDirectory')
+                  : t('workshop.directoryTitle').toUpperCase()}
               </Text>
               <Text style={styles.viewModeSubtitle}>
                 {userLocation
-                  ? `📍 GPS Active • ${workshops.length} workshops near you`
-                  : `📍 Kulim, Kedah • ${workshops.length} workshops`}
+                  ? `📍 ${t('common.gpsActive')} • ${workshops.length} ${t('workshop.nearYou')}`
+                  : `📍 Kulim, Kedah • ${workshops.length} ${t('workshop.allWorkshops').toLowerCase()}`}
               </Text>
             </View>
 
@@ -233,7 +237,7 @@ export default function CustomerWorkshopsScreen() {
               >
                 <Layers color={viewMode === 'split' ? '#000' : colors.textSecondary} size={13} />
                 <Text style={[styles.segmentBtnText, viewMode === 'split' && styles.segmentBtnTextActive]}>
-                  Split
+                  {t('common.split')}
                 </Text>
               </TouchableOpacity>
 
@@ -244,7 +248,7 @@ export default function CustomerWorkshopsScreen() {
               >
                 <Map color={viewMode === 'map' ? '#000' : colors.textSecondary} size={13} />
                 <Text style={[styles.segmentBtnText, viewMode === 'map' && styles.segmentBtnTextActive]}>
-                  Map
+                  {t('common.map')}
                 </Text>
               </TouchableOpacity>
 
@@ -255,7 +259,7 @@ export default function CustomerWorkshopsScreen() {
               >
                 <List color={viewMode === 'list' ? '#000' : colors.textSecondary} size={13} />
                 <Text style={[styles.segmentBtnText, viewMode === 'list' && styles.segmentBtnTextActive]}>
-                  List
+                  {t('common.list')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -288,8 +292,8 @@ export default function CustomerWorkshopsScreen() {
                   {locationLoading
                     ? '🛰️ ' + t('common.loading') + ' GPS...'
                     : userLocation
-                    ? `📍 GPS Aktif • ${filterMode === 'nearby' ? 'Disusun paling dekat' : 'Jarak dipaparkan'}`
-                    : '📍 Bolehkan GPS untuk melihat jarak bengkel'}
+                    ? `📍 ${t('common.gpsActive')} • ${filterMode === 'nearby' ? t('common.sortedNearest') : t('common.distancesDisplayed')}`
+                    : `📍 ${t('common.enableGpsToSeeDistance')}`}
                 </Text>
               </View>
               <TouchableOpacity
@@ -304,7 +308,7 @@ export default function CustomerWorkshopsScreen() {
                   <>
                     <RotateCw color={userLocation ? '#000' : colors.primary} size={12} />
                     <Text style={[styles.gpsBtnText, userLocation ? styles.gpsBtnTextActive : undefined]}>
-                      {userLocation ? 'Kemaskini GPS' : 'Kesan GPS'}
+                      {userLocation ? t('common.updateGps') : t('common.detectGps')}
                     </Text>
                   </>
                 )}
@@ -450,7 +454,7 @@ export default function CustomerWorkshopsScreen() {
                             },
                           ]}
                         >
-                          {openStatus.statusText}
+                          {openStatus.isOpen ? t('workshop.openNow') : t('workshop.closed')}
                         </Text>
                       </View>
 

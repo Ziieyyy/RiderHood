@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { COLORS, DARK_COLORS } from '../../constants/theme';
@@ -24,14 +25,20 @@ import {
   Calendar,
   Clock,
   User,
-  RefreshCw,
-  Package,
   Search,
   X,
   FileText,
   CheckCircle2,
   AlertCircle,
   Play,
+  Copy,
+  Check,
+  Phone,
+  CalendarDays,
+  Wrench,
+  ChevronRight,
+  XCircle,
+  Clock3,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
@@ -41,7 +48,8 @@ import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
 import type { Booking, BookingStatus } from '../../types/database';
 import { useTranslation } from '../../i18n';
 
-const getStatusConfig = (colors: typeof DARK_COLORS): Record<BookingStatus, { label: string; color: string; bg: string }> => ({
+// Past Git Dark Theme Status Palette
+const getStatusConfig = (colors: typeof DARK_COLORS, isDark: boolean): Record<BookingStatus, { label: string; color: string; bg: string }> => ({
   pending:     { label: 'Pending',     color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' },
   confirmed:   { label: 'Confirmed',   color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' },
   in_progress: { label: 'In Progress', color: colors.primary, bg: 'rgba(255, 107, 0, 0.15)' },
@@ -51,12 +59,6 @@ const getStatusConfig = (colors: typeof DARK_COLORS): Record<BookingStatus, { la
   no_show:     { label: 'No Show',     color: colors.textMuted, bg: 'rgba(113, 113, 122, 0.15)' },
 });
 
-const NEXT_ACTIONS: Partial<Record<BookingStatus, { to: BookingStatus; label: string; primary?: boolean }[]>> = {
-  pending:     [{ to: 'confirmed', label: 'Accept', primary: true }, { to: 'rejected', label: 'Reject' }],
-  confirmed:   [{ to: 'in_progress', label: 'Start Service', primary: true }, { to: 'cancelled', label: 'Cancel' }],
-  in_progress: [{ to: 'completed', label: 'Complete Service', primary: true }],
-};
-
 export default function WorkshopBookingsScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string; status?: string; filter?: string }>();
@@ -64,7 +66,7 @@ export default function WorkshopBookingsScreen() {
   const { isPhone, contentPadding } = useResponsive();
   const { colors, isDark } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const STATUS_CONFIG = getStatusConfig(colors);
+  const STATUS_CONFIG = getStatusConfig(colors, isDark);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [workshopId, setWorkshopId] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export default function WorkshopBookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,6 +127,16 @@ export default function WorkshopBookingsScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleCopyRef = (refCode: string, id: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(refCode);
+    }
+    setCopiedId(id);
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
+  };
 
   const handleAction = async (bookingId: string, toStatus: BookingStatus) => {
     if (!profile?.id) return;
@@ -188,7 +201,7 @@ export default function WorkshopBookingsScreen() {
     return true;
   });
 
-  const tabCounts = (['pending', 'confirmed', 'in_progress', 'completed'] as BookingStatus[]).reduce(
+  const tabCounts = (['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'] as BookingStatus[]).reduce(
     (acc, s) => {
       acc[s] = bookings.filter((b) => b.status === s).length;
       return acc;
@@ -196,11 +209,20 @@ export default function WorkshopBookingsScreen() {
     {} as Record<string, number>
   );
 
+  const getInitials = (name?: string) => {
+    if (!name) return 'CU';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Booking Queue...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading Bookings Queue...</Text>
       </View>
     );
   }
@@ -212,20 +234,20 @@ export default function WorkshopBookingsScreen() {
         subtitle={`${bookings.length} Total Appointments`}
       />
 
-      {/* Top Search Bar */}
+      {/* Search Bar */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchInputWrapper}>
-          <Search color={COLORS.textMuted} size={18} />
+          <Search color={colors.textMuted} size={18} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search customer, phone, plate number, or ref..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X color={COLORS.textMuted} size={18} />
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <X color={colors.textMuted} size={18} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -233,45 +255,71 @@ export default function WorkshopBookingsScreen() {
 
       {/* Timeframe Filter (Today | Upcoming | All) */}
       <View style={styles.timeframeRow}>
-        {(['today', 'upcoming', 'all'] as const).map((tf) => (
-          <TouchableOpacity
-            key={tf}
-            style={[styles.timeframeBtn, dateFilter === tf && styles.activeTimeframeBtn]}
-            onPress={() => setDateFilter(tf)}
-          >
-            <Text style={[styles.timeframeText, dateFilter === tf && styles.activeTimeframeText]}>
-              {tf.charAt(0).toUpperCase() + tf.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Status Filter Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
-        {(['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'] as const).map((tab) => {
-          const isActive = statusFilter === tab;
-          const count = tab === 'all' ? bookings.length : tabCounts[tab] ?? bookings.filter((b) => b.status === tab).length;
-          const cfg = tab !== 'all' ? STATUS_CONFIG[tab] : null;
+        {(['today', 'upcoming', 'all'] as const).map((tf) => {
+          const isActive = dateFilter === tf;
           return (
             <TouchableOpacity
-              key={tab}
-              style={[
-                styles.tab,
-                isActive && styles.activeTab,
-                isActive && cfg && { borderColor: cfg.color, backgroundColor: cfg.bg },
-              ]}
-              onPress={() => setStatusFilter(tab)}
+              key={tf}
+              style={[styles.timeframeBtn, isActive && styles.activeTimeframeBtn]}
+              onPress={() => setDateFilter(tf)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, isActive && { color: cfg?.color ?? COLORS.primary, fontWeight: '900' }]}>
-                {tab === 'all' ? t('common.all').toUpperCase() : STATUS_CONFIG[tab].label.toUpperCase()} ({count})
+              <Text style={[styles.timeframeText, isActive && styles.activeTimeframeText]}>
+                {tf === 'today' ? 'Today' : tf === 'upcoming' ? 'Upcoming' : 'All Appointments'}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
-      {/* Booking List */}
+      {/* Status Filter Tabs (Safe Horizontal Scroll with Exact Git Theme Styling) */}
+      <View style={styles.statusTabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabScroll}
+          style={styles.statusTabsScroll}
+        >
+          {(['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'] as const).map((tab) => {
+            const isActive = statusFilter === tab;
+            const count = tab === 'all' ? bookings.length : tabCounts[tab] ?? bookings.filter((b) => b.status === tab).length;
+            const cfg = tab !== 'all' ? STATUS_CONFIG[tab] : null;
+            const label = tab === 'all' ? t('common.all').toUpperCase() : STATUS_CONFIG[tab].label.toUpperCase();
+
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[
+                  styles.tab,
+                  isActive && styles.activeTab,
+                  isActive && cfg && { borderColor: cfg.color, backgroundColor: cfg.bg },
+                ]}
+                onPress={() => setStatusFilter(tab)}
+                activeOpacity={0.8}
+              >
+                {cfg && (
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: cfg.color },
+                    ]}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.tabText,
+                    isActive && { color: cfg?.color ?? colors.primary, fontWeight: '900' },
+                  ]}
+                >
+                  {label} ({count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Main Bookings Feed */}
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
@@ -282,14 +330,14 @@ export default function WorkshopBookingsScreen() {
               setRefreshing(true);
               loadData();
             }}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
       >
         <ResponsiveContainer>
           {filteredBookings.length === 0 ? (
             <View style={styles.emptyState}>
-              <Calendar color={COLORS.textMuted} size={48} />
+              <Calendar color={colors.textMuted} size={48} />
               <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
               <Text style={styles.emptyDesc}>{t('empty.noBookingsSub')}</Text>
             </View>
@@ -297,30 +345,51 @@ export default function WorkshopBookingsScreen() {
             <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
               {filteredBookings.map((bk) => {
                 const cfg = STATUS_CONFIG[bk.status];
-                const actions = NEXT_ACTIONS[bk.status] ?? [];
                 const customer = bk.customer as any;
                 const motorcycle = bk.motorcycle as any;
                 const refCode = `#RH-${bk.id.slice(0, 8).toUpperCase()}`;
+                const isCopied = copiedId === bk.id;
 
                 return (
                   <View key={bk.id} style={styles.bookingCard}>
+                    {/* Header Row: Ref Code + Status Badge */}
                     <View style={styles.cardHeader}>
-                      <Text style={styles.refCode}>{refCode}</Text>
+                      <TouchableOpacity
+                        style={styles.refCodeBadge}
+                        onPress={() => handleCopyRef(refCode, bk.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.refCode}>{refCode}</Text>
+                        {isCopied ? (
+                          <Check size={12} color={colors.success} />
+                        ) : (
+                          <Copy size={12} color={colors.textMuted} />
+                        )}
+                      </TouchableOpacity>
+
                       <View style={[styles.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color }]}>
-                        <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label.toUpperCase()}</Text>
+                        <Text style={[styles.statusText, { color: cfg.color }]}>
+                          {cfg.label.toUpperCase()}
+                        </Text>
                       </View>
                     </View>
 
+                    {/* Customer Row */}
                     <View style={styles.customerRow}>
                       <View style={styles.avatar}>
-                        <User color={COLORS.textMuted} size={18} />
+                        <User color={colors.textMuted} size={18} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.customerName} numberOfLines={1}>{customer?.full_name ?? 'Customer'}</Text>
-                        <Text style={styles.customerPhone} numberOfLines={1}>{customer?.phone ?? customer?.email ?? 'No contact info'}</Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.customerName} numberOfLines={1}>
+                          {customer?.full_name ?? 'Customer'}
+                        </Text>
+                        <Text style={styles.customerPhone} numberOfLines={1}>
+                          {customer?.phone ?? customer?.email ?? 'No contact info'}
+                        </Text>
                       </View>
                     </View>
 
+                    {/* Motorcycle Box */}
                     {motorcycle && (
                       <View style={styles.bikeBox}>
                         <Text style={styles.bikeTag} numberOfLines={1}>
@@ -329,17 +398,19 @@ export default function WorkshopBookingsScreen() {
                       </View>
                     )}
 
+                    {/* Date & Time Row */}
                     <View style={styles.dateRow}>
                       <View style={styles.metaRow}>
-                        <Calendar color={COLORS.textMuted} size={13} />
+                        <Calendar color={colors.textMuted} size={13} />
                         <Text style={styles.metaText}>{bk.booking_date}</Text>
                       </View>
                       <View style={styles.metaRow}>
-                        <Clock color={COLORS.textMuted} size={13} />
+                        <Clock color={colors.textMuted} size={13} />
                         <Text style={styles.metaText}>{bk.booking_time}</Text>
                       </View>
                     </View>
 
+                    {/* Services List */}
                     {(bk.booking_services ?? []).length > 0 && (
                       <View style={styles.servicesList}>
                         {(bk.booking_services ?? []).map((s) => (
@@ -350,50 +421,121 @@ export default function WorkshopBookingsScreen() {
                       </View>
                     )}
 
-                    <View style={styles.cardFooter}>
+                    {/* Card Price & Details Row */}
+                    <View style={styles.priceRow}>
                       <Text style={styles.totalText}>RM {Number(bk.total_amount).toFixed(2)}</Text>
-                      <View style={styles.actionsRow}>
-                        <TouchableOpacity
-                          style={styles.viewBtn}
-                          onPress={() => {
-                            setSelectedBooking(bk);
-                            setShowDetailModal(true);
-                          }}
-                        >
-                          <Text style={styles.viewBtnText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
-                        </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.viewBtn}
+                        onPress={() => {
+                          setSelectedBooking(bk);
+                          setShowDetailModal(true);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.viewBtnText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    </View>
 
-                        {bk.status === 'confirmed' && (
-                          <TouchableOpacity style={styles.reschedBtn} onPress={() => handleOpenReschedule(bk)}>
-                            <Text style={styles.reschedBtnText}>{t('booking.reschedule').toUpperCase()}</Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {actions.map((a) => (
+                    {/* Card Actions Container — Non-overflowing, Structured Layout */}
+                    <View style={styles.cardActionsContainer}>
+                      {bk.status === 'pending' && (
+                        <View style={styles.buttonSplitRow}>
                           <TouchableOpacity
-                            key={a.to}
-                            style={[
-                              styles.actionBtn,
-                              a.primary ? styles.primaryBtn : (a.to === 'rejected' || a.to === 'cancelled' ? styles.dangerBtn : styles.secondaryBtn),
-                            ]}
-                            onPress={() => handleAction(bk.id, a.to)}
+                            style={[styles.actionBtn, styles.primaryBtn]}
+                            onPress={() => handleAction(bk.id, 'confirmed')}
                             disabled={actionLoading !== null}
+                            activeOpacity={0.8}
                           >
-                            {actionLoading === bk.id + a.to ? (
+                            {actionLoading === bk.id + 'confirmed' ? (
                               <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
-                              <Text
-                                style={[
-                                  styles.actionBtnText,
-                                  a.primary ? { color: '#FFFFFF' } : (a.to === 'rejected' || a.to === 'cancelled' ? { color: COLORS.danger } : { color: COLORS.textPrimary }),
-                                ]}
-                              >
-                                {a.label.toUpperCase()}
-                              </Text>
+                              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>ACCEPT</Text>
                             )}
                           </TouchableOpacity>
-                        ))}
-                      </View>
+
+                          <TouchableOpacity
+                            style={[styles.actionBtn, styles.dangerBtn]}
+                            onPress={() => handleAction(bk.id, 'rejected')}
+                            disabled={actionLoading !== null}
+                            activeOpacity={0.8}
+                          >
+                            {actionLoading === bk.id + 'rejected' ? (
+                              <ActivityIndicator size="small" color={colors.danger} />
+                            ) : (
+                              <Text style={[styles.actionBtnText, { color: colors.danger }]}>REJECT</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {bk.status === 'confirmed' && (
+                        <View style={styles.actionBlock}>
+                          <TouchableOpacity
+                            style={[styles.actionBtn, styles.primaryBtn, { width: '100%' }]}
+                            onPress={() => handleAction(bk.id, 'in_progress')}
+                            disabled={actionLoading !== null}
+                            activeOpacity={0.8}
+                          >
+                            {actionLoading === bk.id + 'in_progress' ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>START SERVICE</Text>
+                            )}
+                          </TouchableOpacity>
+
+                          <View style={styles.buttonSplitRow}>
+                            <TouchableOpacity
+                              style={[styles.actionBtn, styles.reschedBtn]}
+                              onPress={() => handleOpenReschedule(bk)}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.reschedBtnText}>{t('booking.reschedule').toUpperCase()}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={[styles.actionBtn, styles.dangerBtn]}
+                              onPress={() => handleAction(bk.id, 'cancelled')}
+                              disabled={actionLoading !== null}
+                              activeOpacity={0.8}
+                            >
+                              {actionLoading === bk.id + 'cancelled' ? (
+                                <ActivityIndicator size="small" color={colors.danger} />
+                              ) : (
+                                <Text style={[styles.actionBtnText, { color: colors.danger }]}>CANCEL</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+
+                      {bk.status === 'in_progress' && (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.primaryBtn, { width: '100%' }]}
+                          onPress={() => handleAction(bk.id, 'completed')}
+                          disabled={actionLoading !== null}
+                          activeOpacity={0.8}
+                        >
+                          {actionLoading === bk.id + 'completed' ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>COMPLETE SERVICE</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+
+                      {bk.status === 'completed' && (
+                        <View style={styles.completedBadgeBox}>
+                          <Text style={styles.completedBadgeText}>✓ SERVICE COMPLETED</Text>
+                        </View>
+                      )}
+
+                      {(bk.status === 'cancelled' || bk.status === 'rejected') && (
+                        <View style={styles.cancelledBadgeBox}>
+                          <Text style={styles.cancelledBadgeText}>
+                            {bk.status === 'cancelled' ? '✕ BOOKING CANCELLED' : '✕ BOOKING REJECTED'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 );
@@ -412,7 +554,7 @@ export default function WorkshopBookingsScreen() {
                 BOOKING DETAILS #{selectedBooking?.id.slice(0, 8).toUpperCase()}
               </Text>
               <TouchableOpacity onPress={() => setShowDetailModal(false)}>
-                <X color={COLORS.textMuted} size={22} />
+                <X color={colors.textMuted} size={22} />
               </TouchableOpacity>
             </View>
 
@@ -468,7 +610,7 @@ export default function WorkshopBookingsScreen() {
                         <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>ACCEPT BOOKING</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.modalActionBtn, styles.dangerBtn]} onPress={() => handleAction(selectedBooking.id, 'rejected')}>
-                        <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>REJECT</Text>
+                        <Text style={[styles.actionBtnText, { color: colors.danger }]}>REJECT</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -509,7 +651,7 @@ export default function WorkshopBookingsScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>RESCHEDULE BOOKING</Text>
               <TouchableOpacity onPress={() => setShowRescheduleModal(false)}>
-                <X color={COLORS.textMuted} size={22} />
+                <X color={colors.textMuted} size={22} />
               </TouchableOpacity>
             </View>
 
@@ -521,8 +663,8 @@ export default function WorkshopBookingsScreen() {
               <Text style={styles.formLabel}>NEW DATE (YYYY-MM-DD)</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="e.g. 2026-08-20"
-                placeholderTextColor={COLORS.textMuted}
+                placeholder="e.g. 2026-09-20"
+                placeholderTextColor={colors.textMuted}
                 value={rescheduleDate}
                 onChangeText={setRescheduleDate}
               />
@@ -531,7 +673,7 @@ export default function WorkshopBookingsScreen() {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. 10:30 AM"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 value={rescheduleTime}
                 onChangeText={setRescheduleTime}
               />
@@ -540,7 +682,7 @@ export default function WorkshopBookingsScreen() {
               <TextInput
                 style={[styles.formInput, { height: 70 }]}
                 placeholder="e.g. Parts arrived late / Customer requested shift"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 multiline
                 value={rescheduleReason}
                 onChangeText={setRescheduleReason}
@@ -567,50 +709,79 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     container: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
     loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+
+    // Top Search Bar
     searchBarContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
     searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, gap: 10, height: 44 },
     searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+
+    // Timeframe Filter (Today | Upcoming | All)
     timeframeRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 6, gap: 8 },
     timeframeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.cards, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
     activeTimeframeBtn: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
     timeframeText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
     activeTimeframeText: { color: colors.primary, fontWeight: '800' },
-    tabScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
-    tab: { backgroundColor: colors.cards, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+
+    // Status Filter Tabs
+    statusTabsWrapper: { height: 48, justifyContent: 'center' },
+    statusTabsScroll: { flexGrow: 0 },
+    tabScroll: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
+    tab: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.cards, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
     activeTab: { backgroundColor: colors.elevatedCards },
     tabText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800' },
-    scrollContent: { padding: 20, paddingBottom: 40 },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
+
+    // Booking Feed & Cards
+    scrollContent: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 40 },
     emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: colors.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border },
     emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
     emptyDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
-    bookingCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 14, gap: 12 },
+    
+    bookingCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    refCodeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     refCode: { color: colors.primary, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+    statusText: { fontSize: 10, fontWeight: '900' },
+
+    // Customer & Bike
     customerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondaryBackground, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
     customerName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
     customerPhone: { color: colors.textSecondary, fontSize: 11, fontWeight: '500' },
-    statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
-    statusText: { fontSize: 10, fontWeight: '900' },
     bikeBox: { backgroundColor: colors.secondaryBackground, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
     bikeTag: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+
+    // Date & Services
     dateRow: { flexDirection: 'row', gap: 16 },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     metaText: { color: colors.textSecondary, fontSize: 12 },
     servicesList: { gap: 3 },
     serviceItem: { color: colors.textSecondary, fontSize: 12 },
-    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, flexWrap: 'wrap', gap: 8 },
+
+    // Price & View Details
+    priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
     totalText: { color: colors.primary, fontSize: 16, fontWeight: '900' },
-    actionsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
     viewBtn: { backgroundColor: colors.elevatedCards, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
     viewBtnText: { color: colors.textPrimary, fontSize: 11, fontWeight: '800' },
-    reschedBtn: { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.warning },
-    reschedBtnText: { color: colors.warning, fontSize: 11, fontWeight: '800' },
-    actionBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+
+    // Structured Action Buttons Layout (Guaranteed No Overflow)
+    cardActionsContainer: { gap: 8 },
+    buttonSplitRow: { flexDirection: 'row', gap: 8 },
+    actionBlock: { gap: 8 },
+    actionBtn: { flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
     primaryBtn: { backgroundColor: colors.primary, borderColor: colors.primary },
     secondaryBtn: { backgroundColor: colors.elevatedCards, borderColor: colors.borderHighlight },
+    reschedBtn: { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)', borderWidth: 1, borderColor: colors.warning },
+    reschedBtnText: { color: colors.warning, fontSize: 11, fontWeight: '800' },
     dangerBtn: { backgroundColor: colors.dangerBg, borderColor: colors.danger },
     actionBtnText: { fontSize: 11, fontWeight: '900' },
+    completedBadgeBox: { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', paddingVertical: 9, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.success },
+    completedBadgeText: { color: colors.success, fontSize: 11, fontWeight: '900' },
+    cancelledBadgeBox: { backgroundColor: colors.dangerBg, paddingVertical: 9, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.danger },
+    cancelledBadgeText: { color: colors.danger, fontSize: 11, fontWeight: '900' },
+
+    // Modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
     modalContent: { backgroundColor: colors.elevatedCards, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: colors.borderHighlight, maxHeight: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 },
@@ -629,8 +800,6 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     detailActionContainer: { marginTop: 10 },
     modalActionRow: { flexDirection: 'row', gap: 10 },
     modalActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    completedBadgeBox: { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.success },
-    completedBadgeText: { color: colors.success, fontSize: 13, fontWeight: '900' },
     rescheduleForm: { gap: 12 },
     currentScheduleText: { color: colors.primary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
     formLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },

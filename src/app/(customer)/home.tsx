@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -176,9 +177,21 @@ export default function CustomerHomeScreen() {
               )}
             </View>
 
-            <View style={styles.bikeInfoRow}>
+            <TouchableOpacity
+              style={styles.bikeInfoRow}
+              onPress={() => router.push('/(customer)/garage')}
+              activeOpacity={0.8}
+            >
               <View style={styles.bikePlaceholderImg}>
-                <Bike color={COLORS.textMuted} size={28} />
+                {selectedBike.photo_url ? (
+                  <Image
+                    source={{ uri: selectedBike.photo_url }}
+                    style={styles.bikePhotoImg}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Bike color={colors.primary} size={32} />
+                )}
               </View>
               <View style={styles.bikeDetails}>
                 <Text style={styles.bikeName}>
@@ -192,7 +205,7 @@ export default function CustomerHomeScreen() {
                   <Text style={styles.plateText}>{selectedBike.plate_number}</Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Health Score Component */}
@@ -522,7 +535,22 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     switchBtn: { backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
     switchBtnText: { color: colors.textPrimary, fontSize: 11, fontWeight: '700' },
     bikeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-    bikePlaceholderImg: { width: 80, height: 60, borderRadius: 12, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+    bikePlaceholderImg: {
+      width: 68,
+      height: 68,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+      overflow: 'hidden',
+    },
+    bikePhotoImg: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 14,
+    },
     bikeDetails: { flex: 1, gap: 2 },
     bikeName: { color: colors.textPrimary, fontSize: 17, fontWeight: '800' },
     bikeEngine: { color: colors.textSecondary, fontSize: 12, fontWeight: '500' },

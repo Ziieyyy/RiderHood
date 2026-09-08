@@ -105,9 +105,22 @@ export interface TranslationSchema {
     showLess: string;
     welcome: string;
     closed: string;
-    suspended: string;
     state: string;
     title: string;
+    getDirections: string;
+    gpsActive: string;
+    distancesDisplayed: string;
+    sortedNearest: string;
+    enableGpsToSeeDistance: string;
+    updateGps: string;
+    detectGps: string;
+    youAreHere: string;
+    liveDeviceLocation: string;
+    focus: string;
+    fitAll: string;
+    split: string;
+    map: string;
+    list: string;
   };
 
   navigation: {
@@ -435,6 +448,9 @@ export interface TranslationSchema {
     contactInfo: string;
     noPhoneRegistered: string;
     description: string;
+    mapExplorer: string;
+    interactiveMapDirectory: string;
+    nearYou: string;
   };
 
   services: {

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, DARK_COLORS } from '../../constants/theme';
@@ -29,6 +30,9 @@ import {
   Plus,
   TrendingUp,
   ChevronRight,
+  ShieldCheck,
+  Calendar,
+  Phone,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n';
@@ -50,7 +54,6 @@ export default function WorkshopDashboardScreen() {
   const { isPhone, isTablet, isDesktop, contentPadding } = useResponsive();
   const { colors, isDark } = useTheme();
   const styles = useThemedStyles(createStyles);
-
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -122,9 +125,13 @@ export default function WorkshopDashboardScreen() {
   // Monthly revenue: sum of completed bookings this month
   const now = new Date();
   const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthlyRevenue = bookings
-    .filter((b) => b.status === 'completed' && b.booking_date.startsWith(thisMonthStr))
-    .reduce((sum, b) => sum + Number(b.total_amount || 0), 0);
+  const thisMonthCompletedBookings = bookings.filter(
+    (b) => b.status === 'completed' && b.booking_date.startsWith(thisMonthStr)
+  );
+  const monthlyRevenue = thisMonthCompletedBookings.reduce(
+    (sum, b) => sum + Number(b.total_amount || 0),
+    0
+  );
 
   // Low stock parts
   const lowStockParts = parts.filter(
@@ -144,10 +151,19 @@ export default function WorkshopDashboardScreen() {
     }
   };
 
+  const getInitials = (name?: string) => {
+    if (!name) return 'CU';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
@@ -156,7 +172,7 @@ export default function WorkshopDashboardScreen() {
   if (error) {
     return (
       <View style={styles.centered}>
-        <RefreshCw color={COLORS.danger} size={40} />
+        <RefreshCw color={colors.danger} size={40} />
         <Text style={styles.errorTitle}>{t('errors.genericTitle')}</Text>
         <Text style={styles.errorDesc}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
@@ -165,6 +181,76 @@ export default function WorkshopDashboardScreen() {
       </View>
     );
   }
+
+  const kpis = [
+    {
+      id: 'today',
+      title: "Today's Bookings",
+      value: String(todaysBookings.length),
+      subtext: `${todaysBookings.filter((b) => b.status === 'confirmed').length} confirmed today`,
+      icon: CalendarDays,
+      color: colors.primary,
+      bg: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)',
+      route: '/(workshop)/bookings?filter=today',
+    },
+    {
+      id: 'pending',
+      title: 'Pending Bookings',
+      value: String(pendingBookings.length),
+      subtext: 'Awaiting your confirmation',
+      icon: Clock,
+      color: '#F59E0B',
+      bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+      route: '/(workshop)/bookings?status=pending',
+    },
+    {
+      id: 'in_progress',
+      title: 'In Progress',
+      value: String(inProgressBookings.length),
+      subtext: 'Currently servicing',
+      icon: Wrench,
+      color: '#38BDF8',
+      bg: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(56, 189, 248, 0.12)',
+      route: '/(workshop)/bookings?status=in_progress',
+    },
+    {
+      id: 'completed',
+      title: 'Completed Today',
+      value: String(completedTodayBookings.length),
+      subtext: 'Successfully serviced',
+      icon: CheckCircle2,
+      color: colors.success,
+      bg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+      route: '/(workshop)/bookings?status=completed',
+    },
+    {
+      id: 'revenue',
+      title: 'Monthly Revenue',
+      value: formatCurrency(monthlyRevenue),
+      subtext: `${thisMonthCompletedBookings.length} completed this month`,
+      icon: DollarSign,
+      color: colors.success,
+      bg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+      route: '/(workshop)/reports?period=month',
+    },
+    {
+      id: 'rating',
+      title: 'Workshop Rating',
+      value: `${workshop ? Number(workshop.rating).toFixed(1) : '0.0'} ★`,
+      subtext: `Based on ${workshop?.review_count || reviews.length} customer reviews`,
+      icon: Star,
+      color: '#F59E0B',
+      bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+      route: '/(workshop)/reviews',
+    },
+  ];
+
+  const quickActions = [
+    { label: t('workshopAdmin.viewBookings'), icon: CalendarDays, route: '/(workshop)/bookings' },
+    { label: t('workshopAdmin.addService'), icon: Plus, route: '/(workshop)/services' },
+    { label: t('workshopAdmin.customerDirectory'), icon: Users, route: '/(workshop)/customers' },
+    { label: t('workshopAdmin.reports'), icon: TrendingUp, route: '/(workshop)/reports' },
+  ];
 
   return (
     <View style={styles.screenContainer}>
@@ -184,380 +270,301 @@ export default function WorkshopDashboardScreen() {
               setRefreshing(true);
               loadData();
             }}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
       >
         <ResponsiveContainer>
-          {/* Welcome Greeting Header */}
+          {/* Welcome Greeting Banner */}
           <View style={styles.welcomeCard}>
-          <View style={styles.welcomeTextGroup}>
-            <Text style={styles.greetingTitle}>
-              {t('common.welcome')}, {profile?.full_name?.split(' ')[0] || 'Admin'} 👋
-            </Text>
-            <Text style={styles.greetingSub}>
-              {workshop?.name || 'RiderHood Workshop'} • {workshop?.district || 'Main Hub'}
-            </Text>
-          </View>
-          <View style={styles.welcomeActions}>
-            <TouchableOpacity
-              style={styles.welcomeSecondaryBtn}
-              onPress={() => router.push('/(workshop)/profile')}
-            >
-              <Eye color={COLORS.textPrimary} size={14} />
-              <Text style={styles.welcomeSecBtnText}>{t('workshop.viewWorkshop')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.welcomePrimaryBtn}
-              onPress={() => router.push('/(workshop)/profile')}
-            >
-              <Wrench color="#FFFFFF" size={14} />
-              <Text style={styles.welcomePriBtnText}>{t('workshopAdmin.editWorkshopProfile')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* KPI Summary Grid */}
-        <View style={styles.kpiGrid}>
-          {/* Today Bookings */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/bookings?filter=today')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(255, 107, 0, 0.15)' }]}>
-                <CalendarDays color={COLORS.primary} size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>{todaysBookings.length}</Text>
-            <Text style={styles.kpiLabel}>{t('workshopAdmin.todaysBookings').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>{t('workshopAdmin.todaysBookings')}</Text>
-          </TouchableOpacity>
-
-          {/* Pending Confirmations */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/bookings?status=pending')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Clock color={COLORS.warning} size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>{pendingBookings.length}</Text>
-            <Text style={styles.kpiLabel}>{t('workshopAdmin.pendingBookings').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>{t('booking.pendingApproval')}</Text>
-          </TouchableOpacity>
-
-          {/* In Progress */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/bookings?status=in_progress')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(56, 189, 248, 0.15)' }]}>
-                <Wrench color="#38bdf8" size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>{inProgressBookings.length}</Text>
-            <Text style={styles.kpiLabel}>{t('booking.inProgress').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>{t('booking.inProgress')}</Text>
-          </TouchableOpacity>
-
-          {/* Completed Today */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/bookings?status=completed')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                <CheckCircle2 color={COLORS.success} size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>{completedTodayBookings.length}</Text>
-            <Text style={styles.kpiLabel}>{t('workshopAdmin.completedServices').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>{t('booking.bookingCompleted')}</Text>
-          </TouchableOpacity>
-
-          {/* Monthly Revenue */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/reports?period=month')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                <DollarSign color={COLORS.success} size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>{formatCurrency(monthlyRevenue)}</Text>
-            <Text style={styles.kpiLabel}>{t('workshopAdmin.monthlyRevenue').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>
-              {bookings.filter((b) => b.status === 'completed' && b.booking_date.startsWith(thisMonthStr)).length} {t('navigation.bookings')}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Workshop Rating */}
-          <TouchableOpacity
-            style={styles.kpiCard}
-            onPress={() => router.push('/(workshop)/reviews')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Star color={COLORS.secondaryOrange} size={18} />
-              </View>
-              <ChevronRight color={COLORS.textMuted} size={16} />
-            </View>
-            <Text style={styles.kpiValue}>
-              {workshop ? Number(workshop.rating).toFixed(1) : '0.0'} ★
-            </Text>
-            <Text style={styles.kpiLabel}>{t('workshopAdmin.workshopRating').toUpperCase()}</Text>
-            <Text style={styles.kpiSubText}>
-              {workshop?.review_count || reviews.length} {t('workshopAdmin.reviews')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Actions / Recent Activity Bar */}
-        <Text style={styles.sectionHeaderTitle}>{t('dashboard.recentActivity').toUpperCase()}</Text>
-        <View style={styles.quickActionsRow}>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/bookings')}
-            activeOpacity={0.7}
-          >
-            <CalendarDays color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>{t('workshopAdmin.viewBookings')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/services')}
-            activeOpacity={0.7}
-          >
-            <Plus color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>{t('workshopAdmin.addService')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/customers')}
-            activeOpacity={0.7}
-          >
-            <Users color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>{t('workshopAdmin.customerDirectory')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/(workshop)/reports')}
-            activeOpacity={0.7}
-          >
-            <TrendingUp color={COLORS.primary} size={18} />
-            <Text style={styles.quickBtnText}>{t('workshopAdmin.reports')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Low Stock Alert Header if applicable */}
-        {lowStockParts.length > 0 && (
-          <TouchableOpacity
-            style={styles.alertBannerCard}
-            onPress={() => router.push('/(workshop)/parts')}
-          >
-            <AlertTriangle color={COLORS.warning} size={20} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertBannerTitle}>
-                {lowStockParts.length} {t('workshopAdmin.lowStockItems')}
+            <View style={styles.welcomeTextGroup}>
+              <Text style={styles.greetingTitle}>
+                {t('common.welcome')}, {profile?.full_name?.split(' ')[0] || 'Admin'} 👋
               </Text>
-              <Text style={styles.alertBannerSub}>
-                {lowStockParts.slice(0, 3).map((p: Part) => p.name).join(', ')}
+              <Text style={styles.greetingSub}>
+                {workshop?.name || 'RiderHood Workshop'} • {workshop?.district || 'Main Hub'}
               </Text>
             </View>
-            <Text style={styles.alertActionText}>{t('navigation.spareParts')} &gt;</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Today's Booking Queue Section */}
-        <View style={styles.queueHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>{t('workshopAdmin.todaysBookings').toUpperCase()} ({todaysBookings.length})</Text>
-          <TouchableOpacity onPress={() => router.push('/(workshop)/bookings')}>
-            <Text style={styles.viewAllQueueText}>{t('workshopAdmin.viewBookings')} &gt;</Text>
-          </TouchableOpacity>
-        </View>
-
-        {todaysBookings.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <CalendarDays color={COLORS.textMuted} size={32} />
-            <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
-            <Text style={styles.emptyDesc}>
-              {t('empty.noBookingsSub')}
-            </Text>
+            <View style={styles.welcomeActions}>
+              <TouchableOpacity
+                style={styles.welcomeSecondaryBtn}
+                onPress={() => router.push('/(workshop)/profile')}
+                activeOpacity={0.8}
+              >
+                <Eye color={colors.textPrimary} size={14} />
+                <Text style={styles.welcomeSecBtnText}>{t('workshop.viewWorkshop')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.welcomePrimaryBtn}
+                onPress={() => router.push('/(workshop)/profile')}
+                activeOpacity={0.8}
+              >
+                <Wrench color="#FFFFFF" size={14} />
+                <Text style={styles.welcomePriBtnText}>{t('workshopAdmin.editWorkshopProfile')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        ) : (
-          todaysBookings.map((bk) => {
-            const cust = bk.customer as any;
-            const bike = bk.motorcycle as any;
-            const servicesList = bk.booking_services
-              ?.map((s) => s.service_name_snapshot)
-              .join(', ') || 'General Servicing';
 
-            return (
-              <View key={bk.id} style={styles.bookingCard}>
-                <View style={styles.bookingMainRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarLetters}>
-                      {(cust?.full_name || 'Customer').substring(0, 2).toUpperCase()}
-                    </Text>
+          {/* KPI Summary Grid (3 Columns on Desktop, 2 on Tablet/Mobile) */}
+          <ResponsiveGrid columns={{ phone: 2, tablet: 3, desktop: 3 }} gap={14}>
+            {kpis.map((kpi) => {
+              const Icon = kpi.icon;
+              return (
+                <TouchableOpacity
+                  key={kpi.id}
+                  style={styles.kpiCard}
+                  onPress={() => router.push(kpi.route as any)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.kpiHeader}>
+                    <View style={[styles.kpiIconBadge, { backgroundColor: kpi.bg }]}>
+                      <Icon color={kpi.color} size={18} />
+                    </View>
+                    <ChevronRight color={colors.textMuted} size={16} />
                   </View>
+                  <Text style={styles.kpiValue} numberOfLines={1}>{kpi.value}</Text>
+                  <Text style={styles.kpiTitle} numberOfLines={1}>{kpi.title}</Text>
+                  <Text style={styles.kpiSubtext} numberOfLines={1}>{kpi.subtext}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ResponsiveGrid>
 
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <View style={styles.bookingTopLine}>
-                      <Text style={styles.customerNameText}>{cust?.full_name || 'Customer'}</Text>
-                      <View style={[styles.statusBadge, getStatusStyle(bk.status)]}>
-                        <Text style={[styles.statusBadgeText, getStatusTextStyle(bk.status)]}>
+          {/* Low Stock Warning Banner if any */}
+          {lowStockParts.length > 0 && (
+            <TouchableOpacity
+              style={styles.alertBannerCard}
+              onPress={() => router.push('/(workshop)/parts')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.alertIconBadge}>
+                <AlertTriangle color={colors.warning} size={18} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.alertBannerTitle}>
+                  {lowStockParts.length} {t('workshopAdmin.lowStockItems')}
+                </Text>
+                <Text style={styles.alertBannerSub} numberOfLines={1}>
+                  {lowStockParts.slice(0, 3).map((p: Part) => p.name).join(', ')}
+                </Text>
+              </View>
+              <ChevronRight color={colors.warning} size={16} />
+            </TouchableOpacity>
+          )}
+
+          {/* Quick Actions Bar */}
+          <View style={styles.sectionHeaderWrapper}>
+            <Text style={styles.sectionHeaderTitle}>QUICK ACTIONS</Text>
+          </View>
+          <ResponsiveGrid columns={{ phone: 2, tablet: 4, desktop: 4 }} gap={12}>
+            {quickActions.map((action, idx) => {
+              const ActionIcon = action.icon;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.quickActionCard}
+                  onPress={() => router.push(action.route as any)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.quickActionIconCircle}>
+                    <ActionIcon color={colors.primary} size={18} />
+                  </View>
+                  <Text style={styles.quickActionLabel} numberOfLines={1}>
+                    {action.label}
+                  </Text>
+                  <ChevronRight color={colors.textMuted} size={14} />
+                </TouchableOpacity>
+              );
+            })}
+          </ResponsiveGrid>
+
+          {/* Today's Bookings Queue Section */}
+          <View style={styles.queueHeaderRow}>
+            <View style={styles.queueHeaderLeft}>
+              <Text style={styles.sectionHeaderTitle}>
+                {t('workshopAdmin.todaysBookings').toUpperCase()} ({todaysBookings.length})
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewAllQueueBtn}
+              onPress={() => router.push('/(workshop)/bookings')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.viewAllQueueText}>{t('workshopAdmin.viewBookings')}</Text>
+              <ChevronRight color={colors.primary} size={14} />
+            </TouchableOpacity>
+          </View>
+
+          {todaysBookings.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <CalendarDays color={colors.textMuted} size={40} />
+              <Text style={styles.emptyTitle}>{t('empty.noBookings')}</Text>
+              <Text style={styles.emptyDesc}>
+                {t('empty.noBookingsSub')}
+              </Text>
+            </View>
+          ) : (
+            <ResponsiveGrid columns={{ phone: 1, tablet: 2, desktop: 3 }} gap={16}>
+              {todaysBookings.map((bk) => {
+                const cust = bk.customer as any;
+                const bike = bk.motorcycle as any;
+                const refCode = `#RH-${bk.id.slice(0, 8).toUpperCase()}`;
+
+                return (
+                  <View key={bk.id} style={styles.bookingCard}>
+                    {/* Header */}
+                    <View style={styles.bookingCardHeader}>
+                      <Text style={styles.refCodeText}>{refCode}</Text>
+                      <View style={[styles.statusBadge, getStatusBadgeStyle(bk.status, colors, isDark)]}>
+                        <Text style={[styles.statusBadgeText, getStatusTextStyle(bk.status, colors)]}>
                           {bk.status.toUpperCase().replace('_', ' ')}
                         </Text>
                       </View>
                     </View>
 
-                    <Text style={styles.bikeText}>
-                      🏍️ {bike ? `${bike.brand} ${bike.model} (${bike.plate_number})` : 'Motorcycle'}
-                    </Text>
-                    <Text style={styles.serviceText}>🛠️ {servicesList}</Text>
-                    <Text style={styles.metaText}>
-                      ⏰ {bk.booking_time} • {t('common.total')}: <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{formatCurrency(bk.total_amount || 0)}</Text>
-                    </Text>
-                  </View>
-                </View>
+                    {/* Customer */}
+                    <View style={styles.customerRow}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarInitials}>{getInitials(cust?.full_name)}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.customerName} numberOfLines={1}>
+                          {cust?.full_name || 'Customer'}
+                        </Text>
+                        <Text style={styles.customerPhone} numberOfLines={1}>
+                          {cust?.phone || cust?.email || 'No contact info'}
+                        </Text>
+                      </View>
+                    </View>
 
-                {/* Workflow Actions */}
-                <View style={styles.bookingActionsRow}>
-                  {bk.status === 'pending' && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.acceptBtn]}
-                        onPress={() => handleStatusChange(bk.id, 'confirmed')}
-                        disabled={actionLoading !== null}
-                      >
-                        {actionLoading === bk.id + '_confirmed' ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <Text style={styles.acceptBtnText}>{t('workshopAdmin.confirmBooking')}</Text>
-                        )}
-                      </TouchableOpacity>
+                    {/* Bike Box */}
+                    {bike && (
+                      <View style={styles.bikeBox}>
+                        <Text style={styles.bikeTag} numberOfLines={1}>
+                          🏍️ {bike.brand} {bike.model} • {bike.plate_number}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Schedule Time & Total */}
+                    <View style={styles.metaRow}>
+                      <View style={styles.metaItem}>
+                        <Clock size={13} color={colors.textMuted} />
+                        <Text style={styles.metaText}>{bk.booking_time}</Text>
+                      </View>
+                      <Text style={styles.totalAmountText}>
+                        RM {Number(bk.total_amount || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    {/* Actions */}
+                    <View style={styles.actionsContainer}>
+                      {bk.status === 'pending' && (
+                        <View style={styles.splitBtnRow}>
+                          <TouchableOpacity
+                            style={[styles.actionBtn, styles.primaryBtn]}
+                            onPress={() => handleStatusChange(bk.id, 'confirmed')}
+                            disabled={actionLoading !== null}
+                          >
+                            {actionLoading === bk.id + '_confirmed' ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>ACCEPT</Text>
+                            )}
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionBtn, styles.dangerBtn]}
+                            onPress={() => handleStatusChange(bk.id, 'rejected')}
+                            disabled={actionLoading !== null}
+                          >
+                            {actionLoading === bk.id + '_rejected' ? (
+                              <ActivityIndicator size="small" color={colors.danger} />
+                            ) : (
+                              <Text style={[styles.actionBtnText, { color: colors.danger }]}>REJECT</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {bk.status === 'confirmed' && (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.primaryBtn, { width: '100%' }]}
+                          onPress={() => handleStatusChange(bk.id, 'in_progress')}
+                          disabled={actionLoading !== null}
+                        >
+                          {actionLoading === bk.id + '_in_progress' ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>START SERVICE</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+
+                      {bk.status === 'in_progress' && (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.completeBtn, { width: '100%' }]}
+                          onPress={() => handleStatusChange(bk.id, 'completed')}
+                          disabled={actionLoading !== null}
+                        >
+                          {actionLoading === bk.id + '_completed' ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>COMPLETE SERVICE</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
 
                       <TouchableOpacity
-                        style={[styles.actionBtn, styles.rejectBtn]}
-                        onPress={() => handleStatusChange(bk.id, 'rejected')}
-                        disabled={actionLoading !== null}
-                      >
-                        {actionLoading === bk.id + '_rejected' ? (
-                          <ActivityIndicator size="small" color={COLORS.danger} />
-                        ) : (
-                          <Text style={styles.rejectBtnText}>{t('workshopAdmin.rejectBooking')}</Text>
-                        )}
-                      </TouchableOpacity>
-                    </>
-                  )}
-
-                  {bk.status === 'confirmed' && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.startBtn]}
-                        onPress={() => handleStatusChange(bk.id, 'in_progress')}
-                        disabled={actionLoading !== null}
-                      >
-                        {actionLoading === bk.id + '_in_progress' ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <><Play color="#FFFFFF" size={12} /><Text style={styles.startBtnText}>{t('workshopAdmin.startService')}</Text></>
-                        )}
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.secondaryActionBtn]}
+                        style={styles.viewDetailsFullBtn}
                         onPress={() => router.push(`/(workshop)/bookings?id=${bk.id}`)}
                       >
-                        <Text style={styles.secondaryActionText}>{t('booking.rescheduleBooking')}</Text>
+                        <Text style={styles.viewDetailsText}>{t('dashboard.viewDetails').toUpperCase()}</Text>
                       </TouchableOpacity>
-                    </>
-                  )}
-
-                  {bk.status === 'in_progress' && (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.completeBtn]}
-                      onPress={() => handleStatusChange(bk.id, 'completed')}
-                      disabled={actionLoading !== null}
-                    >
-                      {actionLoading === bk.id + '_completed' ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <><CheckCircle2 color="#FFFFFF" size={12} /><Text style={styles.completeBtnText}>{t('workshopAdmin.completeService')}</Text></>
-                      )}
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.viewBtn]}
-                    onPress={() => router.push(`/(workshop)/bookings?id=${bk.id}`)}
-                  >
-                    <Eye color={COLORS.textSecondary} size={14} />
-                    <Text style={styles.viewBtnText}>{t('common.view')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })
-        )}
+                    </View>
+                  </View>
+                );
+              })}
+            </ResponsiveGrid>
+          )}
         </ResponsiveContainer>
       </ScrollView>
     </View>
   );
 }
 
-function getStatusStyle(status: BookingStatus) {
+function getStatusBadgeStyle(status: BookingStatus, colors: typeof DARK_COLORS, isDark: boolean) {
   switch (status) {
     case 'pending':
-      return { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: COLORS.warning };
+      return { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#F59E0B' };
     case 'confirmed':
-      return { backgroundColor: 'rgba(56, 189, 248, 0.15)', borderColor: '#38bdf8' };
+      return { backgroundColor: 'rgba(56, 189, 248, 0.15)', borderColor: '#38BDF8' };
     case 'in_progress':
-      return { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: COLORS.primary };
+      return { backgroundColor: 'rgba(255, 107, 0, 0.15)', borderColor: colors.primary };
     case 'completed':
-      return { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: COLORS.success };
+      return { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: colors.success };
     case 'cancelled':
     case 'rejected':
-      return { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: COLORS.danger };
+      return { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.danger };
     default:
-      return { backgroundColor: COLORS.cards, borderColor: COLORS.border };
+      return { backgroundColor: colors.cards, borderColor: colors.border };
   }
 }
 
-function getStatusTextStyle(status: BookingStatus) {
+function getStatusTextStyle(status: BookingStatus, colors: typeof DARK_COLORS) {
   switch (status) {
     case 'pending':
-      return { color: COLORS.warning };
+      return { color: '#F59E0B' };
     case 'confirmed':
-      return { color: '#38bdf8' };
+      return { color: '#38BDF8' };
     case 'in_progress':
-      return { color: COLORS.primary };
+      return { color: colors.primary };
     case 'completed':
-      return { color: COLORS.success };
+      return { color: colors.success };
     case 'cancelled':
     case 'rejected':
-      return { color: COLORS.danger };
+      return { color: colors.danger };
     default:
-      return { color: COLORS.textSecondary };
+      return { color: colors.textSecondary };
   }
 }
 
@@ -579,15 +586,17 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     errorTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 8 },
     errorDesc: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
     retryBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-    retryText: { color: isDark ? '#000000' : '#FFFFFF', fontWeight: '800', fontSize: 13 },
+    retryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
     scrollView: { flex: 1 },
     scrollContent: {
-      padding: 20,
-      gap: 18,
+      paddingVertical: 16,
+      gap: 16,
       paddingBottom: 40,
     },
+
+    // Welcome Banner Card
     welcomeCard: {
-      backgroundColor: colors.surfaceContainer,
+      backgroundColor: colors.cards,
       borderRadius: 16,
       padding: 18,
       borderWidth: 1,
@@ -609,6 +618,7 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     greetingSub: {
       color: colors.textSecondary,
       fontSize: 13,
+      fontWeight: '500',
     },
     welcomeActions: {
       flexDirection: 'row',
@@ -620,13 +630,12 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
+      backgroundColor: colors.elevatedCards,
+      paddingHorizontal: 14,
       paddingVertical: 9,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: colors.borderHighlight,
-      flexGrow: 1,
+      borderColor: colors.border,
     },
     welcomeSecBtnText: {
       color: colors.textPrimary,
@@ -639,33 +648,21 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.primary,
-      paddingHorizontal: 14,
+      paddingHorizontal: 16,
       paddingVertical: 9,
       borderRadius: 10,
-      flexGrow: 1,
     },
     welcomePriBtnText: {
-      color: isDark ? '#000000' : '#FFFFFF',
+      color: '#FFFFFF',
       fontSize: 12,
       fontWeight: '800',
     },
-    sectionHeaderTitle: {
-      color: colors.textMuted,
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.8,
-    },
-    kpiGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      rowGap: 12,
-    },
+
+    // KPI Cards
     kpiCard: {
-      width: '48.5%',
-      backgroundColor: colors.surfaceContainer,
+      backgroundColor: colors.cards,
       borderRadius: 16,
-      padding: 14,
+      padding: 16,
       borderWidth: 1,
       borderColor: colors.border,
       gap: 6,
@@ -674,57 +671,35 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      marginBottom: 4,
     },
     kpiIconBadge: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
     },
     kpiValue: {
       color: colors.textPrimary,
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '900',
     },
-    kpiLabel: {
-      color: colors.textMuted,
-      fontSize: 9,
-      fontWeight: '800',
-      letterSpacing: 0.5,
-    },
-    kpiSubText: {
-      color: colors.textSecondary,
-      fontSize: 10,
-    },
-    quickActionsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      rowGap: 10,
-    },
-    quickBtn: {
-      width: '48.5%',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      backgroundColor: colors.surfaceContainer,
-      paddingHorizontal: 10,
-      paddingVertical: 10,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      minHeight: 52,
-    },
-    quickBtnText: {
+    kpiTitle: {
       color: colors.textPrimary,
-      fontSize: 11.5,
-      fontWeight: '700',
-      flex: 1,
-      lineHeight: 15,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.3,
     },
+    kpiSubtext: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '500',
+    },
+
+    // Alert Banner
     alertBannerCard: {
-      backgroundColor: colors.warningBg,
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.08)',
       borderRadius: 14,
       padding: 14,
       borderWidth: 1,
@@ -732,6 +707,14 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+    },
+    alertIconBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     alertBannerTitle: {
       color: colors.textPrimary,
@@ -741,30 +724,78 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
     alertBannerSub: {
       color: colors.textSecondary,
       fontSize: 11,
+      marginTop: 2,
     },
-    alertActionText: {
-      color: colors.warning,
-      fontSize: 12,
+
+    // Quick Actions
+    sectionHeaderWrapper: {
+      marginTop: 4,
+    },
+    sectionHeaderTitle: {
+      color: colors.textMuted,
+      fontSize: 11,
       fontWeight: '800',
+      letterSpacing: 0.8,
     },
+    quickActionCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.cards,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    quickActionIconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    quickActionLabel: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+      flex: 1,
+    },
+
+    // Queue Header
     queueHeaderRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      marginTop: 6,
+    },
+    queueHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    viewAllQueueBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
     },
     viewAllQueueText: {
       color: colors.primary,
       fontSize: 12,
       fontWeight: '700',
     },
+
+    // Empty State
     emptyCard: {
-      backgroundColor: colors.surfaceContainer,
+      backgroundColor: colors.cards,
       borderRadius: 16,
-      padding: 28,
+      padding: 36,
       borderWidth: 1,
       borderColor: colors.border,
+      borderStyle: 'dashed',
       alignItems: 'center',
-      gap: 8,
+      gap: 10,
     },
     emptyTitle: {
       color: colors.textPrimary,
@@ -775,135 +806,150 @@ const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
       color: colors.textSecondary,
       fontSize: 12,
       textAlign: 'center',
+      maxWidth: 300,
     },
+
+    // Booking Card
     bookingCard: {
-      backgroundColor: colors.surfaceContainer,
+      backgroundColor: colors.cards,
       borderRadius: 16,
       padding: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      gap: 14,
-    },
-    bookingMainRow: {
-      flexDirection: 'row',
       gap: 12,
     },
-    avatarBox: {
-      width: 42,
-      height: 42,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    avatarLetters: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '900',
-    },
-    bookingTopLine: {
+    bookingCardHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    customerNameText: {
-      color: colors.textPrimary,
-      fontSize: 15,
-      fontWeight: '800',
+    refCodeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+      fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
     },
     statusBadge: {
       paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingVertical: 4,
       borderRadius: 6,
       borderWidth: 1,
     },
     statusBadgeText: {
       fontSize: 9,
       fontWeight: '900',
-      letterSpacing: 0.5,
+      letterSpacing: 0.4,
     },
-    bikeText: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    serviceText: {
-      color: colors.primaryDim,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    metaText: {
-      color: colors.textMuted,
-      fontSize: 11,
-    },
-    bookingActionsRow: {
-      flexDirection: 'row',
-      gap: 8,
-      alignItems: 'center',
-      flexWrap: 'wrap',
-    },
-    actionBtn: {
+    customerRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 10,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.secondaryBackground,
       justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 8,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    acceptBtn: {
-      backgroundColor: colors.primary,
-    },
-    acceptBtnText: {
-      color: isDark ? '#000000' : '#FFFFFF',
+    avatarInitials: {
+      color: colors.primary,
       fontSize: 12,
       fontWeight: '800',
     },
-    rejectBtn: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.danger,
-    },
-    rejectBtnText: {
-      color: colors.danger,
-      fontSize: 12,
+    customerName: {
+      color: colors.textPrimary,
+      fontSize: 14,
       fontWeight: '700',
     },
-    startBtn: {
-      backgroundColor: '#38bdf8',
+    customerPhone: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '500',
     },
-    startBtnText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '800',
+    bikeBox: {
+      backgroundColor: colors.secondaryBackground,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    bikeTag: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    metaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 8,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    metaText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    totalAmountText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    actionsContainer: {
+      gap: 6,
+    },
+    splitBtnRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionBtn: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    primaryBtn: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     completeBtn: {
       backgroundColor: colors.success,
+      borderColor: colors.success,
     },
-    completeBtnText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '800',
+    dangerBtn: {
+      backgroundColor: colors.dangerBg,
+      borderColor: colors.danger,
     },
-    secondaryActionBtn: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderHighlight,
+    actionBtnText: {
+      fontSize: 11,
+      fontWeight: '900',
     },
-    secondaryActionText: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    viewBtn: {
-      backgroundColor: colors.surface,
+    viewDetailsFullBtn: {
+      backgroundColor: colors.elevatedCards,
+      paddingVertical: 7,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.border,
-      marginLeft: 'auto',
+      alignItems: 'center',
     },
-    viewBtnText: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '600',
+    viewDetailsText: {
+      color: colors.textPrimary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.3,
     },
   });

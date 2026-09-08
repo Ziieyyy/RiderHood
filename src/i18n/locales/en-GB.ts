@@ -107,9 +107,22 @@ export const enGB: TranslationSchema = {
     showLess: 'Show Less',
     welcome: 'Welcome',
     closed: 'Closed',
-    suspended: 'Suspended',
     state: 'State',
     title: 'Title',
+    getDirections: 'Get Directions',
+    gpsActive: 'GPS Active',
+    distancesDisplayed: 'Distances displayed',
+    sortedNearest: 'Sorted by nearest',
+    enableGpsToSeeDistance: 'Enable GPS to see workshop distances',
+    updateGps: 'Update GPS',
+    detectGps: 'Detect GPS',
+    youAreHere: 'YOU ARE HERE',
+    liveDeviceLocation: 'Live Device Location',
+    focus: 'Focus',
+    fitAll: 'Fit All',
+    split: 'Split',
+    map: 'Map',
+    list: 'List',
   },
 
   navigation: {
@@ -437,6 +450,9 @@ export const enGB: TranslationSchema = {
     contactInfo: 'Contact Information',
     noPhoneRegistered: 'No phone number registered for this workshop.',
     description: 'Description',
+    mapExplorer: 'MAP EXPLORER',
+    interactiveMapDirectory: 'INTERACTIVE MAP & DIRECTORY',
+    nearYou: 'workshops near you',
   },
 
   services: {

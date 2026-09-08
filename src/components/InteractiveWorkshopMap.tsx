@@ -21,6 +21,7 @@ import { getWorkshopOpenStatus } from '../utils/operatingHours';
 import { canBookWorkshop } from '../services/workshopService';
 import type { Workshop } from '../types/database';
 import { Crosshair } from 'lucide-react-native';
+import { useTranslation } from '../i18n';
 
 interface InteractiveWorkshopMapProps {
   userLocation: UserLocationDetails | Coordinates | null;
@@ -45,6 +46,7 @@ export function InteractiveWorkshopMap({
   height = 480,
   showHud = true,
 }: InteractiveWorkshopMapProps) {
+  const { t, language } = useTranslation();
   const iframeRef = useRef<any>(null);
   const webViewRef = useRef<any>(null);
 
@@ -74,13 +76,13 @@ export function InteractiveWorkshopMap({
           distanceKm: distKm,
           distanceText: formatDistance(distKm),
           isOpen: openStatus.isOpen,
-          statusLabel: openStatus.statusText,
+          statusLabel: openStatus.isOpen ? t('workshop.openNow') : t('workshop.closed'),
           isPartner: Boolean(w.is_partner || bookable),
           bookingEnabled: bookable,
         };
       })
       .filter(Boolean);
-  }, [workshops, userLocation]);
+  }, [workshops, userLocation, language, t]);
 
   // Handle messages received from Web / iframe
   useEffect(() => {
@@ -139,6 +141,18 @@ export function InteractiveWorkshopMap({
     const userLng = userLocation?.longitude ?? 100.5618;
     const accuracy = (userLocation as UserLocationDetails)?.accuracy ?? 25;
     const hasUserGPS = Boolean(userLocation);
+
+    const strFocus = t('common.focus');
+    const strFitAll = t('common.fitAll');
+    const strYouAreHere = t('common.youAreHere');
+    const strLiveLocation = t('common.liveDeviceLocation');
+    const strOpenNow = t('workshop.openNow');
+    const strClosed = t('workshop.closed');
+    const strBook = t('common.bookNow');
+    const strCall = t('common.call');
+    const strDirections = t('common.getDirections');
+    const strPartner = t('workshop.bookablePartners');
+    const strDirectory = t('workshop.directoryListing');
 
     return `
 <!DOCTYPE html>
@@ -346,8 +360,8 @@ export function InteractiveWorkshopMap({
       <span>${hasUserGPS ? 'Live GPS (' + userLat.toFixed(4) + '°, ' + userLng.toFixed(4) + '°)' : 'Kulim Center (5.3644°, 100.5618°)'}</span>
     </div>
     <div class="map-hud-right">
-      <button class="hud-btn" onclick="recenterMap()">🎯 Focus</button>
-      <button class="hud-btn" onclick="fitAllWorkshops()">🗺️ Fit All</button>
+      <button class="hud-btn" onclick="recenterMap()">🎯 ${strFocus}</button>
+      <button class="hud-btn" onclick="fitAllWorkshops()">🗺️ ${strFitAll}</button>
     </div>
   </div>
 
@@ -397,7 +411,7 @@ export function InteractiveWorkshopMap({
       });
 
       const userMarker = L.marker([userLat, userLng], { icon: beaconIcon, zIndexOffset: 1000 }).addTo(map);
-      userMarker.bindPopup('<div style="padding: 4px; font-weight: 800; color: #00D9FF; text-align: center;">📍 YOU ARE HERE<br><span style="font-size: 10px; color: #A1A1AA; font-weight: normal;">Live Device Location</span></div>');
+      userMarker.bindPopup('<div style="padding: 4px; font-weight: 800; color: #00D9FF; text-align: center;">📍 ${strYouAreHere}<br><span style="font-size: 10px; color: #A1A1AA; font-weight: normal;">${strLiveLocation}</span></div>');
 
       // Accuracy circle
       L.circle([userLat, userLng], {
@@ -430,16 +444,16 @@ export function InteractiveWorkshopMap({
       // Popup content
       const googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + ws.lat + ',' + ws.lng;
       const statusHtml = ws.isOpen
-        ? '<span class="popup-open">🟢 Buka Sekarang</span>'
-        : '<span class="popup-closed">🔴 Tutup</span>';
+        ? '<span class="popup-open">🟢 ${strOpenNow}</span>'
+        : '<span class="popup-closed">🔴 ${strClosed}</span>';
 
       const partnerBadgeHtml = ws.isPartner
-        ? '<span class="popup-badge popup-badge-partner">⚡ Official Partner</span>'
-        : '<span class="popup-badge popup-badge-standard">Directory</span>';
+        ? '<span class="popup-badge popup-badge-partner">⚡ ${strPartner}</span>'
+        : '<span class="popup-badge popup-badge-standard">${strDirectory}</span>';
 
       const bookBtnHtml = ws.bookingEnabled
-        ? '<button class="popup-btn popup-btn-book" onclick="bookWorkshop(\\'' + ws.id + '\\')">Tempah Servis</button>'
-        : '<a class="popup-btn popup-btn-book" style="background:#242B38;color:#FF6B00;border:1px solid #FF6B00;" href="tel:' + ws.phone.replace(/\\s+/g, '') + '">Hubungi</a>';
+        ? '<button class="popup-btn popup-btn-book" onclick="bookWorkshop(\\'' + ws.id + '\\')">${strBook}</button>'
+        : '<a class="popup-btn popup-btn-book" style="background:#242B38;color:#FF6B00;border:1px solid #FF6B00;" href="tel:' + ws.phone.replace(/\\s+/g, '') + '">${strCall}</a>';
 
       const popupContent = '<div class="popup-card">' +
         '<div class="popup-header">' +
@@ -455,7 +469,7 @@ export function InteractiveWorkshopMap({
         '<div class="popup-address">' + ws.address + '</div>' +
         '<div class="popup-actions">' +
           bookBtnHtml +
-          '<a class="popup-btn popup-btn-dir" href="' + googleMapsUrl + '" target="_blank">Arah Jalan</a>' +
+          '<a class="popup-btn popup-btn-dir" href="' + googleMapsUrl + '" target="_blank">${strDirections}</a>' +
         '</div>' +
       '</div>';
 
@@ -488,12 +502,13 @@ export function InteractiveWorkshopMap({
 </body>
 </html>
     `;
-  }, [userLocation, workshopsData]);
+  }, [userLocation, workshopsData, language, t]);
 
   return (
     <View style={[styles.mapContainer, { height }]}>
       {Platform.OS === 'web' ? (
         <iframe
+          key={`map-iframe-${language}-${workshopsData.length}`}
           ref={iframeRef}
           srcDoc={mapHtml}
           title="Interactive Workshop Map"
@@ -507,6 +522,7 @@ export function InteractiveWorkshopMap({
         />
       ) : (
         <WebView
+          key={`map-webview-${language}-${workshopsData.length}`}
           ref={webViewRef}
           originWhitelist={['*']}
           source={{ html: mapHtml }}
@@ -528,12 +544,12 @@ export function InteractiveWorkshopMap({
             <View style={[styles.gpsIndicatorDot, { backgroundColor: userLocation ? '#00D9FF' : COLORS.warning }]} />
             <View>
               <Text style={styles.hudTitle}>
-                {userLocation ? 'GPS Precise Lock' : 'GPS Locating...'}
+                {userLocation ? t('common.gpsActive') : t('common.loading')}
               </Text>
               <Text style={styles.hudCoords}>
                 {userLocation
                   ? `${userLocation.latitude.toFixed(5)}° N, ${userLocation.longitude.toFixed(5)}° E (±${Math.round((userLocation as UserLocationDetails)?.accuracy || 15)}m)`
-                  : 'Acquiring high accuracy GPS fix...'}
+                  : t('common.loading')}
               </Text>
             </View>
           </View>
@@ -550,7 +566,7 @@ export function InteractiveWorkshopMap({
               ) : (
                 <>
                   <Crosshair color="#000" size={13} />
-                  <Text style={styles.refreshLocText}>Locate</Text>
+                  <Text style={styles.refreshLocText}>{t('common.detectGps')}</Text>
                 </>
               )}
             </TouchableOpacity>

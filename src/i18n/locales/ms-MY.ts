@@ -107,9 +107,22 @@ export const msMY: TranslationSchema = {
     showLess: 'Tunjuk Kurang',
     welcome: 'Selamat Datang',
     closed: 'Tutup',
-    suspended: 'Digantung',
     state: 'Negeri',
     title: 'Tajuk',
+    getDirections: 'Arah Jalan',
+    gpsActive: 'GPS Aktif',
+    distancesDisplayed: 'Jarak dipaparkan',
+    sortedNearest: 'Disusun paling dekat',
+    enableGpsToSeeDistance: 'Bolehkan GPS untuk melihat jarak bengkel',
+    updateGps: 'Kemaskini GPS',
+    detectGps: 'Kesan GPS',
+    youAreHere: 'ANDA DI SINI',
+    liveDeviceLocation: 'Lokasi Peranti Terkini',
+    focus: 'Fokus',
+    fitAll: 'Muat Semua',
+    split: 'Pemisah',
+    map: 'Peta',
+    list: 'Senarai',
   },
 
   navigation: {
@@ -437,6 +450,9 @@ export const msMY: TranslationSchema = {
     contactInfo: 'Maklumat Perhubungan',
     noPhoneRegistered: 'Tiada nombor telefon didaftarkan untuk bengkel ini.',
     description: 'Penerangan',
+    mapExplorer: 'PENEROKA PETA',
+    interactiveMapDirectory: 'PETA INTERAKTIF & DIREKTORI',
+    nearYou: 'bengkel berhampiran anda',
   },
 
   services: {

@@ -76,7 +76,7 @@ export default function AdminReportsScreen() {
               </View>
               <View style={styles.breakdownRow}>
                 <View style={[styles.dot, { backgroundColor: COLORS.danger }]} />
-                <Text style={styles.breakdownLabel}>{t('common.suspended')}</Text>
+                <Text style={styles.breakdownLabel}>{t('superAdmin.suspended')}</Text>
                 <Text style={styles.breakdownValue}>{suspendedUsers}</Text>
               </View>
             </View>

@@ -12,9 +12,19 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { COLORS, DARK_COLORS } from '../../constants/theme';
+import { DARK_COLORS } from '../../constants/theme';
 import { Service } from '../../types/database';
-import { Wrench, Plus, Edit2, Trash2, Clock, RefreshCw, ChevronDown, Check, X, Search, ShieldCheck } from 'lucide-react-native';
+import {
+  Wrench,
+  Plus,
+  Edit2,
+  Trash2,
+  Clock,
+  ChevronDown,
+  Check,
+  X,
+  Search,
+} from 'lucide-react-native';
 import { CustomButton } from '../../components/CustomButton';
 import { WorkshopAdminHeader } from '../../components/WorkshopAdminHeader';
 import { getWorkshopServices, createService, getMyWorkshop } from '../../services/workshopService';
@@ -26,7 +36,6 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { useTheme, useThemedStyles } from '../../context/ThemeContext';
 import { ResponsiveContainer } from '../../components/responsive/ResponsiveContainer';
 import { ResponsiveGrid } from '../../components/responsive/ResponsiveGrid';
-
 
 const CATEGORIES = ['All', 'Engine', 'Brake', 'Oil & Fluid', 'Suspension', 'Electrical', 'General', 'Custom'];
 
@@ -44,10 +53,9 @@ const DURATION_OPTIONS = [
 export default function WorkshopServicesScreen() {
   const { t, language } = useTranslation();
   const { profile } = useAuth();
-  const { isPhone, contentPadding } = useResponsive();
+  const { contentPadding } = useResponsive();
   const { colors, isDark } = useTheme();
   const styles = useThemedStyles(createStyles);
-
 
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +237,7 @@ export default function WorkshopServicesScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading Service Catalog...</Text>
       </View>
     );
@@ -245,45 +253,52 @@ export default function WorkshopServicesScreen() {
       {/* Top Header Actions & Search */}
       <View style={styles.topBarContainer}>
         <View style={styles.searchInputWrapper}>
-          <Search color={COLORS.textMuted} size={18} />
+          <Search color={colors.textMuted} size={18} />
           <TextInput
             style={styles.searchInput}
             placeholder={t('common.search')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X color={COLORS.textMuted} size={18} />
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <X color={colors.textMuted} size={18} />
             </TouchableOpacity>
           ) : null}
         </View>
 
         <TouchableOpacity style={styles.addBtn} onPress={handleOpenAddModal} activeOpacity={0.8}>
-          <Plus color="#FFFFFF" size={16} />
+          <Plus color={isDark ? '#000000' : '#FFFFFF'} size={16} />
           <Text style={styles.addBtnText}>{t('workshopAdmin.addService')}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Category Tabs Scroll */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-        {CATEGORIES.map((cat) => {
-          const isSel = selectedCategory === cat;
-          return (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.categoryChip, isSel && styles.activeCategoryChip]}
-              onPress={() => setSelectedCategory(cat)}
-            >
-              <Text style={[styles.categoryChipText, isSel && styles.activeCategoryChipText]}>
-                {formatCategoryName(cat, language)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
+      {/* Category Tabs Scroll (Fixed Height Constraint) */}
+      <View style={styles.categoryTabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryTabsScroll}
+          contentContainerStyle={styles.categoryScroll}
+        >
+          {CATEGORIES.map((cat) => {
+            const isSel = selectedCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.categoryChip, isSel && styles.activeCategoryChip]}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.categoryChipText, isSel && styles.activeCategoryChipText]}>
+                  {formatCategoryName(cat, language)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Services List */}
       <ScrollView
@@ -297,14 +312,14 @@ export default function WorkshopServicesScreen() {
               setRefreshing(true);
               loadServices();
             }}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
       >
         <ResponsiveContainer>
           {filteredServices.length === 0 ? (
             <View style={styles.emptyState}>
-              <Wrench color={COLORS.textMuted} size={48} />
+              <Wrench color={colors.textMuted} size={48} />
               <Text style={styles.emptyTitle}>{t('empty.noServices')}</Text>
               <Text style={styles.emptyDesc}>
                 {t('empty.noServicesSub')}
@@ -316,12 +331,27 @@ export default function WorkshopServicesScreen() {
                 const isAct = srv.is_available ?? true;
                 return (
                   <View key={srv.id} style={[styles.serviceCard, !isAct && styles.disabledCard]}>
+                    {/* Card Top: Title, Status Badge, Tags & Price */}
                     <View style={styles.cardTop}>
-                      <View style={{ flex: 1, gap: 4 }}>
+                      <View style={styles.titleCol}>
                         <View style={styles.titleRow}>
                           <Text style={styles.srvTitle} numberOfLines={1}>{srv.name}</Text>
-                          <View style={[styles.activeStatusChip, { backgroundColor: isAct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(113, 113, 122, 0.15)' }]}>
-                            <Text style={[styles.activeStatusText, { color: isAct ? COLORS.success : COLORS.textMuted }]}>
+                          <View
+                            style={[
+                              styles.activeStatusChip,
+                              {
+                                backgroundColor: isAct
+                                  ? 'rgba(16, 185, 129, 0.15)'
+                                  : 'rgba(113, 113, 122, 0.15)',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.activeStatusText,
+                                { color: isAct ? colors.success : colors.textMuted },
+                              ]}
+                            >
                               {isAct ? t('common.active').toUpperCase() : t('common.inactive').toUpperCase()}
                             </Text>
                           </View>
@@ -329,11 +359,11 @@ export default function WorkshopServicesScreen() {
 
                         <View style={styles.metaRow}>
                           <View style={styles.metaChip}>
-                            <Clock color={COLORS.primary} size={12} />
+                            <Clock color={colors.primary} size={11} />
                             <Text style={styles.metaText}>{srv.estimated_duration_minutes || 30} mins</Text>
                           </View>
                           <View style={styles.metaChip}>
-                            <Wrench color={COLORS.textSecondary} size={12} />
+                            <Wrench color={colors.textSecondary} size={11} />
                             <Text style={styles.metaText}>{formatCategoryName(srv.category || 'General', language)}</Text>
                           </View>
                         </View>
@@ -342,28 +372,40 @@ export default function WorkshopServicesScreen() {
                       <Text style={styles.srvPrice}>RM {Number(srv.price || 0).toFixed(2)}</Text>
                     </View>
 
-                    <Text style={styles.srvDesc} numberOfLines={2}>{srv.description || t('services.title')}</Text>
+                    {/* Specification / Description */}
+                    <Text style={styles.srvDesc} numberOfLines={2}>
+                      {srv.description || `${t('services.specification')}: ${srv.name} • Genuine Workshop Service`}
+                    </Text>
 
+                    {/* Footer Actions */}
                     <View style={styles.cardActions}>
                       <View style={styles.toggleActiveContainer}>
                         <Text style={styles.toggleLabel}>{t('common.status')}:</Text>
                         <Switch
                           value={isAct}
                           onValueChange={() => handleToggleActiveStatus(srv)}
-                          trackColor={{ false: COLORS.border, true: 'rgba(255, 107, 0, 0.5)' }}
-                          thumbColor={isAct ? COLORS.primary : COLORS.textMuted}
+                          trackColor={{ false: colors.border, true: 'rgba(255, 107, 0, 0.45)' }}
+                          thumbColor={isAct ? colors.primary : colors.textMuted}
                         />
                       </View>
 
                       <View style={styles.rightActionBtns}>
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenEditModal(srv)}>
-                          <Edit2 color={COLORS.textSecondary} size={14} />
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={() => handleOpenEditModal(srv)}
+                          activeOpacity={0.8}
+                        >
+                          <Edit2 color={colors.textSecondary} size={13} />
                           <Text style={styles.actionText}>{t('common.edit')}</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(srv)}>
-                          <Trash2 color={COLORS.danger} size={14} />
-                          <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('common.delete')}</Text>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => handleDelete(srv)}
+                          activeOpacity={0.8}
+                        >
+                          <Trash2 color={colors.danger} size={13} />
+                          <Text style={[styles.actionText, { color: colors.danger }]}>{t('common.delete')}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -384,7 +426,7 @@ export default function WorkshopServicesScreen() {
                 {editingService ? t('services.editService') : t('services.addService')}
               </Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <X color={COLORS.textMuted} size={20} />
+                <X color={colors.textMuted} size={20} />
               </TouchableOpacity>
             </View>
 
@@ -396,7 +438,7 @@ export default function WorkshopServicesScreen() {
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Major Service & Valve Clearance"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                 />
               </View>
 
@@ -424,7 +466,7 @@ export default function WorkshopServicesScreen() {
                   value={price}
                   onChangeText={setPrice}
                   placeholder="e.g. 180"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                 />
               </View>
@@ -437,9 +479,9 @@ export default function WorkshopServicesScreen() {
                   onPress={() => setShowDurationPicker(!showDurationPicker)}
                   activeOpacity={0.8}
                 >
-                  <Clock color={COLORS.primary} size={16} />
+                  <Clock color={colors.primary} size={16} />
                   <Text style={styles.dropdownTriggerText}>{selectedDurationObj.label}</Text>
-                  <ChevronDown color={COLORS.textMuted} size={18} />
+                  <ChevronDown color={colors.textMuted} size={18} />
                 </TouchableOpacity>
               </View>
 
@@ -460,7 +502,7 @@ export default function WorkshopServicesScreen() {
                           <Text style={[styles.dropdownItemText, isSelected && styles.selectedDropdownItemText]}>
                             {opt.label}
                           </Text>
-                          {isSelected && <Check color={COLORS.primary} size={16} />}
+                          {isSelected && <Check color={colors.primary} size={16} />}
                         </TouchableOpacity>
                       );
                     })}
@@ -475,7 +517,7 @@ export default function WorkshopServicesScreen() {
                   value={description}
                   onChangeText={setDescription}
                   placeholder="Details of maintenance items included in this package..."
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   multiline
                 />
               </View>
@@ -485,8 +527,8 @@ export default function WorkshopServicesScreen() {
                 <Switch
                   value={isActive}
                   onValueChange={setIsActive}
-                  trackColor={{ false: COLORS.border, true: 'rgba(255, 107, 0, 0.5)' }}
-                  thumbColor={isActive ? COLORS.primary : COLORS.textMuted}
+                  trackColor={{ false: colors.border, true: 'rgba(255, 107, 0, 0.5)' }}
+                  thumbColor={isActive ? colors.primary : colors.textMuted}
                 />
               </View>
 
@@ -507,60 +549,373 @@ export default function WorkshopServicesScreen() {
 
 const createStyles = (colors: typeof DARK_COLORS, isDark: boolean) =>
   StyleSheet.create({
-    screenContainer: { flex: 1, backgroundColor: colors.background },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12, backgroundColor: colors.background },
-    loadingText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
-    topBarContainer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, flexDirection: 'row', gap: 8 },
-    searchInputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, gap: 8, height: 38 },
-    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 12 },
-    addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 10, height: 38, borderRadius: 10 },
-    addBtnText: { color: isDark ? '#000000' : '#FFFFFF', fontSize: 11, fontWeight: '800' },
-    categoryScroll: { paddingHorizontal: 20, paddingVertical: 6, gap: 6 },
-    categoryChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: colors.cards, borderWidth: 1, borderColor: colors.border },
-    activeCategoryChip: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)', borderColor: colors.primary },
-    categoryChipText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
-    activeCategoryChipText: { color: colors.primary, fontWeight: '800' },
-    scrollView: { flex: 1 },
-    scrollContent: { padding: 20, paddingBottom: 40, gap: 14 },
-    emptyState: { alignItems: 'center', paddingVertical: 64, gap: 10, backgroundColor: colors.cards, borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border },
-    emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
-    emptyDesc: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', maxWidth: 280 },
-    serviceCard: { backgroundColor: colors.cards, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 },
-    disabledCard: { opacity: 0.6 },
-    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-    srvTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
-    activeStatusChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    activeStatusText: { fontSize: 9, fontWeight: '900' },
-    metaRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-    metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.secondaryBackground, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: colors.border },
-    metaText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
-    srvPrice: { color: colors.primary, fontSize: 20, fontWeight: '900' },
-    srvDesc: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
-    cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
-    toggleActiveContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    toggleLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
-    rightActionBtns: { flexDirection: 'row', gap: 8 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.elevatedCards, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.borderHighlight },
-    deleteBtn: { borderColor: colors.dangerBg, backgroundColor: colors.dangerBg },
-    actionText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-    modalContent: { backgroundColor: colors.elevatedCards, borderRadius: 24, padding: 20, width: '100%', borderWidth: 1, borderColor: colors.borderHighlight, maxHeight: '85%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10 },
-    modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
-    inputGroup: { gap: 6 },
-    inputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-    input: { backgroundColor: colors.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, fontSize: 13 },
-    miniCatChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.cards, borderWidth: 1, borderColor: colors.border },
-    activeMiniCatChip: { backgroundColor: colors.primary, borderColor: colors.primary },
-    miniCatText: { color: colors.textSecondary, fontSize: 10, fontWeight: '600' },
-    activeMiniCatText: { color: '#FFFFFF', fontWeight: '800' },
-    dropdownTrigger: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cards, borderRadius: 12, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: colors.border, gap: 10 },
-    dropdownTriggerText: { flex: 1, color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
-    dropdownContainer: { backgroundColor: colors.cards, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, overflow: 'hidden', marginTop: 2 },
-    dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-    selectedDropdownItem: { backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)' },
-    dropdownItemText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
-    selectedDropdownItemText: { color: colors.primary, fontWeight: '800' },
-    activeSwitchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+    screenContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+      gap: 12,
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    topBarContainer: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    searchInputWrapper: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.cards,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+      height: 42,
+    },
+    searchInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      height: 42,
+      borderRadius: 12,
+      justifyContent: 'center',
+    },
+    addBtnText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.3,
+    },
+    categoryTabsWrapper: {
+      height: 44,
+      marginBottom: 6,
+    },
+    categoryTabsScroll: {
+      flexGrow: 0,
+      height: 44,
+    },
+    categoryScroll: {
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      gap: 8,
+    },
+    categoryChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 10,
+      backgroundColor: colors.cards,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    activeCategoryChip: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)',
+      borderColor: colors.primary,
+    },
+    categoryChipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    activeCategoryChipText: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 40,
+      gap: 14,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 64,
+      gap: 10,
+      backgroundColor: colors.cards,
+      borderRadius: 18,
+      borderStyle: 'dashed',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    emptyDesc: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      textAlign: 'center',
+      maxWidth: 280,
+    },
+    serviceCard: {
+      backgroundColor: colors.cards,
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+      justifyContent: 'space-between',
+    },
+    disabledCard: {
+      opacity: 0.65,
+    },
+    cardTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    titleCol: {
+      flex: 1,
+      gap: 6,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    srvTitle: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+      lineHeight: 20,
+    },
+    activeStatusChip: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    activeStatusText: {
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    metaChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.secondaryBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    metaText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    srvPrice: {
+      color: colors.primary,
+      fontSize: 18,
+      fontWeight: '900',
+      textAlign: 'right',
+      minWidth: 80,
+    },
+    srvDesc: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+      minHeight: 32,
+    },
+    cardActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 10,
+    },
+    toggleActiveContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    toggleLabel: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    rightActionBtns: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: colors.elevatedCards,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+    },
+    deleteBtn: {
+      borderColor: 'rgba(239, 68, 68, 0.3)',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    },
+    actionText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.elevatedCards,
+      borderRadius: 24,
+      padding: 20,
+      width: '100%',
+      maxWidth: 480,
+      borderWidth: 1,
+      borderColor: colors.borderHighlight,
+      maxHeight: '85%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: 10,
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    inputLabel: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    input: {
+      backgroundColor: colors.cards,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      height: 46,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: 13,
+    },
+    miniCatChip: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: colors.cards,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    activeMiniCatChip: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    miniCatText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '600',
+    },
+    activeMiniCatText: {
+      color: isDark ? '#000000' : '#FFFFFF',
+      fontWeight: '800',
+    },
+    dropdownTrigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.cards,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      height: 46,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    dropdownTriggerText: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    dropdownContainer: {
+      backgroundColor: colors.cards,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      overflow: 'hidden',
+      marginTop: 2,
+    },
+    dropdownItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    selectedDropdownItem: {
+      backgroundColor: isDark ? 'rgba(255, 107, 0, 0.15)' : 'rgba(255, 107, 0, 0.12)',
+    },
+    dropdownItemText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    selectedDropdownItemText: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    activeSwitchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
   });

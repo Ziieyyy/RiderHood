@@ -324,7 +324,7 @@ export default function WorkshopDetailsScreen() {
           />
           <View style={[styles.statusBadge, { backgroundColor: openStatus.isOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
             <Text style={[styles.statusText, { color: openStatus.isOpen ? colors.success : colors.danger }]}>
-              {openStatus.statusText.toUpperCase()}
+              {(openStatus.isOpen ? t('workshop.openNow') : t('workshop.closed')).toUpperCase()}
             </Text>
           </View>
         </View>
